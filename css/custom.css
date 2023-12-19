@@ -1,3 +1,6 @@
+#web_bg{
+    background-size: 110%;
+}
 /* 首页文章卡片 */
 #recent-posts > .recent-post-item{
     background:rgba(255, 255, 255, 0.8);
