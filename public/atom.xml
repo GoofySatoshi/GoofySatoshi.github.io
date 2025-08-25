@@ -6,7 +6,7 @@
   <link href="https://goofysatoshi.github.io/atom.xml" rel="self"/>
   
   <link href="https://goofysatoshi.github.io/"/>
-  <updated>2025-05-03T19:21:12.352Z</updated>
+  <updated>2025-08-25T14:11:38.512Z</updated>
   <id>https://goofysatoshi.github.io/</id>
   
   <author>
@@ -15,6 +15,26 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Hello World</title>
+    <link href="https://goofysatoshi.github.io/2025/08/25/hello-world/"/>
+    <id>https://goofysatoshi.github.io/2025/08/25/hello-world/</id>
+    <published>2025-08-25T14:11:38.512Z</published>
+    <updated>2025-08-25T14:11:38.512Z</updated>
+    
+    <content type="html"><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p><h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p><h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p><h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p><h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;Welcome to &lt;a href=&quot;https://hexo.io/&quot;&gt;Hexo&lt;/a&gt;! This is your very first post. Check &lt;a href=&quot;https://hexo.io/docs/&quot;&gt;documentation&lt;/a&gt; for</summary>
+      
+    
+    
+    
+    
+  </entry>
   
   <entry>
     <title>Hexo 博客文章发布教程</title>
@@ -85,7 +105,7 @@
     <link href="https://goofysatoshi.github.io/2025/05/04/Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/2025-05-04-Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/"/>
     <id>https://goofysatoshi.github.io/2025/05/04/Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/2025-05-04-Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/</id>
     <published>2025-05-03T19:08:35.000Z</published>
-    <updated>2025-05-03T19:20:22.234Z</updated>
+    <updated>2025-08-25T14:11:38.504Z</updated>
     
     <content type="html"><![CDATA[<h1 id="Python-基础教程"><a href="#Python-基础教程" class="headerlink" title="Python 基础教程"></a>Python 基础教程</h1><p>Python 是一种简单易学、功能强大的编程语言。它拥有高效的高级数据结构，并且能够用简单而有效的方式进行面向对象编程。Python 优雅的语法和动态类型，以及解释型语言的本质，使它成为多数平台上写脚本和快速开发应用的理想语言。</p><h2 id="Python-的特点"><a href="#Python-的特点" class="headerlink" title="Python 的特点"></a>Python 的特点</h2><ul><li>简单易学：Python 有相对较少的关键字，结构简单，和一个明确定义的语法，学习起来更加简单。</li><li>免费开源：Python 是 FLOSS（自由&#x2F;开放源码软件）之一。</li><li>可移植性：基于其开放源代码的特性，Python 已经被移植到许多平台上。</li><li>丰富的库：Python 标准库确实很庞大。它可以帮助你处理各种工作，包括正则表达式、文档生成、单元测试、线程、数据库、网页浏览器、CGI、FTP、电子邮件、XML、XML-RPC、HTML、WAV 文件、密码系统、GUI（图形用户界面）、Tk 和其他与系统有关的操作。</li></ul><h2 id="第一个-Python-程序"><a href="#第一个-Python-程序" class="headerlink" title="第一个 Python 程序"></a>第一个 Python 程序</h2><p>让我们从经典的 “Hello, World!” 开始：</p><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(<span class="string">&quot;Hello, World!&quot;</span>)</span><br></pre></td></tr></table></figure><p>运行这段代码，你会在控制台看到：</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Hello, World!</span><br></pre></td></tr></table></figure><h2 id="Python-基本语法"><a href="#Python-基本语法" class="headerlink" title="Python 基本语法"></a>Python 基本语法</h2><h3 id="变量和数据类型"><a href="#变量和数据类型" class="headerlink" title="变量和数据类型"></a>变量和数据类型</h3><p>Python 中的变量不需要声明。每个变量在使用前都必须赋值，变量赋值以后该变量才会被创建。</p><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 整数</span></span><br><span class="line">x = <span class="number">10</span></span><br><span class="line"><span class="comment"># 浮点数</span></span><br><span class="line">y = <span class="number">3.14</span></span><br><span class="line"><span class="comment"># 字符串</span></span><br><span class="line">name = <span class="string">&quot;Python&quot;</span></span><br><span class="line"><span class="comment"># 布尔值</span></span><br><span class="line">is_python = <span class="literal">True</span></span><br></pre></td></tr></table></figure><h3 id="条件语句"><a href="#条件语句" class="headerlink" title="条件语句"></a>条件语句</h3><p>Python 使用缩进来表示代码块，而不是使用大括号。</p><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> x &gt; <span class="number">0</span>:</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;x 是正数&quot;</span>)</span><br><span class="line"><span class="keyword">elif</span> x &lt; <span class="number">0</span>:</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;x 是负数&quot;</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;x 是零&quot;</span>)</span><br></pre></td></tr></table></figure><h3 id="循环语句"><a href="#循环语句" class="headerlink" title="循环语句"></a>循环语句</h3><p>Python 提供了 for 循环和 while 循环。</p><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># for 循环</span></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">5</span>):</span><br><span class="line">    <span class="built_in">print</span>(i)</span><br><span class="line"></span><br><span class="line"><span class="comment"># while 循环</span></span><br><span class="line">count = <span class="number">0</span></span><br><span class="line"><span class="keyword">while</span> count &lt; <span class="number">5</span>:</span><br><span class="line">    <span class="built_in">print</span>(count)</span><br><span class="line">    count += <span class="number">1</span></span><br></pre></td></tr></table></figure><h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Python 是一个功能强大且易于学习的编程语言，适合初学者和专业开发者。它的简洁语法和丰富的库使得开发过程更加高效和愉快。</p><p>希望这篇教程能帮助你开始 Python 编程之旅！如果你有任何问题，欢迎在评论区留言。</p>]]></content>
     
@@ -113,31 +133,11 @@
   </entry>
   
   <entry>
-    <title>Hello World</title>
-    <link href="https://goofysatoshi.github.io/2025/05/04/hello-world/"/>
-    <id>https://goofysatoshi.github.io/2025/05/04/hello-world/</id>
-    <published>2025-05-03T18:22:05.987Z</published>
-    <updated>2025-05-03T18:21:39.832Z</updated>
-    
-    <content type="html"><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p><h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p><h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p><h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p><h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>]]></content>
-    
-    
-      
-      
-    <summary type="html">&lt;p&gt;Welcome to &lt;a href=&quot;https://hexo.io/&quot;&gt;Hexo&lt;/a&gt;! This is your very first post. Check &lt;a href=&quot;https://hexo.io/docs/&quot;&gt;documentation&lt;/a&gt; for</summary>
-      
-    
-    
-    
-    
-  </entry>
-  
-  <entry>
     <title>周末摄影之旅：寻找城市之美</title>
     <link href="https://goofysatoshi.github.io/2024/05/04/life-weekend-photography-trip/"/>
     <id>https://goofysatoshi.github.io/2024/05/04/life-weekend-photography-trip/</id>
     <published>2024-05-04T08:30:00.000Z</published>
-    <updated>2025-05-03T18:40:12.694Z</updated>
+    <updated>2025-08-25T14:11:38.506Z</updated>
     
     <content type="html"><![CDATA[<h1 id="周末摄影之旅：寻找城市之美"><a href="#周末摄影之旅：寻找城市之美" class="headerlink" title="周末摄影之旅：寻找城市之美"></a>周末摄影之旅：寻找城市之美</h1><p>这个周末，我带着相机走遍城市的角落，捕捉那些容易被忽视的美好瞬间。</p><h2 id="清晨的街道"><a href="#清晨的街道" class="headerlink" title="清晨的街道"></a>清晨的街道</h2><p><em>早晨6点的街道，阳光斜射在建筑物上，形成独特的光影效果</em></p><h2 id="城市建筑"><a href="#城市建筑" class="headerlink" title="城市建筑"></a>城市建筑</h2><h3 id="现代建筑"><a href="#现代建筑" class="headerlink" title="现代建筑"></a>现代建筑</h3><p><em>玻璃幕墙映射着天空的颜色，仿佛一面巨大的镜子</em></p><h3 id="老街区"><a href="#老街区" class="headerlink" title="老街区"></a>老街区</h3><p><em>保留着历史痕迹的老街区，每一面墙都在诉说着故事</em></p><h2 id="街头生活"><a href="#街头生活" class="headerlink" title="街头生活"></a>街头生活</h2><p><em>街边小店的烟火气息，是城市最真实的一面</em></p><h2 id="视频分享"><a href="#视频分享" class="headerlink" title="视频分享"></a>视频分享</h2><div class="video-container">https://youtu.be/your-video-id  </div><p><em>城市延时摄影，记录24小时的城市变迁</em></p><h2 id="拍摄技巧分享"><a href="#拍摄技巧分享" class="headerlink" title="拍摄技巧分享"></a>拍摄技巧分享</h2><ol><li>黄金时段的利用</li><li>构图要点</li><li>相机参数设置<ul><li>光圈：f&#x2F;8</li><li>快门：1&#x2F;125s</li><li>ISO：100</li></ul></li></ol><h2 id="后期处理"><a href="#后期处理" class="headerlink" title="后期处理"></a>后期处理</h2><p>使用Lightroom进行后期调整：</p><ul><li>提亮阴影</li><li>调整色温</li><li>局部锐化</li></ul><span id="more"></span><h2 id="器材分享"><a href="#器材分享" class="headerlink" title="器材分享"></a>器材分享</h2><ul><li>相机：Sony A7III</li><li>镜头：<ul><li>24-70mm f&#x2F;2.8</li><li>50mm f&#x2F;1.8</li></ul></li><li>三脚架：Manfrotto</li></ul><h2 id="拍摄心得"><a href="#拍摄心得" class="headerlink" title="拍摄心得"></a>拍摄心得</h2><p>在城市摄影中，最重要的不是器材，而是发现美的眼睛…</p><hr><p>欢迎关注我的摄影账号：</p><ul><li>Instagram: @your_photo_account</li><li>500px: @your_500px_account</li></ul>]]></content>
     
@@ -190,7 +190,7 @@
     <link href="https://goofysatoshi.github.io/2024/05/04/reading-deep-work-notes/2025-05-04-reading-deep-work-notes/"/>
     <id>https://goofysatoshi.github.io/2024/05/04/reading-deep-work-notes/2025-05-04-reading-deep-work-notes/</id>
     <published>2024-05-04T08:00:00.000Z</published>
-    <updated>2025-05-03T18:25:18.350Z</updated>
+    <updated>2025-08-25T14:11:38.508Z</updated>
     
     <content type="html"><![CDATA[<h1 id="《深度工作》读书笔记"><a href="#《深度工作》读书笔记" class="headerlink" title="《深度工作》读书笔记"></a>《深度工作》读书笔记</h1><blockquote><p>作者：Cal Newport<br>出版年份：2016<br>推荐指数：⭐⭐⭐⭐⭐</p></blockquote><h2 id="核心观点"><a href="#核心观点" class="headerlink" title="核心观点"></a>核心观点</h2><p>深度工作是指在无干扰的状态下专注进行职业活动的能力，能够创造新价值，提升技能，而且难以复制。</p><h2 id="重要概念"><a href="#重要概念" class="headerlink" title="重要概念"></a>重要概念</h2><ol><li>深度工作 vs 浅度工作</li><li>注意力残留</li><li>心流状态</li></ol><h2 id="实践建议"><a href="#实践建议" class="headerlink" title="实践建议"></a>实践建议</h2><h3 id="1-培养深度工作习惯"><a href="#1-培养深度工作习惯" class="headerlink" title="1. 培养深度工作习惯"></a>1. 培养深度工作习惯</h3><ul><li>固定时间段</li><li>远离干扰源</li><li>创造仪式感</li></ul><h3 id="2-管理精力而非时间"><a href="#2-管理精力而非时间" class="headerlink" title="2. 管理精力而非时间"></a>2. 管理精力而非时间</h3><ul><li>识别最佳工作时段</li><li>合理安排休息</li><li>保持规律作息</li></ul><h2 id="读后感"><a href="#读后感" class="headerlink" title="读后感"></a>读后感</h2><p>这本书改变了我对工作方式的认知…</p><span id="more"></span><h2 id="行动清单"><a href="#行动清单" class="headerlink" title="行动清单"></a>行动清单</h2><ul><li><input disabled type="checkbox"> 制定每日深度工作时间表</li><li><input disabled type="checkbox"> 创建专注工作环境</li><li><input disabled type="checkbox"> 培养深度工作习惯</li></ul><h2 id="金句摘录"><a href="#金句摘录" class="headerlink" title="金句摘录"></a>金句摘录</h2><blockquote><p>“Professional activities performed in a state of distraction-free concentration that push your cognitive capabilities to their limit.”</p></blockquote><hr><p>推荐阅读：</p><ul><li>《原子习惯》</li><li>《刻意练习》</li></ul>]]></content>
     
@@ -234,7 +234,7 @@
     <link href="https://goofysatoshi.github.io/2024/05/04/tech-getting-started-with-python/2025-05-04-tech-getting-started-with-python/"/>
     <id>https://goofysatoshi.github.io/2024/05/04/tech-getting-started-with-python/2025-05-04-tech-getting-started-with-python/</id>
     <published>2024-05-04T07:30:00.000Z</published>
-    <updated>2025-05-03T18:24:58.631Z</updated>
+    <updated>2025-08-25T14:11:38.510Z</updated>
     
     <content type="html"><![CDATA[<h1 id="Python入门指南"><a href="#Python入门指南" class="headerlink" title="Python入门指南"></a>Python入门指南</h1><p>Python是一门优雅、简单且功能强大的编程语言。本文将带你了解Python的基础知识。</p><h2 id="为什么选择Python？"><a href="#为什么选择Python？" class="headerlink" title="为什么选择Python？"></a>为什么选择Python？</h2><ul><li>简单易学</li><li>可读性强</li><li>广泛应用</li><li>丰富的生态系统</li></ul><h2 id="开发环境搭建"><a href="#开发环境搭建" class="headerlink" title="开发环境搭建"></a>开发环境搭建</h2><ol><li>下载Python</li><li>安装IDE</li><li>配置环境变量</li></ol><h2 id="基础语法"><a href="#基础语法" class="headerlink" title="基础语法"></a>基础语法</h2><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 这是一个简单的Python程序</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;Hello, World!&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 变量定义</span></span><br><span class="line">name = <span class="string">&quot;Python&quot;</span></span><br><span class="line">version = <span class="number">3.9</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 条件语句</span></span><br><span class="line"><span class="keyword">if</span> version &gt;= <span class="number">3.6</span>:</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;You are using Python <span class="subst">&#123;version&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure><h2 id="下一步学习建议"><a href="#下一步学习建议" class="headerlink" title="下一步学习建议"></a>下一步学习建议</h2><ol><li>掌握基础语法</li><li>学习数据结构</li><li>了解面向对象编程</li><li>实践小项目</li></ol><span id="more"></span><h2 id="进阶内容"><a href="#进阶内容" class="headerlink" title="进阶内容"></a>进阶内容</h2><p>更多内容请关注后续更新…</p><hr><p>相关阅读：</p><ul><li><a href="https://docs.python.org/">Python官方文档</a></li><li><a href="https://docs.python-guide.org/">Python最佳实践指南</a></li></ul>]]></content>
     

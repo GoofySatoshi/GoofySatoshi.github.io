@@ -2,9 +2,9 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
-    <loc>https://goofysatoshi.github.io/2024/05/04/life-weekend-photography-trip/</loc>
+    <loc>https://goofysatoshi.github.io/tags/index.html</loc>
     
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13,14 +13,68 @@
   <url>
     <loc>https://goofysatoshi.github.io/categories/index.html</loc>
     
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://goofysatoshi.github.io/tags/index.html</loc>
+    <loc>https://goofysatoshi.github.io/about/index.html</loc>
+    
+    <lastmod>2025-08-25</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/2025/08/25/hello-world/</loc>
+    
+    <lastmod>2025-08-25</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/2024/05/04/tech-getting-started-with-python/2025-05-04-tech-getting-started-with-python/</loc>
+    
+    <lastmod>2025-08-25</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/2024/05/04/reading-deep-work-notes/2025-05-04-reading-deep-work-notes/</loc>
+    
+    <lastmod>2025-08-25</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/2024/05/04/life-weekend-photography-trip/</loc>
+    
+    <lastmod>2025-08-25</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/2025/05/04/Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/2025-05-04-Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/</loc>
+    
+    <lastmod>2025-08-25</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/2024/05/04/life-weekend-photography-trip/</loc>
     
     <lastmod>2025-05-03</lastmod>
     
@@ -46,64 +100,10 @@
     <priority>0.6</priority>
   </url>
   
-  <url>
-    <loc>https://goofysatoshi.github.io/2025/05/04/Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/2025-05-04-Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/</loc>
-    
-    <lastmod>2025-05-03</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://goofysatoshi.github.io/about/index.html</loc>
-    
-    <lastmod>2025-05-03</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://goofysatoshi.github.io/2024/05/04/life-weekend-photography-trip/</loc>
-    
-    <lastmod>2025-05-03</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://goofysatoshi.github.io/2024/05/04/reading-deep-work-notes/2025-05-04-reading-deep-work-notes/</loc>
-    
-    <lastmod>2025-05-03</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://goofysatoshi.github.io/2024/05/04/tech-getting-started-with-python/2025-05-04-tech-getting-started-with-python/</loc>
-    
-    <lastmod>2025-05-03</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://goofysatoshi.github.io/2025/05/04/hello-world/</loc>
-    
-    <lastmod>2025-05-03</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
 
   <url>
     <loc>https://goofysatoshi.github.io/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -111,112 +111,112 @@
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/Hexo/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/%E5%8D%9A%E5%AE%A2/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/%E6%95%99%E7%A8%8B/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/%E5%B7%A5%E5%85%B7/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/travel/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/%E6%91%84%E5%BD%B1/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/%E5%9F%8E%E5%B8%82%E9%A3%8E%E5%85%89/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/travel/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/python/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/%E7%BC%96%E7%A8%8B/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/%E7%BC%96%E7%A8%8B%E5%85%A5%E9%97%A8/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/Markdown/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/%E5%86%99%E4%BD%9C/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/%E6%95%88%E7%8E%87/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/%E8%87%AA%E6%88%91%E6%8F%90%E5%8D%87/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/tags/%E6%97%B6%E9%97%B4%E7%AE%A1%E7%90%86/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
@@ -225,70 +225,70 @@
   
   <url>
     <loc>https://goofysatoshi.github.io/categories/%E5%8D%9A%E5%AE%A2/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/categories/life/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/categories/%E5%8D%9A%E5%AE%A2/%E6%95%99%E7%A8%8B/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/categories/%E7%BC%96%E7%A8%8B/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/categories/tech/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/categories/life/photography/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/categories/%E7%BC%96%E7%A8%8B/%E6%95%99%E7%A8%8B/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/categories/%E5%B7%A5%E5%85%B7/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/categories/reading/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://goofysatoshi.github.io/categories/%E5%B7%A5%E5%85%B7/%E6%95%99%E7%A8%8B/</loc>
-    <lastmod>2025-05-03</lastmod>
+    <lastmod>2025-08-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
