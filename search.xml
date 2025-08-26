@@ -277,6 +277,53 @@
 ]]></content>
   </entry>
   <entry>
+    <title>Nacos 核心源码学习笔记</title>
+    <url>/2025/08/26/Nacos-%E6%A0%B8%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
+    <content><![CDATA[<h1 id="Nacos-核心源码学习笔记"><a href="#Nacos-核心源码学习笔记" class="headerlink" title="Nacos 核心源码学习笔记"></a>Nacos 核心源码学习笔记</h1><p>Nacos 作为微服务架构中核心的服务注册发现与配置中心，其底层设计与实现逻辑对理解微服务治理至关重要。本文从源码入口、服务注册、心跳检测、集群一致性四个核心维度，梳理 Nacos 关键机制的实现原理。</p>
+<h2 id="一、源码入口与初始化机制"><a href="#一、源码入口与初始化机制" class="headerlink" title="一、源码入口与初始化机制"></a>一、源码入口与初始化机制</h2><h3 id="1-源码入口定位"><a href="#1-源码入口定位" class="headerlink" title="1. 源码入口定位"></a>1. 源码入口定位</h3><p>分析 Nacos 源码时，可通过启动脚本定位启动类，或直接聚焦服务发现核心 Jar 包（如 <code>nacos-discovery</code>）。其初始化逻辑依赖 <strong>Spring Boot SPI 机制</strong>，核心流程如下：</p>
+<ul>
+<li>在 <code>META-INF/spring.factories</code> 中配置自动配置类（如服务发现场景的 <code>NacosDiscoveryAutoConfiguration</code>）；</li>
+<li>启用 Jar 包时，Spring 容器通过 <code>@EnableAutoConfiguration</code> 触发自动配置类加载；</li>
+<li>自动配置类初始化 <code>NacosServiceRegistry</code>（服务注册）、<code>NacosDiscoveryClient</code>（服务发现）等核心组件，并向 Nacos 服务端发起请求，建立基础通信链路。</li>
+</ul>
+<h2 id="二、服务注册流程与高并发设计"><a href="#二、服务注册流程与高并发设计" class="headerlink" title="二、服务注册流程与高并发设计"></a>二、服务注册流程与高并发设计</h2><h3 id="1-核心注册流程"><a href="#1-核心注册流程" class="headerlink" title="1. 核心注册流程"></a>1. 核心注册流程</h3><ol>
+<li>客户端封装服务信息（IP、端口、服务名等）为 <code>Instance</code> 对象，发送注册请求至服务端；</li>
+<li>服务端接收请求后，先将 <code>Instance</code> 存入 <code>BlockingQueue</code> 阻塞队列，作为请求缓冲层；</li>
+<li>后台专用线程从队列中持续取出 <code>Instance</code>，写入注册表（嵌套 <code>Map</code> 结构：<code>serviceName -&gt; cluster -&gt; Instance</code>）。</li>
+</ol>
+<h3 id="2-高并发支撑策略"><a href="#2-高并发支撑策略" class="headerlink" title="2. 高并发支撑策略"></a>2. 高并发支撑策略</h3><ul>
+<li><strong>阻塞队列缓冲</strong>：通过“生产者-消费者”模式解耦请求接收与数据写入，避免直接操作注册表导致的锁竞争；</li>
+<li><strong>读写分离架构</strong>：<ul>
+<li>写操作（注册&#x2F;更新）：拷贝目标服务的 <code>Instance</code> 集合（<code>Set</code>），在副本中修改，不影响原集合；</li>
+<li>读操作（服务发现）：直接从原 <code>Set</code> 读取数据，保证查询无阻塞；</li>
+</ul>
+</li>
+<li><strong>原子替换</strong>：修改完成后，用新 <code>Set</code> 原子替换原 <code>Set</code>，兼顾数据一致性与并发效率。</li>
+</ul>
+<h2 id="三、心跳检测机制"><a href="#三、心跳检测机制" class="headerlink" title="三、心跳检测机制"></a>三、心跳检测机制</h2><h3 id="1-客户端心跳发送"><a href="#1-客户端心跳发送" class="headerlink" title="1. 客户端心跳发送"></a>1. 客户端心跳发送</h3><p>服务实例注册成功后，客户端默认每 <strong>5 秒</strong> 向 Nacos 服务端发送心跳请求，携带实例 ID 等唯一标识信息。</p>
+<h3 id="2-服务端健康检查"><a href="#2-服务端健康检查" class="headerlink" title="2. 服务端健康检查"></a>2. 服务端健康检查</h3><p>服务端维护每个实例的“最后心跳时间”，通过时间差判断实例健康状态：</p>
+<ul>
+<li>若 <code>当前时间 - 最后心跳时间 &gt; 15 秒</code>：标记实例为不健康（<code>healthy = false</code>），服务发现时不返回该实例；</li>
+<li>若 <code>当前时间 - 最后心跳时间 &gt; 30 秒</code>：直接从注册表中移除实例，视为服务下线。</li>
+</ul>
+<h2 id="四、集群-CP-模式与-Raft-协议"><a href="#四、集群-CP-模式与-Raft-协议" class="headerlink" title="四、集群 CP 模式与 Raft 协议"></a>四、集群 CP 模式与 Raft 协议</h2><h3 id="1-CP-模式适用场景"><a href="#1-CP-模式适用场景" class="headerlink" title="1. CP 模式适用场景"></a>1. CP 模式适用场景</h3><p>通过配置 <code>nacos.core.protocol=cp</code> 开启 CP 模式，适用于数据一致性要求极高的场景（如金融领域服务注册）。</p>
+<h3 id="2-Raft-协议核心作用"><a href="#2-Raft-协议核心作用" class="headerlink" title="2. Raft 协议核心作用"></a>2. Raft 协议核心作用</h3><p>服务注册、实例状态变更等操作会触发 Raft 协议，保障集群数据一致性：</p>
+<ul>
+<li><strong>Leader 选举</strong>：集群节点通过 Raft 选举产生 Leader，由 Leader 统一处理客户端请求并协调数据同步；</li>
+<li><strong>日志复制</strong>：Leader 将数据变更记录为日志，同步至所有 Follower 节点，待多数节点确认后才提交变更（如写入注册表）；</li>
+<li>基于 Raft 协议，Nacos 集群在节点故障、网络分区时仍能保证数据一致，实现高可靠服务治理。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>Nacos</tag>
+        <tag>微服务</tag>
+        <tag>源码分析</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Hello World</title>
     <url>/2025/08/26/hello-world/</url>
     <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
