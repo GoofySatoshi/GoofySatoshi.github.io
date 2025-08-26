@@ -7,8 +7,6 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write  # 允许推送代码到仓库分支
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
@@ -35,6 +33,6 @@ jobs:
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
-        deploy_key: ${{ secrets.GITHUB_TOKEN }}
+        deploy_key: ${{ secrets.HEXO_DEPLOY_PRI }}
         publish_dir: ./public
         publish_branch: main  # 与 _config.yml 中的 deploy.branch 一致
