@@ -1,6 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>周末摄影之旅</title>
+    <url>/2024/05/04/life-weekend-photography-trip/</url>
+    <content><![CDATA[]]></content>
+      <categories>
+        <category>生活</category>
+        <category>摄影</category>
+      </categories>
+      <tags>
+        <tag>摄影</tag>
+        <tag>城市风光</tag>
+        <tag>travel</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Hexo 博客文章发布教程</title>
     <url>/2025/05/04/Hexo-%E5%8D%9A%E5%AE%A2%E6%96%87%E7%AB%A0%E5%8F%91%E5%B8%83%E6%95%99%E7%A8%8B/</url>
     <content><![CDATA[<h1 id="Hexo-博客文章发布教程"><a href="#Hexo-博客文章发布教程" class="headerlink" title="Hexo 博客文章发布教程"></a>Hexo 博客文章发布教程</h1><p>本教程将详细介绍如何在 Hexo 博客中创建和发布文章，包括文章的基本结构、常用配置和发布流程。</p>
@@ -92,6 +106,64 @@
       </tags>
   </entry>
   <entry>
+    <title>Markdown 使用教程</title>
+    <url>/2025/05/04/Markdown-%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B/</url>
+    <content><![CDATA[<h1 id="Markdown-使用教程"><a href="#Markdown-使用教程" class="headerlink" title="Markdown 使用教程"></a>Markdown 使用教程</h1><p>Markdown 是一种轻量级标记语言，创始人为约翰·格鲁伯（John Gruber）。它允许人们使用易读易写的纯文本格式编写文档，然后转换成有效的 HTML 文档。由于其易读性、易写性及格式转换的便利性，Markdown 被广泛用于博客、文档编写等领域。</p>
+<h2 id="基本语法"><a href="#基本语法" class="headerlink" title="基本语法"></a>基本语法</h2><h3 id="1-标题"><a href="#1-标题" class="headerlink" title="1. 标题"></a>1. 标题</h3><p>使用 <code>#</code> 号可表示 1-6 级标题，一级标题对应一个 <code>#</code> 号，二级标题对应两个 <code>#</code> 号，以此类推。</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="section"># 一级标题</span></span><br><span class="line"><span class="section">## 二级标题</span></span><br><span class="line"><span class="section">### 三级标题</span></span><br><span class="line"><span class="section">#### 四级标题</span></span><br><span class="line"><span class="section">##### 五级标题</span></span><br><span class="line"><span class="section">###### 六级标题</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-段落和换行"><a href="#2-段落和换行" class="headerlink" title="2. 段落和换行"></a>2. 段落和换行</h3><p>段落的前后要有空行，所谓的空行是指没有内容的行。若想在段内强制换行的方式是使用两个以上空格加上回车。</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">这是第一段。</span><br><span class="line"></span><br><span class="line">这是第二段，  </span><br><span class="line">这里强制换行。</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-强调"><a href="#3-强调" class="headerlink" title="3. 强调"></a>3. 强调</h3><p>使用 <code>*</code> 或 <code>_</code> 包裹文本可以表示强调：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="emphasis">*斜体文本*</span></span><br><span class="line"><span class="emphasis">_斜体文本_</span></span><br><span class="line"></span><br><span class="line"><span class="strong">**粗体文本**</span></span><br><span class="line"><span class="strong">__粗体文本__</span></span><br><span class="line"></span><br><span class="line"><span class="strong">**<span class="emphasis">*粗斜体文本*</span>**</span></span><br><span class="line"><span class="strong">__<span class="emphasis">_粗斜体文本_</span>__</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-列表"><a href="#4-列表" class="headerlink" title="4. 列表"></a>4. 列表</h3><h4 id="无序列表"><a href="#无序列表" class="headerlink" title="无序列表"></a>无序列表</h4><p>使用 <code>-</code>、<code>+</code> 或 <code>*</code> 标记无序列表：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="bullet">-</span> 第一项</span><br><span class="line"><span class="bullet">-</span> 第二项</span><br><span class="line"><span class="bullet">-</span> 第三项</span><br><span class="line"></span><br><span class="line"><span class="bullet">*</span> 第一项</span><br><span class="line"><span class="bullet">*</span> 第二项</span><br><span class="line"><span class="bullet">*</span> 第三项</span><br><span class="line"></span><br><span class="line"><span class="bullet">+</span> 第一项</span><br><span class="line"><span class="bullet">+</span> 第二项</span><br><span class="line"><span class="bullet">+</span> 第三项</span><br></pre></td></tr></table></figure>
+
+<h4 id="有序列表"><a href="#有序列表" class="headerlink" title="有序列表"></a>有序列表</h4><p>使用数字加点标记有序列表：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="bullet">1.</span> 第一项</span><br><span class="line"><span class="bullet">2.</span> 第二项</span><br><span class="line"><span class="bullet">3.</span> 第三项</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-引用"><a href="#5-引用" class="headerlink" title="5. 引用"></a>5. 引用</h3><p>使用 <code>&gt;</code> 标记引用：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="quote">&gt; 这是引用的内容</span></span><br><span class="line"><span class="quote">&gt; </span></span><br><span class="line"><span class="quote">&gt; 这是第二行引用</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="6-代码"><a href="#6-代码" class="headerlink" title="6. 代码"></a>6. 代码</h3><h4 id="行内代码"><a href="#行内代码" class="headerlink" title="行内代码"></a>行内代码</h4><p>使用反引号 <code>`</code> 包裹代码：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">使用 <span class="code">`print()`</span> 函数输出内容</span><br></pre></td></tr></table></figure>
+
+<h4 id="代码块"><a href="#代码块" class="headerlink" title="代码块"></a>代码块</h4><p>使用三个反引号 &#96;&#96;&#96; 包裹代码块，并指定语言：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="code">```python</span></span><br><span class="line"><span class="code">def hello():</span></span><br><span class="line"><span class="code">    print(&quot;Hello, World!&quot;)</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">### 7. 链接和图片</span><br><span class="line"></span><br><span class="line">#### 链接</span><br><span class="line"></span><br><span class="line">```markdown</span><br><span class="line">[链接文字](链接地址)</span><br><span class="line">[百度](https://www.baidu.com)</span><br></pre></td></tr></table></figure>
+
+<h4 id="图片"><a href="#图片" class="headerlink" title="图片"></a>图片</h4><figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">![<span class="string">图片描述</span>](<span class="link">图片地址</span>)</span><br><span class="line">![<span class="string">示例图片</span>](<span class="link">https://example.com/image.jpg</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-表格"><a href="#8-表格" class="headerlink" title="8. 表格"></a>8. 表格</h3><p>使用 <code>|</code> 来分隔不同的单元格，使用 <code>-</code> 来分隔表头和其他行：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">| 表头1 | 表头2 |</span><br><span class="line">|-------|-------|</span><br><span class="line">| 单元格1 | 单元格2 |</span><br><span class="line">| 单元格3 | 单元格4 |</span><br></pre></td></tr></table></figure>
+
+<h3 id="9-分割线"><a href="#9-分割线" class="headerlink" title="9. 分割线"></a>9. 分割线</h3><p>使用三个或以上的 <code>-</code>、<code>*</code> 或 <code>_</code> 来创建分割线：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">---</span><br><span class="line"><span class="strong">***</span></span><br><span class="line"><span class="strong">__<span class="emphasis">_</span></span></span><br></pre></td></tr></table></figure>
+
+<h2 id="高级用法"><a href="#高级用法" class="headerlink" title="高级用法"></a>高级用法</h2><h3 id="1-任务列表"><a href="#1-任务列表" class="headerlink" title="1. 任务列表"></a>1. 任务列表</h3><figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="bullet">-</span> [x] 已完成的任务</span><br><span class="line"><span class="bullet">-</span> [ ] 未完成的任务</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-脚注"><a href="#2-脚注" class="headerlink" title="2. 脚注"></a>2. 脚注</h3><figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">这是一个脚注[^1]</span><br><span class="line"></span><br><span class="line">[<span class="symbol">^1</span>]: <span class="link">这是脚注的内容</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-目录"><a href="#3-目录" class="headerlink" title="3. 目录"></a>3. 目录</h3><p>使用 <code>[TOC]</code> 可以自动生成目录（部分编辑器支持）：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">[TOC]</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Markdown 是一种简单而强大的标记语言，它让写作变得更加简单和高效。通过掌握这些基本语法，你就可以开始使用 Markdown 来编写文档、博客等内容了。</p>
+<p>如果你有任何问题，欢迎在评论区留言讨论！ </p>
+]]></content>
+      <categories>
+        <category>工具</category>
+        <category>教程</category>
+      </categories>
+      <tags>
+        <tag>教程</tag>
+        <tag>工具</tag>
+        <tag>Markdown</tag>
+        <tag>写作</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>周末摄影之旅：寻找城市之美</title>
     <url>/2024/05/04/life-weekend-photography-trip/</url>
     <content><![CDATA[<h1 id="周末摄影之旅：寻找城市之美"><a href="#周末摄影之旅：寻找城市之美" class="headerlink" title="周末摄影之旅：寻找城市之美"></a>周末摄影之旅：寻找城市之美</h1><p>这个周末，我带着相机走遍城市的角落，捕捉那些容易被忽视的美好瞬间。</p>
@@ -145,23 +217,9 @@
         <category>摄影</category>
       </categories>
       <tags>
+        <tag>摄影</tag>
+        <tag>城市风光</tag>
         <tag>旅行</tag>
-        <tag>摄影</tag>
-        <tag>城市风光</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>周末摄影之旅</title>
-    <url>/2024/05/04/life-weekend-photography-trip/</url>
-    <content><![CDATA[]]></content>
-      <categories>
-        <category>生活</category>
-        <category>摄影</category>
-      </categories>
-      <tags>
-        <tag>摄影</tag>
-        <tag>城市风光</tag>
-        <tag>travel</tag>
       </tags>
   </entry>
   <entry>
@@ -263,64 +321,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Markdown 使用教程</title>
-    <url>/2025/05/04/Markdown-%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B/</url>
-    <content><![CDATA[<h1 id="Markdown-使用教程"><a href="#Markdown-使用教程" class="headerlink" title="Markdown 使用教程"></a>Markdown 使用教程</h1><p>Markdown 是一种轻量级标记语言，创始人为约翰·格鲁伯（John Gruber）。它允许人们使用易读易写的纯文本格式编写文档，然后转换成有效的 HTML 文档。由于其易读性、易写性及格式转换的便利性，Markdown 被广泛用于博客、文档编写等领域。</p>
-<h2 id="基本语法"><a href="#基本语法" class="headerlink" title="基本语法"></a>基本语法</h2><h3 id="1-标题"><a href="#1-标题" class="headerlink" title="1. 标题"></a>1. 标题</h3><p>使用 <code>#</code> 号可表示 1-6 级标题，一级标题对应一个 <code>#</code> 号，二级标题对应两个 <code>#</code> 号，以此类推。</p>
-<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="section"># 一级标题</span></span><br><span class="line"><span class="section">## 二级标题</span></span><br><span class="line"><span class="section">### 三级标题</span></span><br><span class="line"><span class="section">#### 四级标题</span></span><br><span class="line"><span class="section">##### 五级标题</span></span><br><span class="line"><span class="section">###### 六级标题</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="2-段落和换行"><a href="#2-段落和换行" class="headerlink" title="2. 段落和换行"></a>2. 段落和换行</h3><p>段落的前后要有空行，所谓的空行是指没有内容的行。若想在段内强制换行的方式是使用两个以上空格加上回车。</p>
-<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">这是第一段。</span><br><span class="line"></span><br><span class="line">这是第二段，  </span><br><span class="line">这里强制换行。</span><br></pre></td></tr></table></figure>
-
-<h3 id="3-强调"><a href="#3-强调" class="headerlink" title="3. 强调"></a>3. 强调</h3><p>使用 <code>*</code> 或 <code>_</code> 包裹文本可以表示强调：</p>
-<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="emphasis">*斜体文本*</span></span><br><span class="line"><span class="emphasis">_斜体文本_</span></span><br><span class="line"></span><br><span class="line"><span class="strong">**粗体文本**</span></span><br><span class="line"><span class="strong">__粗体文本__</span></span><br><span class="line"></span><br><span class="line"><span class="strong">**<span class="emphasis">*粗斜体文本*</span>**</span></span><br><span class="line"><span class="strong">__<span class="emphasis">_粗斜体文本_</span>__</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-列表"><a href="#4-列表" class="headerlink" title="4. 列表"></a>4. 列表</h3><h4 id="无序列表"><a href="#无序列表" class="headerlink" title="无序列表"></a>无序列表</h4><p>使用 <code>-</code>、<code>+</code> 或 <code>*</code> 标记无序列表：</p>
-<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="bullet">-</span> 第一项</span><br><span class="line"><span class="bullet">-</span> 第二项</span><br><span class="line"><span class="bullet">-</span> 第三项</span><br><span class="line"></span><br><span class="line"><span class="bullet">*</span> 第一项</span><br><span class="line"><span class="bullet">*</span> 第二项</span><br><span class="line"><span class="bullet">*</span> 第三项</span><br><span class="line"></span><br><span class="line"><span class="bullet">+</span> 第一项</span><br><span class="line"><span class="bullet">+</span> 第二项</span><br><span class="line"><span class="bullet">+</span> 第三项</span><br></pre></td></tr></table></figure>
-
-<h4 id="有序列表"><a href="#有序列表" class="headerlink" title="有序列表"></a>有序列表</h4><p>使用数字加点标记有序列表：</p>
-<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="bullet">1.</span> 第一项</span><br><span class="line"><span class="bullet">2.</span> 第二项</span><br><span class="line"><span class="bullet">3.</span> 第三项</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-引用"><a href="#5-引用" class="headerlink" title="5. 引用"></a>5. 引用</h3><p>使用 <code>&gt;</code> 标记引用：</p>
-<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="quote">&gt; 这是引用的内容</span></span><br><span class="line"><span class="quote">&gt; </span></span><br><span class="line"><span class="quote">&gt; 这是第二行引用</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="6-代码"><a href="#6-代码" class="headerlink" title="6. 代码"></a>6. 代码</h3><h4 id="行内代码"><a href="#行内代码" class="headerlink" title="行内代码"></a>行内代码</h4><p>使用反引号 <code>`</code> 包裹代码：</p>
-<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">使用 <span class="code">`print()`</span> 函数输出内容</span><br></pre></td></tr></table></figure>
-
-<h4 id="代码块"><a href="#代码块" class="headerlink" title="代码块"></a>代码块</h4><p>使用三个反引号 &#96;&#96;&#96; 包裹代码块，并指定语言：</p>
-<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="code">```python</span></span><br><span class="line"><span class="code">def hello():</span></span><br><span class="line"><span class="code">    print(&quot;Hello, World!&quot;)</span></span><br></pre></td></tr></table></figure>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">### 7. 链接和图片</span><br><span class="line"></span><br><span class="line">#### 链接</span><br><span class="line"></span><br><span class="line">```markdown</span><br><span class="line">[链接文字](链接地址)</span><br><span class="line">[百度](https://www.baidu.com)</span><br></pre></td></tr></table></figure>
-
-<h4 id="图片"><a href="#图片" class="headerlink" title="图片"></a>图片</h4><figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">![<span class="string">图片描述</span>](<span class="link">图片地址</span>)</span><br><span class="line">![<span class="string">示例图片</span>](<span class="link">https://example.com/image.jpg</span>)</span><br></pre></td></tr></table></figure>
-
-<h3 id="8-表格"><a href="#8-表格" class="headerlink" title="8. 表格"></a>8. 表格</h3><p>使用 <code>|</code> 来分隔不同的单元格，使用 <code>-</code> 来分隔表头和其他行：</p>
-<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">| 表头1 | 表头2 |</span><br><span class="line">|-------|-------|</span><br><span class="line">| 单元格1 | 单元格2 |</span><br><span class="line">| 单元格3 | 单元格4 |</span><br></pre></td></tr></table></figure>
-
-<h3 id="9-分割线"><a href="#9-分割线" class="headerlink" title="9. 分割线"></a>9. 分割线</h3><p>使用三个或以上的 <code>-</code>、<code>*</code> 或 <code>_</code> 来创建分割线：</p>
-<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">---</span><br><span class="line"><span class="strong">***</span></span><br><span class="line"><span class="strong">__<span class="emphasis">_</span></span></span><br></pre></td></tr></table></figure>
-
-<h2 id="高级用法"><a href="#高级用法" class="headerlink" title="高级用法"></a>高级用法</h2><h3 id="1-任务列表"><a href="#1-任务列表" class="headerlink" title="1. 任务列表"></a>1. 任务列表</h3><figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="bullet">-</span> [x] 已完成的任务</span><br><span class="line"><span class="bullet">-</span> [ ] 未完成的任务</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-脚注"><a href="#2-脚注" class="headerlink" title="2. 脚注"></a>2. 脚注</h3><figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">这是一个脚注[^1]</span><br><span class="line"></span><br><span class="line">[<span class="symbol">^1</span>]: <span class="link">这是脚注的内容</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="3-目录"><a href="#3-目录" class="headerlink" title="3. 目录"></a>3. 目录</h3><p>使用 <code>[TOC]</code> 可以自动生成目录（部分编辑器支持）：</p>
-<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">[TOC]</span><br></pre></td></tr></table></figure>
-
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Markdown 是一种简单而强大的标记语言，它让写作变得更加简单和高效。通过掌握这些基本语法，你就可以开始使用 Markdown 来编写文档、博客等内容了。</p>
-<p>如果你有任何问题，欢迎在评论区留言讨论！ </p>
-]]></content>
-      <categories>
-        <category>工具</category>
-        <category>教程</category>
-      </categories>
-      <tags>
-        <tag>教程</tag>
-        <tag>工具</tag>
-        <tag>Markdown</tag>
-        <tag>写作</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>《深度工作》读书笔记</title>
     <url>/2024/05/04/reading-deep-work-notes/2025-05-04-reading-deep-work-notes/</url>
     <content><![CDATA[<h1 id="《深度工作》读书笔记"><a href="#《深度工作》读书笔记" class="headerlink" title="《深度工作》读书笔记"></a>《深度工作》读书笔记</h1><blockquote>
@@ -346,9 +346,9 @@
 <span id="more"></span>
 
 <h2 id="行动清单"><a href="#行动清单" class="headerlink" title="行动清单"></a>行动清单</h2><ul>
-<li><input disabled type="checkbox"> 制定每日深度工作时间表</li>
-<li><input disabled type="checkbox"> 创建专注工作环境</li>
-<li><input disabled type="checkbox"> 培养深度工作习惯</li>
+<li><input disabled="" type="checkbox"> 制定每日深度工作时间表</li>
+<li><input disabled="" type="checkbox"> 创建专注工作环境</li>
+<li><input disabled="" type="checkbox"> 培养深度工作习惯</li>
 </ul>
 <h2 id="金句摘录"><a href="#金句摘录" class="headerlink" title="金句摘录"></a>金句摘录</h2><blockquote>
 <p>“Professional activities performed in a state of distraction-free concentration that push your cognitive capabilities to their limit.”</p>

@@ -1,0 +1,195 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>标签: 摄影 | GoofySatoshi's Blog</title><meta name="author" content="GoofySatoshi"><meta name="copyright" content="GoofySatoshi"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="分享技术、读书笔记和生活点滴">
+<meta property="og:type" content="website">
+<meta property="og:title" content="GoofySatoshi&#39;s Blog">
+<meta property="og:url" content="https://goofysatoshi.github.io/tags/%E6%91%84%E5%BD%B1/index.html">
+<meta property="og:site_name" content="GoofySatoshi&#39;s Blog">
+<meta property="og:description" content="分享技术、读书笔记和生活点滴">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://goofysatoshi.github.io/img/avatar.png">
+<meta property="article:author" content="GoofySatoshi">
+<meta property="article:tag" content="技术博客,读书笔记,生活分享,摄影,视频">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://goofysatoshi.github.io/img/avatar.png"><script type="application/ld+json"></script><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="https://goofysatoshi.github.io/tags/%E6%91%84%E5%BD%B1/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '标签: 摄影',
+  isHighlightShrink: false,
+  isToc: false,
+  pageType: 'tag'
+}</script><meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="GoofySatoshi's Blog" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">8</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">16</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="page" id="body-wrap"><header class="not-home-page fixed" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">GoofySatoshi's Blog</span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="page-site-info"><h1 id="site-title">摄影</h1></div></header><main class="layout" id="content-inner"><div id="tag"><div class="article-sort-title">标签 - 摄影</div><div class="article-sort"><div class="article-sort-item year">2024</div><div class="article-sort-item"><a class="article-sort-item-img" href="/2024/05/04/life-weekend-photography-trip/" title="周末摄影之旅：寻找城市之美"><img src="/images/city-view-cover.jpg" alt="周末摄影之旅：寻找城市之美" onerror="this.onerror=null;this.src='/img/404.jpg'"></a><div class="article-sort-item-info"><div class="article-sort-item-time"><i class="far fa-calendar-alt"></i><time class="post-meta-date-created" datetime="2024-05-04T08:30:00.000Z" title="发表于 2024-05-04 16:30:00">2024-05-04</time></div><a class="article-sort-item-title" href="/2024/05/04/life-weekend-photography-trip/" title="周末摄影之旅：寻找城市之美">周末摄影之旅：寻找城市之美</a></div></div><div class="article-sort-item"><a class="article-sort-item-img" href="/2024/05/04/life-weekend-photography-trip/" title="周末摄影之旅"><img src="/img/default_cover_1.jpg" alt="周末摄影之旅" onerror="this.onerror=null;this.src='/img/404.jpg'"></a><div class="article-sort-item-info"><div class="article-sort-item-time"><i class="far fa-calendar-alt"></i><time class="post-meta-date-created" datetime="2024-05-03T18:47:01.000Z" title="发表于 2024-05-04 02:47:01">2024-05-04</time></div><a class="article-sort-item-title" href="/2024/05/04/life-weekend-photography-trip/" title="周末摄影之旅">周末摄影之旅</a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">GoofySatoshi</div><div class="author-info-description">分享技术、读书笔记和生活点滴</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">8</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">16</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/08/25/hello-world/" title="Hello World">Hello World</a><time datetime="2025-08-25T14:11:38.512Z" title="发表于 2025-08-25 22:11:38">2025-08-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/05/04/Hexo-%E5%8D%9A%E5%AE%A2%E6%96%87%E7%AB%A0%E5%8F%91%E5%B8%83%E6%95%99%E7%A8%8B/" title="Hexo 博客文章发布教程"><img src="/img/default_cover_3.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Hexo 博客文章发布教程"/></a><div class="content"><a class="title" href="/2025/05/04/Hexo-%E5%8D%9A%E5%AE%A2%E6%96%87%E7%AB%A0%E5%8F%91%E5%B8%83%E6%95%99%E7%A8%8B/" title="Hexo 博客文章发布教程">Hexo 博客文章发布教程</a><time datetime="2025-05-03T19:30:00.000Z" title="发表于 2025-05-04 03:30:00">2025-05-04</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/05/04/Markdown-%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B/" title="Markdown 使用教程"><img src="/img/default_cover_2.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Markdown 使用教程"/></a><div class="content"><a class="title" href="/2025/05/04/Markdown-%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B/" title="Markdown 使用教程">Markdown 使用教程</a><time datetime="2025-05-03T19:20:00.000Z" title="发表于 2025-05-04 03:20:00">2025-05-04</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/05/04/Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/2025-05-04-Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/" title="Python 基础教程"><img src="/img/default_cover_1.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Python 基础教程"/></a><div class="content"><a class="title" href="/2025/05/04/Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/2025-05-04-Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/" title="Python 基础教程">Python 基础教程</a><time datetime="2025-05-03T19:08:35.000Z" title="发表于 2025-05-04 03:08:35">2025-05-04</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/05/04/life-weekend-photography-trip/" title="周末摄影之旅：寻找城市之美"><img src="/images/city-view-cover.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="周末摄影之旅：寻找城市之美"/></a><div class="content"><a class="title" href="/2024/05/04/life-weekend-photography-trip/" title="周末摄影之旅：寻找城市之美">周末摄影之旅：寻找城市之美</a><time datetime="2024-05-04T08:30:00.000Z" title="发表于 2024-05-04 16:30:00">2024-05-04</time></div></div></div></div><div class="card-widget card-categories"><div class="item-headline">
+            <i class="fas fa-folder-open"></i>
+            <span>分类</span>
+            <a class="card-more-btn" href="/categories/" title="查看更多">
+      <i class="fas fa-angle-right"></i></a>
+          </div>
+          <ul class="card-category-list" id="aside-cat-list">
+            <li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%8D%9A%E5%AE%A2/"><span class="card-category-list-name">博客</span><span class="card-category-list-count">1</span></a><ul class="card-category-list child"><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%8D%9A%E5%AE%A2/%E6%95%99%E7%A8%8B/"><span class="card-category-list-name">教程</span><span class="card-category-list-count">1</span></a></li></ul></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%B7%A5%E5%85%B7/"><span class="card-category-list-name">工具</span><span class="card-category-list-count">1</span></a><ul class="card-category-list child"><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%B7%A5%E5%85%B7/%E6%95%99%E7%A8%8B/"><span class="card-category-list-name">教程</span><span class="card-category-list-count">1</span></a></li></ul></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/tech/"><span class="card-category-list-name">技术</span><span class="card-category-list-count">1</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/life/"><span class="card-category-list-name">生活</span><span class="card-category-list-count">2</span></a><ul class="card-category-list child"><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/life/photography/"><span class="card-category-list-name">摄影</span><span class="card-category-list-count">2</span></a></li></ul></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E7%BC%96%E7%A8%8B/"><span class="card-category-list-name">编程</span><span class="card-category-list-count">1</span></a></li>
+          </ul></div><div class="card-widget card-tags"><div class="item-headline"><i class="fas fa-tags"></i><span>标签</span></div><div class="card-tag-cloud"><a href="/tags/%E6%95%88%E7%8E%87/" style="font-size: 1.1em; color: #999">效率</a> <a href="/tags/python/" style="font-size: 1.3em; color: #99a1ac">Python</a> <a href="/tags/%E8%87%AA%E6%88%91%E6%8F%90%E5%8D%87/" style="font-size: 1.1em; color: #999">自我提升</a> <a href="/tags/%E5%9F%8E%E5%B8%82%E9%A3%8E%E5%85%89/" style="font-size: 1.3em; color: #99a1ac">城市风光</a> <a href="/tags/Hexo/" style="font-size: 1.1em; color: #999">Hexo</a> <a href="/tags/%E6%97%B6%E9%97%B4%E7%AE%A1%E7%90%86/" style="font-size: 1.1em; color: #999">时间管理</a> <a href="/tags/%E5%B7%A5%E5%85%B7/" style="font-size: 1.3em; color: #99a1ac">工具</a> <a href="/tags/%E7%BC%96%E7%A8%8B/" style="font-size: 1.1em; color: #999">编程</a> <a href="/tags/%E5%8D%9A%E5%AE%A2/" style="font-size: 1.1em; color: #999">博客</a> <a href="/tags/travel/" style="font-size: 1.1em; color: #999">旅行</a> <a href="/tags/travel/" style="font-size: 1.1em; color: #999">travel</a> <a href="/tags/%E6%91%84%E5%BD%B1/" style="font-size: 1.3em; color: #99a1ac">摄影</a> <a href="/tags/%E7%BC%96%E7%A8%8B%E5%85%A5%E9%97%A8/" style="font-size: 1.3em; color: #99a1ac">编程入门</a> <a href="/tags/Markdown/" style="font-size: 1.1em; color: #999">Markdown</a> <a href="/tags/%E5%86%99%E4%BD%9C/" style="font-size: 1.1em; color: #999">写作</a> <a href="/tags/%E6%95%99%E7%A8%8B/" style="font-size: 1.5em; color: #99a9bf">教程</a></div></div><div class="card-widget card-archives">
+    <div class="item-headline">
+      <i class="fas fa-archive"></i>
+      <span>归档</span>
+      
+    </div>
+  
+    <ul class="card-archive-list">
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/08/">
+            <span class="card-archive-list-date">
+              八月 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/05/">
+            <span class="card-archive-list-date">
+              五月 2025
+            </span>
+            <span class="card-archive-list-count">3</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2024/05/">
+            <span class="card-archive-list-date">
+              五月 2024
+            </span>
+            <span class="card-archive-list-count">4</span>
+          </a>
+        </li>
+      
+    </ul>
+  </div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2019 - 2025 By GoofySatoshi</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/utils.min.js"></script><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/main.min.js"></script><div class="js-pjax"></div><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+POWERMODE.mobile = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章..." type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/search/local-search.min.js"></script></div></div></body></html>
