@@ -2,7 +2,7 @@
 <search>
   <entry>
     <title>周末摄影之旅</title>
-    <url>/2024/05/04/life-weekend-photography-trip/</url>
+    <url>/2024/05/03/life-weekend-photography-trip/</url>
     <content><![CDATA[]]></content>
       <categories>
         <category>生活</category>
@@ -15,62 +15,8 @@
       </tags>
   </entry>
   <entry>
-    <title>Spring Cloud OpenFeign 学习笔记</title>
-    <url>/2025/08/26/Spring-Cloud-OpenFeign-%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
-    <content><![CDATA[<p>一、服务调用方式对比<br>在 Spring Cloud 中，引入 OpenFeign 之前，常使用 Ribbon（负载均衡器）与 RestTemplate 进行服务间调用。但此方式代码耦合性强，维护性与可读性差，修改不便。而 Spring Cloud OpenFeign 采用依赖注入方式调用，如同调用本地 service，极大提升了代码的简洁性与可维护性。</p>
-<p>二、OpenFeign 使用步骤</p>
-<ol>
-<li>引入依赖：在项目中引入 OpenFeign 的相关 Maven 依赖。</li>
-<li>添加注解：在 Spring Boot 启动类上添加 @EnableFeignClients 注解，开启 Feign 客户端功能。</li>
-<li>定义接口：</li>
-</ol>
-<ul>
-<li>方式一：在自定义的 SDK 中定义带有 @FeignClient 注解的接口。</li>
-<li>方式二：自行定义 OpenFeign 接口，该接口用于声明服务调用方法。</li>
-</ul>
-<ol start="4">
-<li>注入使用：将定义好的 Feign 接口注入到需要调用的地方，即可实现服务间的远程调用。<br>三、OpenFeign 接口参数处理</li>
-</ol>
-<ul>
-<li>默认 <strong>@RequestBody</strong>：若接口参数未添加其他注解，OpenFeign 默认添加 @RequestBody 注解。但 @RequestBody 通常只能接收一个对象，传入多个对象会报错。</li>
-<li>GET 请求参数：对于 GET 类型请求，可写多个基本类型参数，这些参数会自动拼接到 URL 上。若想用 form 表单形式传递参数，可使用 @SpringQueryMap 注解，同样会将参数拼接到 URL 上。<br>四、OpenFeign 结构与原理</li>
-<li>服务端与调用端：<ul>
-<li>服务提供端：通过在接口方法上添加 @FeignClient 注解，将服务封装成接口方法，并打包成 SDK。</li>
-<li>服务调用端：引入服务提供端的 SDK，在 Spring Boot 启动时，利用 JDK 动态代理生成代理对象，并注入到 Bean 容器中。当调用接口方法时，通过 InvocationHandler 调用处理器进行远程调用。</li>
-</ul>
-</li>
-<li>处理流程：<ul>
-<li>调用接口方法后，<strong>Contract</strong> 根据注解声明的规则解析底层的 <strong>MethodHandler</strong>。</li>
-<li>MethodHandler 底层调用 <strong>RequestTemplate</strong>，<strong>RequestTemplate</strong> 内部实现了编码和解码功能。服务发起端对请求进行编码，服务调用端在解析返回结果时进行解码。</li>
-<li>最外层有 Interceptors 拦截器，用于对请求和响应进行拦截，例如记录日志等操作。</li>
-<li>Feign Client 基于负载均衡器和重试器进行策略调控。请求到达服务调用端后，经过解码，<strong>MethodHandler</strong> 根据规则映射找到调用的方法，通过处理器获取 InvocationHandler 的调用结果，并解析成 Response 的 Bean。<br>五、OpenFeign 增强方式<br>（一）日志增强</li>
-</ul>
-</li>
-<li>配置 Feign 的 Config Bean 对象：通过配置该 Bean 对象可实现日志增强。</li>
-<li>YAML 文件配置：在 YAML 文件中进行配置，更为灵活且支持配置中心实时更改。</li>
-<li>日志级别：<ul>
-<li>NONE：不记录日志。</li>
-<li>BASIC：仅记录请求方法、URL、响应状态代码及执行时间。</li>
-<li>HEADERS：在 BASIC 基础上记录请求和响应的 Header。</li>
-<li>FULL：全量记录请求、响应的 Header、Body 及原始数据。<br>（二）HTTP 连接优化</li>
-</ul>
-</li>
-<li>引入 Feign HC5：OpenFeign 默认的 HTTP 连接无连接池，性能较差。引入 <strong>Feign HC5</strong>（Apache HTTP5 的实现）依赖，其内部自带连接池，可优化调用效率，减少连接的频繁创建与销毁。由于 OpenFeign 的自动配置类已将相关属性默认配置为启用状态，因此即便不在 YAML 中配置，引入依赖后也会生效。</li>
-<li>替换为 OKHTTP：除 Feign HC5 外，还可引入 OKHTTP 依赖，并在 YAML 中开启 OKHTTP 配置，将底层 HTTP 请求替换为 OKHTTP。<br>（三）压缩配置</li>
-<li>gzip 压缩：OpenFeign 支持 gzip 压缩配置，当请求超过某个阈值（如 1024 字节），可在 YAML 中开启 gzip 压缩，并配置需要压缩的请求类型及最小压缩阈值等参数，以优化请求体大小和传输效率。</li>
-<li>OKHTTP 特殊情况：若使用 OKHTTP 作为底层 HTTP 请求，因其内部默认使用 transparent 压缩方式，一般无需额外配置 gzip 压缩。<br>（四）自定义编解码器<br>OpenFeign 提供扩展点，可通过实现 Encoder 和 Decoder 接口来自定义编解码器，并在 YAML 中进行配置。</li>
-</ul>
-<p>（五）拦截器实现</p>
-<ul>
-<li>BasicAuthRequestInterceptor：通过注入该 Bean 并进行配置来实现拦截器功能，但此方式灵活性欠佳。</li>
-<li>实现 RequestInterceptor 接口：推荐使用此方式，通过实现接口来定义拦截逻辑，更加灵活。<br>六、YAML 基本配置示例<br>feign:<br>client:<br>config:<br>default:<br>loggerLevel: FULL # 日志级别设置为 FULL<br>httpclient:<br>enabled: true # 启用 Feign HC5 连接池<br>max-connections: 200 # 最大连接数<br>max-connections-per-route: 50 # 每个路由的最大连接数<br>compression:<br>request:<br>enabled: true # 开启请求压缩<br>mime-types: text&#x2F;xml,application&#x2F;xml,application&#x2F;json # 需要压缩的请求类型<br>min-request-size: 1024 # 最小压缩阈值<br>okhttp:<br>enabled: true # 启用 OKHTTP</li>
-</ul>
-<p>在对 OpenFeign 进行配置时，优先考虑 YAML 配置方式，因其可</p>
-]]></content>
-  </entry>
-  <entry>
     <title>Hexo 博客文章发布教程</title>
-    <url>/2025/05/04/Hexo-%E5%8D%9A%E5%AE%A2%E6%96%87%E7%AB%A0%E5%8F%91%E5%B8%83%E6%95%99%E7%A8%8B/</url>
+    <url>/2025/05/03/Hexo-%E5%8D%9A%E5%AE%A2%E6%96%87%E7%AB%A0%E5%8F%91%E5%B8%83%E6%95%99%E7%A8%8B/</url>
     <content><![CDATA[<h1 id="Hexo-博客文章发布教程"><a href="#Hexo-博客文章发布教程" class="headerlink" title="Hexo 博客文章发布教程"></a>Hexo 博客文章发布教程</h1><p>本教程将详细介绍如何在 Hexo 博客中创建和发布文章，包括文章的基本结构、常用配置和发布流程。</p>
 <h2 id="创建新文章"><a href="#创建新文章" class="headerlink" title="创建新文章"></a>创建新文章</h2><h3 id="1-使用命令行创建"><a href="#1-使用命令行创建" class="headerlink" title="1. 使用命令行创建"></a>1. 使用命令行创建</h3><p>在博客根目录下，使用以下命令创建新文章：</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">hexo new post <span class="string">&quot;文章标题&quot;</span></span><br></pre></td></tr></table></figure>
@@ -161,7 +107,7 @@
   </entry>
   <entry>
     <title>Markdown 使用教程</title>
-    <url>/2025/05/04/Markdown-%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B/</url>
+    <url>/2025/05/03/Markdown-%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B/</url>
     <content><![CDATA[<h1 id="Markdown-使用教程"><a href="#Markdown-使用教程" class="headerlink" title="Markdown 使用教程"></a>Markdown 使用教程</h1><p>Markdown 是一种轻量级标记语言，创始人为约翰·格鲁伯（John Gruber）。它允许人们使用易读易写的纯文本格式编写文档，然后转换成有效的 HTML 文档。由于其易读性、易写性及格式转换的便利性，Markdown 被广泛用于博客、文档编写等领域。</p>
 <h2 id="基本语法"><a href="#基本语法" class="headerlink" title="基本语法"></a>基本语法</h2><h3 id="1-标题"><a href="#1-标题" class="headerlink" title="1. 标题"></a>1. 标题</h3><p>使用 <code>#</code> 号可表示 1-6 级标题，一级标题对应一个 <code>#</code> 号，二级标题对应两个 <code>#</code> 号，以此类推。</p>
 <figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="section"># 一级标题</span></span><br><span class="line"><span class="section">## 二级标题</span></span><br><span class="line"><span class="section">### 三级标题</span></span><br><span class="line"><span class="section">#### 四级标题</span></span><br><span class="line"><span class="section">##### 五级标题</span></span><br><span class="line"><span class="section">###### 六级标题</span></span><br></pre></td></tr></table></figure>
@@ -277,6 +223,24 @@
       </tags>
   </entry>
   <entry>
+    <title>Hello World</title>
+    <url>/2025/08/26/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+]]></content>
+  </entry>
+  <entry>
     <title>Spring Cloud OpenFeign 学习笔记</title>
     <url>/2025/08/26/Spring-Cloud-OpenFeign-%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
     <content><![CDATA[<p>一、服务调用方式对比<br>在 Spring Cloud 中，引入 OpenFeign 之前，常使用 Ribbon（负载均衡器）与 RestTemplate 进行服务间调用。但此方式代码耦合性强，维护性与可读性差，修改不便。而 Spring Cloud OpenFeign 采用依赖注入方式调用，如同调用本地 service，极大提升了代码的简洁性与可维护性。</p>
@@ -325,22 +289,14 @@
 <p>（五）拦截器实现</p>
 <ul>
 <li>BasicAuthRequestInterceptor：通过注入该 Bean 并进行配置来实现拦截器功能，但此方式灵活性欠佳。</li>
-<li>实现 RequestInterceptor 接口：推荐使用此方式，通过实现接口来定义拦截逻辑，更加灵活。<br>六、YAML 基本配置示例<br>feign:<br>client:<br>  config:<br>default:<br>  loggerLevel: FULL # 日志级别设置为 FULL<br>httpclient:<br>  enabled: true # 启用 Feign HC5 连接池<br>  max-connections: 200 # 最大连接数<br>  max-connections-per-route: 50 # 每个路由的最大连接数<br>compression:<br>  request:<br>enabled: true # 开启请求压缩<br>mime-types: text&#x2F;xml,application&#x2F;xml,application&#x2F;json # 需要压缩的请求类型<br>min-request-size: 1024 # 最小压缩阈值<br>okhttp:<br>  enabled: true # 启用 OKHTTP</li>
+<li>实现 RequestInterceptor 接口：推荐使用此方式，通过实现接口来定义拦截逻辑，更加灵活。<br>六、YAML 基本配置示例<br>feign:<br>client:<br>config:<br>default:<br>loggerLevel: FULL # 日志级别设置为 FULL<br>httpclient:<br>enabled: true # 启用 Feign HC5 连接池<br>max-connections: 200 # 最大连接数<br>max-connections-per-route: 50 # 每个路由的最大连接数<br>compression:<br>request:<br>enabled: true # 开启请求压缩<br>mime-types: text&#x2F;xml,application&#x2F;xml,application&#x2F;json # 需要压缩的请求类型<br>min-request-size: 1024 # 最小压缩阈值<br>okhttp:<br>enabled: true # 启用 OKHTTP</li>
 </ul>
-<p>在对 OpenFeign 进行配置时，优先考虑 YAML 配置方式，因其可借助配置中心实现实时更改，而使用 Config Bean 对象配置则需重新发布应用才能生效。</p>
+<p>在对 OpenFeign 进行配置时，优先考虑 YAML 配置方式，因其可</p>
 ]]></content>
-      <categories>
-        <category>笔记</category>
-      </categories>
-      <tags>
-        <tag>Spring Cloud</tag>
-        <tag>OpenFeign</tag>
-        <tag>笔记</tag>
-      </tags>
   </entry>
   <entry>
     <title>Python 基础教程</title>
-    <url>/2025/05/04/Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/2025-05-04-Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/</url>
+    <url>/2025/05/03/Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/2025-05-04-Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/</url>
     <content><![CDATA[<h1 id="Python-基础教程"><a href="#Python-基础教程" class="headerlink" title="Python 基础教程"></a>Python 基础教程</h1><p>Python 是一种简单易学、功能强大的编程语言。它拥有高效的高级数据结构，并且能够用简单而有效的方式进行面向对象编程。Python 优雅的语法和动态类型，以及解释型语言的本质，使它成为多数平台上写脚本和快速开发应用的理想语言。</p>
 <h2 id="Python-的特点"><a href="#Python-的特点" class="headerlink" title="Python 的特点"></a>Python 的特点</h2><ul>
 <li>简单易学：Python 有相对较少的关键字，结构简单，和一个明确定义的语法，学习起来更加简单。</li>
@@ -375,6 +331,55 @@
         <tag>Python</tag>
         <tag>编程</tag>
         <tag>编程入门</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《深度工作》读书笔记</title>
+    <url>/2024/05/04/reading-deep-work-notes/2025-05-04-reading-deep-work-notes/</url>
+    <content><![CDATA[<h1 id="《深度工作》读书笔记"><a href="#《深度工作》读书笔记" class="headerlink" title="《深度工作》读书笔记"></a>《深度工作》读书笔记</h1><blockquote>
+<p>作者：Cal Newport<br>出版年份：2016<br>推荐指数：⭐⭐⭐⭐⭐</p>
+</blockquote>
+<h2 id="核心观点"><a href="#核心观点" class="headerlink" title="核心观点"></a>核心观点</h2><p>深度工作是指在无干扰的状态下专注进行职业活动的能力，能够创造新价值，提升技能，而且难以复制。</p>
+<h2 id="重要概念"><a href="#重要概念" class="headerlink" title="重要概念"></a>重要概念</h2><ol>
+<li>深度工作 vs 浅度工作</li>
+<li>注意力残留</li>
+<li>心流状态</li>
+</ol>
+<h2 id="实践建议"><a href="#实践建议" class="headerlink" title="实践建议"></a>实践建议</h2><h3 id="1-培养深度工作习惯"><a href="#1-培养深度工作习惯" class="headerlink" title="1. 培养深度工作习惯"></a>1. 培养深度工作习惯</h3><ul>
+<li>固定时间段</li>
+<li>远离干扰源</li>
+<li>创造仪式感</li>
+</ul>
+<h3 id="2-管理精力而非时间"><a href="#2-管理精力而非时间" class="headerlink" title="2. 管理精力而非时间"></a>2. 管理精力而非时间</h3><ul>
+<li>识别最佳工作时段</li>
+<li>合理安排休息</li>
+<li>保持规律作息</li>
+</ul>
+<h2 id="读后感"><a href="#读后感" class="headerlink" title="读后感"></a>读后感</h2><p>这本书改变了我对工作方式的认知…</p>
+<span id="more"></span>
+
+<h2 id="行动清单"><a href="#行动清单" class="headerlink" title="行动清单"></a>行动清单</h2><ul>
+<li><input disabled="" type="checkbox"> 制定每日深度工作时间表</li>
+<li><input disabled="" type="checkbox"> 创建专注工作环境</li>
+<li><input disabled="" type="checkbox"> 培养深度工作习惯</li>
+</ul>
+<h2 id="金句摘录"><a href="#金句摘录" class="headerlink" title="金句摘录"></a>金句摘录</h2><blockquote>
+<p>“Professional activities performed in a state of distraction-free concentration that push your cognitive capabilities to their limit.”</p>
+</blockquote>
+<hr>
+<p>推荐阅读：</p>
+<ul>
+<li>《原子习惯》</li>
+<li>《刻意练习》</li>
+</ul>
+]]></content>
+      <categories>
+        <category>读书</category>
+      </categories>
+      <tags>
+        <tag>效率</tag>
+        <tag>自我提升</tag>
+        <tag>时间管理</tag>
       </tags>
   </entry>
   <entry>
@@ -416,55 +421,6 @@
       <tags>
         <tag>Python</tag>
         <tag>编程入门</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>《深度工作》读书笔记</title>
-    <url>/2024/05/04/reading-deep-work-notes/2025-05-04-reading-deep-work-notes/</url>
-    <content><![CDATA[<h1 id="《深度工作》读书笔记"><a href="#《深度工作》读书笔记" class="headerlink" title="《深度工作》读书笔记"></a>《深度工作》读书笔记</h1><blockquote>
-<p>作者：Cal Newport<br>出版年份：2016<br>推荐指数：⭐⭐⭐⭐⭐</p>
-</blockquote>
-<h2 id="核心观点"><a href="#核心观点" class="headerlink" title="核心观点"></a>核心观点</h2><p>深度工作是指在无干扰的状态下专注进行职业活动的能力，能够创造新价值，提升技能，而且难以复制。</p>
-<h2 id="重要概念"><a href="#重要概念" class="headerlink" title="重要概念"></a>重要概念</h2><ol>
-<li>深度工作 vs 浅度工作</li>
-<li>注意力残留</li>
-<li>心流状态</li>
-</ol>
-<h2 id="实践建议"><a href="#实践建议" class="headerlink" title="实践建议"></a>实践建议</h2><h3 id="1-培养深度工作习惯"><a href="#1-培养深度工作习惯" class="headerlink" title="1. 培养深度工作习惯"></a>1. 培养深度工作习惯</h3><ul>
-<li>固定时间段</li>
-<li>远离干扰源</li>
-<li>创造仪式感</li>
-</ul>
-<h3 id="2-管理精力而非时间"><a href="#2-管理精力而非时间" class="headerlink" title="2. 管理精力而非时间"></a>2. 管理精力而非时间</h3><ul>
-<li>识别最佳工作时段</li>
-<li>合理安排休息</li>
-<li>保持规律作息</li>
-</ul>
-<h2 id="读后感"><a href="#读后感" class="headerlink" title="读后感"></a>读后感</h2><p>这本书改变了我对工作方式的认知…</p>
-<span id="more"></span>
-
-<h2 id="行动清单"><a href="#行动清单" class="headerlink" title="行动清单"></a>行动清单</h2><ul>
-<li><input disabled type="checkbox"> 制定每日深度工作时间表</li>
-<li><input disabled type="checkbox"> 创建专注工作环境</li>
-<li><input disabled type="checkbox"> 培养深度工作习惯</li>
-</ul>
-<h2 id="金句摘录"><a href="#金句摘录" class="headerlink" title="金句摘录"></a>金句摘录</h2><blockquote>
-<p>“Professional activities performed in a state of distraction-free concentration that push your cognitive capabilities to their limit.”</p>
-</blockquote>
-<hr>
-<p>推荐阅读：</p>
-<ul>
-<li>《原子习惯》</li>
-<li>《刻意练习》</li>
-</ul>
-]]></content>
-      <categories>
-        <category>读书</category>
-      </categories>
-      <tags>
-        <tag>效率</tag>
-        <tag>自我提升</tag>
-        <tag>时间管理</tag>
       </tags>
   </entry>
 </search>
