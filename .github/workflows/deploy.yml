@@ -1,0 +1,32 @@
+name: Deploy Hexo Blog # 工作流的名称
+
+on: # 触发工作流的条件
+  push: # 当发生 push 事件时
+    branches: [ source ] # 仅当 push 到 source 分支时触发（请根据你的情况修改分支名）
+
+jobs: # 定义任务
+  build-and-deploy: # 任务 ID
+    runs-on: ubuntu-latest # 任务运行在最新的 Ubuntu 虚拟环境
+
+    steps: # 任务中的一系列步骤
+    - name: Checkout source code # 步骤1: 检出源代码
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js # 步骤2: 设置 Node.js 环境
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18' # 指定 Node.js 版本，请确保与你的 Hexo 兼容
+
+    - name: Install dependencies and build # 步骤3: 安装依赖并构建
+      run: | # 依次运行以下命令
+        npm install -g hexo-cli # 全局安装 Hexo CLI
+        npm install # 安装项目所需的依赖（package.json 中定义的）
+        hexo clean # 清理
+        hexo generate # 生成静态文件
+
+    - name: Deploy to GitHub Pages # 步骤4: 部署
+      uses: peaceiris/actions-gh-pages@v3 # 一个常用的部署到 GH Pages 的 Action
+      with:
+        deploy_key: ${{ secrets.HEXO_DEPLOY_KEY }} # 使用存放在 Secrets 中的部署密钥
+        publish_dir: ./public # 要部署的目录，即 Hexo 生成的静态文件目录
+        publish_branch: main # 要部署到的分支，通常 GitHub Pages 期望的是 gh-pages 分支
