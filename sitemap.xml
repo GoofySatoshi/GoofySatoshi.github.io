@@ -65,15 +65,6 @@
   </url>
   
   <url>
-    <loc>https://goofysatoshi.github.io/2025/08/26/hello-world/</loc>
-    
-    <lastmod>2025-08-26</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
     <loc>https://goofysatoshi.github.io/2025/05/03/Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/2025-05-04-Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/</loc>
     
     <lastmod>2025-08-26</lastmod>
@@ -319,6 +310,13 @@
   </url>
   
   <url>
+    <loc>https://goofysatoshi.github.io/categories/%E7%BC%96%E7%A8%8B/%E6%95%99%E7%A8%8B/</loc>
+    <lastmod>2025-08-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
     <loc>https://goofysatoshi.github.io/categories/reading/</loc>
     <lastmod>2025-08-26</lastmod>
     <changefreq>weekly</changefreq>
@@ -327,13 +325,6 @@
   
   <url>
     <loc>https://goofysatoshi.github.io/categories/tech/</loc>
-    <lastmod>2025-08-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://goofysatoshi.github.io/categories/%E7%BC%96%E7%A8%8B/%E6%95%99%E7%A8%8B/</loc>
     <lastmod>2025-08-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
