@@ -27,6 +27,6 @@ jobs: # 定义任务
     - name: Deploy to GitHub Pages # 步骤4: 部署
       uses: peaceiris/actions-gh-pages@v3 # 一个常用的部署到 GH Pages 的 Action
       with:
-        deploy_key: ${{ secrets.HEXO_DEPLOY_KEY }} # 使用存放在 Secrets 中的部署密钥
+        deploy_key: ${{ secrets.blog }} # 使用存放在 Secrets 中的部署密钥
         publish_dir: ./public # 要部署的目录，即 Hexo 生成的静态文件目录
         publish_branch: main # 要部署到的分支，通常 GitHub Pages 期望的是 gh-pages 分支
