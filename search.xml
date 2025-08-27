@@ -324,10 +324,9 @@
       </tags>
   </entry>
   <entry>
-    <title></title>
+    <title>Nacos 2.X 核心源码学习笔记</title>
     <url>/2025/08/27/Nacos2-x%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
-    <content><![CDATA[<h1 id="Nacos-2-X-核心源码学习笔记"><a href="#Nacos-2-X-核心源码学习笔记" class="headerlink" title="Nacos 2.X 核心源码学习笔记"></a>Nacos 2.X 核心源码学习笔记</h1><hr>
-<h2 id="title-Nacos-2-X-核心源码学习笔记date-2025-08-27-23-11-00categories-中间件tags-Nacos-源码剖析-分布式服务治理"><a href="#title-Nacos-2-X-核心源码学习笔记date-2025-08-27-23-11-00categories-中间件tags-Nacos-源码剖析-分布式服务治理" class="headerlink" title="title: Nacos 2.X 核心源码学习笔记date: 2025-08-27 23:11:00categories: 中间件tags:- Nacos- 源码剖析- 分布式服务治理"></a>title: Nacos 2.X 核心源码学习笔记<br>date: 2025-08-27 23:11:00<br>categories: 中间件<br>tags:<br>- Nacos<br>- 源码剖析<br>- 分布式服务治理</h2><h2 id="一、引言"><a href="#一、引言" class="headerlink" title="一、引言"></a>一、引言</h2><p>Nacos 作为阿里开源的分布式服务发现与配置管理平台，2.X 版本在架构上进行了协议升级（HTTP→gRPC）、存储结构优化（嵌套 Map→扁平分层）、一致性增强（Distro→Raft）</p>
+    <content><![CDATA[<h2 id="一、引言"><a href="#一、引言" class="headerlink" title="一、引言"></a>一、引言</h2><p>Nacos 作为阿里开源的分布式服务发现与配置管理平台，2.X 版本在架构上进行了协议升级（HTTP→gRPC）、存储结构优化（嵌套 Map→扁平分层）、一致性增强（Distro→Raft）</p>
 <p>Nacos 2.X 主要核心优化：</p>
 <ol>
 <li>协议升级：gRPC 长连接替代 HTTP，降低通信开销，提升实时性；</li>
@@ -559,6 +558,14 @@
 <p>当持久化实例变动时，Leader 节点通过 Raft 日志复制同步到所有 Follower 节点：</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// com.alibaba.nacos.naming.consistency.implementation.RaftConsistencyServiceImpl</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">put</span><span class="params">(String key, Record value)</span> <span class="keyword">throws</span> NacosException &#123;</span><br><span class="line">    <span class="comment">// 1. 构建 Raft 日志条目</span></span><br><span class="line">    <span class="type">LogEntry</span> <span class="variable">entry</span> <span class="operator">=</span> LogEntry.newBuilder()</span><br><span class="line">            .setKey(key)</span><br><span class="line">            .setValue(ByteString.copyFrom(SerializeUtils.serialize(value)))</span><br><span class="line">            .setType(LogEntryType.WRITE)</span><br><span class="line">            .build();</span><br><span class="line">    <span class="comment">// 2. Leader 节点复制日志</span></span><br><span class="line">    raftCore.replicateLog(entry);</span><br><span class="line">    <span class="comment">// 3. 等待日志提交</span></span><br><span class="line">    raftCore.waitForLogCommit(entry.getIndex(), <span class="number">5000</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 ]]></content>
+      <categories>
+        <category>中间件</category>
+      </categories>
+      <tags>
+        <tag>Nacos</tag>
+        <tag>源码剖析</tag>
+        <tag>分布式服务治理</tag>
+      </tags>
   </entry>
   <entry>
     <title>Python 基础教程</title>
