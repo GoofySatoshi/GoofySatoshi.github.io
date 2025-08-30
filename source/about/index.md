@@ -2,7 +2,6 @@
 title: 关于我
 date: 2024-05-04 17:00:00
 type: "about"
-top_img: /img/about-bg.jpg
 ---
 
 # 欢迎来到我的小世界 (◕‿◕✿)

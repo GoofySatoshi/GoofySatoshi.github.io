@@ -57,7 +57,7 @@ favicon: /img/avatar.png
 
 avatar:
   img: /img/avatar.png
-  effect: false  # 关闭头像旋转
+  effect: true  # 关闭头像旋转
   # 禁用其他动画效果
   transition: none
   opacity: 1
@@ -98,7 +98,7 @@ footer_img: false
 
 # Website Background
 # Can set it to color or image url
-background:
+background: /img/background.png
 
 cover:
   # Disable the cover or not
@@ -300,10 +300,10 @@ aside:
       enable: true
       icon: fab fa-github
       text: Follow Me
-      link: https://github.com/xxxxxx
+      link: https://github.com/GoofySatoshi
   card_announcement:
     enable: true
-    content: This is my Blog
+    content: 连雨不知春归去，一晴方觉夏已深
   card_recent_post:
     enable: true
     # If set 0 will show all
