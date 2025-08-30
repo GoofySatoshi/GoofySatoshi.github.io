@@ -11,33 +11,6 @@
   </url>
   
   <url>
-    <loc>https://goofysatoshi.github.io/2025/08/27/Nacos2-x%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</loc>
-    
-    <lastmod>2025-08-30</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://goofysatoshi.github.io/about/index.html</loc>
-    
-    <lastmod>2025-08-30</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://goofysatoshi.github.io/categories/index.html</loc>
-    
-    <lastmod>2025-08-30</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
     <loc>https://goofysatoshi.github.io/2024/05/03/life-weekend-photography-trip/</loc>
     
     <lastmod>2025-08-30</lastmod>
@@ -110,6 +83,15 @@
   </url>
   
   <url>
+    <loc>https://goofysatoshi.github.io/2025/08/27/Nacos2-x%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</loc>
+    
+    <lastmod>2025-08-30</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://goofysatoshi.github.io/2025/05/03/Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/2025-05-04-Python-%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B/</loc>
     
     <lastmod>2025-08-30</lastmod>
@@ -129,6 +111,24 @@
   
   <url>
     <loc>https://goofysatoshi.github.io/2024/05/04/tech-getting-started-with-python/2025-05-04-tech-getting-started-with-python/</loc>
+    
+    <lastmod>2025-08-30</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/about/index.html</loc>
+    
+    <lastmod>2025-08-30</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/categories/index.html</loc>
     
     <lastmod>2025-08-30</lastmod>
     
