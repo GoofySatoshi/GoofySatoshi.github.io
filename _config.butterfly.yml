@@ -8,9 +8,8 @@
 # --------------------------------------
 # Navigation Settings
 # --------------------------------------
-
 nav:
-  # Navigation bar logo image
+  # Navigation bar logo image (填写logo路径，如无则留空)
   logo:
   display_title: true
   # Whether to fix navigation bar
@@ -26,7 +25,6 @@ menu:
 # --------------------------------------
 # Code Blocks Settings
 # --------------------------------------
-
 code_blocks:
   # Code block theme: darker / pale night / light / ocean / false
   theme: light
@@ -42,42 +40,39 @@ code_blocks:
   shrink: false
   fullpage: false
 
-# Social media links
-# Formal:
-#   icon: link || the description || color
+# Social media links (替换为你的社交链接，取消注释使用)
+# Formal: icon: link || the description || color
 social:
-  # fab fa-github: https://github.com/xxxxx || Github || '#24292e'
-  # fas fa-envelope: mailto:xxxxxx@gmail.com || Email || '#4a7dbe'
+  fab fa-github: https://github.com/GoofySatoshi || Github || '#24292e'
+  # fas fa-envelope: mailto:your-email@gmail.com || Email || '#4a7dbe'
 
 # --------------------------------------
-# Image Settings
+# Image Settings (关键修复：头像旋转、图片路径)
 # --------------------------------------
-
-favicon: /img/avatar.png
+favicon: /img/avatar.jpg
 
 avatar:
-  img: /img/avatar.png
-  effect: false  # 关闭头像旋转
-  # 禁用其他动画效果
-  transition: none
+  img: /img/avatar.jpg
+  effect: false  # 关闭主题默认头像动画
+  transition: none  # 禁用过渡效果
   opacity: 1
-  rotate: false
+  rotate: false  # 明确禁用旋转
   scale: 1
-  animation: none
+  animation: none  # 禁用所有动画
 
 # Disable all banner images
 disable_top_img: false
 
 # If the banner of page not setting, it will show the default_top_img
-default_top_img: /img/top_img.png
+default_top_img:
 
-# The banner image of index page
+# The banner image of index page (如无则留空)
 index_img:
 
-# The banner image of archive page
+# The banner image of archive page (如无则留空)
 archive_img:
 
-# Note: tag page, not tags page
+# Note: tag page, not tags page (如无则留空)
 tag_img:
 
 # The banner image of tag page, you can set the banner image for each tag
@@ -85,7 +80,7 @@ tag_img:
 #  - tag name: xxxxx
 tag_per_img:
 
-# Note: category page, not categories page
+# Note: category page, not categories page (如无则留空)
 category_img:
 
 # The banner image of category page, you can set the banner image for each category
@@ -93,30 +88,29 @@ category_img:
 #  - category name: xxxxx
 category_per_img:
 
-# The background image of footer
+# The background image of footer (修复无效值：填写路径或设为false)
 footer_img: false
 
-# Website Background
-# Can set it to color or image url
-background: /img/background.png
+# Website Background (可设颜色如#f5f5f5，或图片路径)
+background:
 
 cover:
   # Disable the cover or not
-  index_enable: true
-  aside_enable: true
-  archives_enable: true
+  index_enable: false
+  aside_enable: false
+  archives_enable: false
   # When cover is not set, the default cover is displayed
   default_cover:
-    # - xxx.jpg
+  # - xxx.jpg
 
 # Replace Broken Images
 error_img:
   flink: /img/friend_404.gif
   post_page: /img/404.jpg
 
-# A simple 404 page
+# A simple 404 page (修复：启用则设为true，禁用设为false)
 error_404:
-  enable: false
+  enable: true
   subtitle: 'Page Not Found'
   background: /img/error-page.png
 
@@ -144,7 +138,6 @@ post_meta:
 # --------------------------------------
 # Index page settings
 # --------------------------------------
-
 # The top_img settings of home page
 # default: top img - full screen, site info - middle
 # The position of site info, eg: 300px/300em/300rem/10%
@@ -152,7 +145,7 @@ index_site_info_top:
 # The height of top_img, eg: 300px/300em/300rem
 index_top_img_height:
 
-# The subtitle on homepage
+# The subtitle on homepage (保留你的个性化内容)
 subtitle:
   enable: true
   # Typewriter Effect
@@ -203,7 +196,6 @@ index_post_content:
 # --------------------------------------
 # Post Settings
 # --------------------------------------
-
 toc:
   post: true
   page: false
@@ -225,12 +217,12 @@ reward:
   enable: false
   text:
   QR_code:
-    # - img: /img/wechat.jpg
-    #   link:
-    #   text: wechat
-    # - img: /img/alipay.jpg
-    #   link:
-    #   text: alipay
+  # - img: /img/wechat.jpg
+  #   link:
+  #   text: wechat
+  # - img: /img/alipay.jpg
+  #   link:
+  #   text: alipay
 
 # Post edit
 # Easily browse and edit blog source code online.
@@ -273,14 +265,13 @@ footer:
   owner:
     enable: true
     since: 2019
-  custom_text: 
+  custom_text:
   # Copyright of theme and framework
   copyright: true
 
 # --------------------------------------
-# Aside Settings
+# Aside Settings (修复：card_webinfo总开关与子项逻辑)
 # --------------------------------------
-
 aside:
   enable: true
   hide: false
@@ -355,19 +346,16 @@ aside:
     # Sort of order. 1, asc for ascending; -1, desc for descending
     order: -1
   card_webinfo:
-    enable: false
-    post_count: true
-    last_push_date: true
+    enable: true  # 总开关：启用后子项才生效
+    post_count: true  # 显示文章总数
+    last_push_date: true  # 显示最后更新时间
     sort_order:
-    # Time difference between publish date and now
-    # Formal: Month/Day/Year Time or Year/Month/Day Time
-    # Leave it empty if you don't enable this feature
+    # Time difference between publish date and now (格式：2023/01/01 00:00:00，如不需要则留空)
     runtime_date:
 
 # --------------------------------------
 # Bottom right button
 # --------------------------------------
-
 # The distance between the bottom right button and the bottom (default unit: px)
 rightside_bottom:
 
@@ -416,9 +404,8 @@ rightside_item_order:
   show:
 
 # --------------------------------------
-# Global Settings
+# Global Settings (修复：wordcount总开关与子项逻辑)
 # --------------------------------------
-
 anchor:
   # When you scroll, the URL will update according to header id.
   auto_update: false
@@ -434,15 +421,12 @@ copy:
     enable: false
     limit_count: 150
 
-# Need to install the hexo-wordcount plugin
+# Need to install the hexo-wordcount plugin (npm install hexo-wordcount --save)
 wordcount:
-  enable: false
-  # Display the word count of the article in post meta
-  post_wordcount: true
-  # Display the time to read the article in post meta
-  min2read: true
-  # Display the total word count of the website in aside's webinfo
-  total_wordcount: true
+  enable: true  # 总开关：启用后子项才生效
+  post_wordcount: true  # 文章内显示字数
+  min2read: true  # 文章内显示阅读时间
+  total_wordcount: true  # 侧边栏显示总字数（配合aside.card_webinfo.enable: true）
 
 # Busuanzi count for PV / UV in site
 busuanzi:
@@ -453,13 +437,11 @@ busuanzi:
 # --------------------------------------
 # Math
 # --------------------------------------
-
 # About the per_page
 # if you set it to true, it will load mathjax/katex script in each page
 # if you set it to false, it will load mathjax/katex script according to your setting (add the 'mathjax: true' or 'katex: true' in page's front-matter)
 math:
-  # Choose: mathjax, katex
-  # Leave it empty if you don't need math
+  # Choose: mathjax, katex (如不需要数学公式则留空)
   use:
   per_page: true
   hide_scrollbar: false
@@ -475,9 +457,8 @@ math:
     copy_tex: false
 
 # --------------------------------------
-# Search
+# Search (保留本地搜索配置)
 # --------------------------------------
-
 search:
   # Choose: algolia_search / local_search / docsearch
   use: local_search
@@ -511,10 +492,8 @@ docsearch:
 # --------------------------------------
 # Share System
 # --------------------------------------
-
 share:
-  # Choose: sharejs / addtoany
-  # Leave it empty if you don't need share
+  # Choose: sharejs / addtoany (如不需要分享则留空)
   use: sharejs
 
   # Share.js
@@ -528,9 +507,8 @@ share:
     item: facebook,twitter,wechat,sina_weibo,facebook_messenger,email,copy_link
 
 # --------------------------------------
-# Comments System
+# Comments System (保留utterances配置)
 # --------------------------------------
-
 comments:
   # Up to two comments system, the first will be shown as default
   use: utterances
@@ -610,10 +588,8 @@ facebook_comments:
 # --------------------------------------
 # Chat Services
 # --------------------------------------
-
 chat:
-  # Choose: chatra/tidio/crisp
-  # Leave it empty if you don't need chat
+  # Choose: chatra/tidio/crisp (如不需要聊天则留空)
   use:
   # Chat Button [recommend]
   # It will create a button in the bottom right corner of website, and hide the origin button
@@ -636,7 +612,6 @@ crisp:
 # --------------------------------------
 # Analysis
 # --------------------------------------
-
 # https://tongji.baidu.com/web/welcome/login
 baidu_analytics:
 
@@ -666,7 +641,6 @@ umami_analytics:
 # --------------------------------------
 # Advertisement
 # --------------------------------------
-
 # Google Adsense
 google_adsense:
   enable: false
@@ -688,20 +662,17 @@ ad:
 # --------------------------------------
 # Verification
 # --------------------------------------
-
 site_verification:
-  # - name: google-site-verification
-  #   content: xxxxxx
-  # - name: baidu-site-verification
-  #   content: xxxxxxx
+# - name: google-site-verification
+#   content: xxxxxx
+# - name: baidu-site-verification
+#   content: xxxxxxx
 
 # --------------------------------------
 # Beautify / Effect
 # --------------------------------------
-
 # Theme color for customize
 # Notice: color value must in double quotes like "#000" or may cause error!
-
 # theme_color:
 #   enable: true
 #   main: "#49B1F5"
@@ -783,7 +754,7 @@ hr_icon:
   icon:
   icon_top:
 
-# Typewriter Effect
+# Typewriter Effect (按需启用，不需要则设为false)
 # https://github.com/disjukr/activate-power-mode
 activate_power_mode:
   enable: true
@@ -793,7 +764,6 @@ activate_power_mode:
 
 # Background effects
 # --------------------------------------
-
 # canvas_ribbon
 # See: https://github.com/hustcc/ribbon.js
 canvas_ribbon:
@@ -840,27 +810,24 @@ click_heart:
 clickShowText:
   enable: false
   text:
-    # - I
-    # - LOVE
-    # - YOU
+  # - I
+  # - LOVE
+  # - YOU
   fontSize: 15px
   random: false
   mobile: false
 
 # --------------------------------------
-# Lightbox Settings
+# Lightbox Settings (修复：启用图片灯箱)
 # --------------------------------------
-
-# Choose: fancybox / medium_zoom
+# Choose: fancybox / medium_zoom (推荐fancybox，支持多图预览)
 # https://github.com/francoischalifour/medium-zoom
 # https://fancyapps.com/fancybox/
-# Leave it empty if you don't need lightbox
-lightbox:
+lightbox: fancybox
 
 # --------------------------------------
 # Tag Plugins settings
 # --------------------------------------
-
 # Series
 series:
   enable: false
@@ -923,13 +890,12 @@ note:
 # --------------------------------------
 # Other Settings
 # --------------------------------------
-
 # https://github.com/MoOx/pjax
 pjax:
   enable: false
   # Exclude the specified pages from pjax, such as '/music/'
   exclude:
-    # - /xxxxxx/
+  # - /xxxxxx/
 
 # Inject the css and script (aplayer/meting)
 aplayerInject:
@@ -950,14 +916,15 @@ snackbar:
 # https://instant.page/
 instantpage: false
 
-# Lazyload
+# Lazyload (按需启用，图片多建议开启)
 # https://github.com/verlok/vanilla-lazyload
 lazyload:
-  enable: false
+  enable: true
   # Specify the field to use lazyload (site or post)
   field: site
-  placeholder:
-  blur: false
+  # 占位图路径（如无则留空）
+  placeholder: /img/loading.png
+  blur: true  # 模糊加载效果
 
 # PWA
 # See https://github.com/JLHwung/hexo-offline
@@ -975,13 +942,13 @@ pwa:
 Open_Graph_meta:
   enable: true
   option:
-    # twitter_card:
-    # twitter_image:
-    # twitter_id:
-    # twitter_site:
-    # google_plus:
-    # fb_admins:
-    # fb_app_id:
+  # twitter_card:
+  # twitter_image:
+  # twitter_id:
+  # twitter_site:
+  # google_plus:
+  # fb_admins:
+  # fb_app_id:
 
 # Structured Data
 # https://developers.google.com/search/docs/guides/intro-structured-data
@@ -990,14 +957,90 @@ structured_data: true
 # Add the vendor prefixes to ensure compatibility
 css_prefix: true
 
-# Inject
-# Insert the code to head (before '</head>' tag) and the bottom (before '</body>' tag)
+# --------------------------------------
+# Inject (关键：强制禁用头像旋转的CSS)
+# --------------------------------------
 inject:
   head:
-    # - <link rel="stylesheet" href="/xxx.css">
-  bottom:
-    # - <script src="xxxx"></script>
+    - |
+      <style>
+        /* 1. 禁用侧边栏头像旋转（核心） */
+        .sidebar-card .card-author .author-avatar img,
+        .sidebar-card .card-author .author-avatar img:hover {
+          transform: none !important;
+          transition: none !important;
+        }
+        /* 2. 兼容移动端/其他头像容器 */
+        .author-avatar img,
+        .author-avatar img:hover {
+          transform: none !important;
+          transition: none !important;
+        }
+        /* 3. 避免主题其他样式干扰 */
+        [class*="avatar"] img,
+        [class*="avatar"] img:hover {
+          transform: none !important;
+          transition: none !important;
+        }
+        /* 针对id="page-header"的头部区域设置透明 */
+        #page-header {
+          background-color: transparent !important; /* 强制透明背景 */
+          background-image: none !important; /* 清除可能的背景图 */
+          box-shadow: none !important; /* 去除阴影（若有） */
+        }
 
+        /* 修复头部内部元素的背景（如导航栏） */
+        #page-header .header-inner {
+          background-color: transparent !important;
+        }
+
+        /* 调整头部文字颜色（根据你的背景图明暗度修改） */
+        #page-header .nav-item a,
+        #page-header .site-title,
+        #page-header .site-subtitle {
+          color: #333 !important; /* 深色文字，背景浅时用；反之用#fff */
+        }
+          /* 确保背景图显示样式正确 */
+        body {
+        background-repeat: no-repeat !important;
+        background-attachment: fixed !important;
+        background-size: cover !important;
+        background-position: center !important;
+        }
+      </style>
+  bottom:
+#   - <script src="xxxx"></script>
+  - |
+    <script>
+      // 背景图片列表（替换为你的图片路径）
+      const backgroundImages = [
+        '/img/background1.jpg',
+        '/img/background2.png',
+        '/img/background3.jpg',
+        '/img/background4.jpg',
+        '/img/background5.jpg',
+        '/img/background6.jpg',
+        '/img/background7.jpg',
+        '/img/background8.jpg',
+        '/img/background9.jpg',
+        '/img/background10.jpg',
+        '/img/background11.jpg',
+        '/img/background12.jpg',
+        '/img/background13.jpg',
+        '/img/background14.jpg',
+        '/img/background15.jpg',
+        '/img/background16.jpg',
+        '/img/background17.jpg',
+        '/img/background18.jpg',
+        '/img/background19.jpg',
+        '/img/background20.jpg'
+      ];
+      // 随机选择一张图片
+      const randomImg = backgroundImages[Math.floor(Math.random() * backgroundImages.length)];
+      // 设置为背景
+      document.body.style.backgroundImage = `url(${randomImg})`;
+    </script>
+# --------------------------------------
 # CDN
 # Don't modify the following settings unless you know how they work
 # 选择 CDN 类型
@@ -1017,54 +1060,54 @@ CDN:
   custom_format:
 
   option:
-    # main_css:
-    # main:
-    # utils:
-    # translate:
-    # local_search:
-    # algolia_js:
-    # algolia_search:
-    # instantsearch:
-    # docsearch_js:
-    # docsearch_css:
-    # pjax:
-    # gitalk:
-    # gitalk_css:
-    # blueimp_md5:
-    # valine:
-    # disqusjs:
-    # disqusjs_css:
-    # twikoo:
-    # waline_js:
-    # waline_css:
-    # sharejs:
-    # sharejs_css:
-    # mathjax:
-    # katex:
-    # katex_copytex:
-    # mermaid:
-    # canvas_ribbon:
-    # canvas_fluttering_ribbon:
-    # canvas_nest:
-    # lazyload:
-    # instantpage:
-    # typed:
-    # pangu:
-    # fancybox_css:
-    # fancybox:
-    # medium_zoom:
-    # snackbar_css:
-    # snackbar:
-    # activate_power_mode:
-    # fireworks:
-    # click_heart:
-    # ClickShowText:
-    # fontawesome:
-    # flickr_justified_gallery_js:
-    # flickr_justified_gallery_css:
-    # aplayer_css:
-    # aplayer_js:
-    # meting_js:
-    # prismjs_js:
-    # prismjs_lineNumber_js:
-    # prismjs_autoloader:
+  # main_css:
+  # main:
+  # utils:
+  # translate:
+  # local_search:
+  # algolia_js:
+  # algolia_search:
+  # instantsearch:
+  # docsearch_js:
+  # docsearch_css:
+  # pjax:
+  # gitalk:
+  # gitalk_css:
+  # blueimp_md5:
+  # valine:
+  # disqusjs:
+  # disqusjs_css:
+  # twikoo:
+  # waline_js:
+  # waline_css:
+  # sharejs:
+  # sharejs_css:
+  # mathjax:
+  # katex:
+  # katex_copytex:
+  # mermaid:
+  # canvas_ribbon:
+  # canvas_fluttering_ribbon:
+  # canvas_nest:
+  # lazyload:
+  # instantpage:
+  # typed:
+  # pangu:
+  # fancybox_css:
+  # fancybox:
+  # medium_zoom:
+  # snackbar_css:
+  # snackbar:
+  # activate_power_mode:
+  # fireworks:
+  # click_heart:
+  # ClickShowText:
+  # fontawesome:
+  # flickr_justified_gallery_js:
+  # flickr_justified_gallery_css:
+  # aplayer_css:
+  # aplayer_js:
+  # meting_js:
+  # prismjs_js:
+  # prismjs_lineNumber_js:
+  # prismjs_autoloader:
