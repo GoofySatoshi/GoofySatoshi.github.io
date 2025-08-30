@@ -57,7 +57,7 @@ favicon: /img/avatar.png
 
 avatar:
   img: /img/avatar.png
-  effect: true  # 关闭头像旋转
+  effect: false  # 关闭头像旋转
   # 禁用其他动画效果
   transition: none
   opacity: 1
@@ -69,7 +69,7 @@ avatar:
 disable_top_img: false
 
 # If the banner of page not setting, it will show the default_top_img
-default_top_img:
+default_top_img: /img/top_img.png
 
 # The banner image of index page
 index_img:
