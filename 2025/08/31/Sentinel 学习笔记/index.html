@@ -1,0 +1,349 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Sentinel 学习笔记 | GoofySatoshi's Blog</title><meta name="author" content="GoofySatoshi"><meta name="copyright" content="GoofySatoshi"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="一、Sentinel 基础概念与服务雪崩背景（一）服务雪崩现象剖析服务雪崩是微服务架构中的严重问题：当某服务因高并发不堪重负，其依赖链上的其他服务会受波及，影响层层传递，最终导致大量服务瘫痪。 服务不可用的核心原因包括：  程序 Bug：隐藏错误在特定场景（输入、环境、业务）下触发，导致服务异常。 高并发冲击：突发请求远超服务器承载能力，资源被耗尽，无法及时处理请求。 硬件故障：服务器硬件老化、损">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Sentinel 学习笔记">
+<meta property="og:url" content="https://goofysatoshi.github.io/2025/08/31/Sentinel%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/index.html">
+<meta property="og:site_name" content="GoofySatoshi&#39;s Blog">
+<meta property="og:description" content="一、Sentinel 基础概念与服务雪崩背景（一）服务雪崩现象剖析服务雪崩是微服务架构中的严重问题：当某服务因高并发不堪重负，其依赖链上的其他服务会受波及，影响层层传递，最终导致大量服务瘫痪。 服务不可用的核心原因包括：  程序 Bug：隐藏错误在特定场景（输入、环境、业务）下触发，导致服务异常。 高并发冲击：突发请求远超服务器承载能力，资源被耗尽，无法及时处理请求。 硬件故障：服务器硬件老化、损">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://goofysatoshi.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2025-08-31T15:56:00.000Z">
+<meta property="article:modified_time" content="2025-08-31T15:58:24.952Z">
+<meta property="article:author" content="GoofySatoshi">
+<meta property="article:tag" content="Sentinel">
+<meta property="article:tag" content="微服务治理">
+<meta property="article:tag" content="流量控制">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://goofysatoshi.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Sentinel 学习笔记",
+  "url": "https://goofysatoshi.github.io/2025/08/31/Sentinel%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/",
+  "image": "https://goofysatoshi.github.io/img/avatar.jpg",
+  "datePublished": "2025-08-31T15:56:00.000Z",
+  "dateModified": "2025-08-31T15:58:24.952Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "GoofySatoshi",
+      "url": "https://goofysatoshi.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/avatar.jpg"><link rel="canonical" href="https://goofysatoshi.github.io/2025/08/31/Sentinel%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Sentinel 学习笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>
+  /* 1. 禁用侧边栏头像旋转（核心） */
+  .sidebar-card .card-author .author-avatar img,
+  .sidebar-card .card-author .author-avatar img:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* 2. 兼容移动端/其他头像容器 */
+  .author-avatar img,
+  .author-avatar img:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* 3. 避免主题其他样式干扰 */
+  [class*="avatar"] img,
+  [class*="avatar"] img:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* 针对id="page-header"的头部区域设置透明 */
+  #page-header {
+    background-color: transparent !important; /* 强制透明背景 */
+    background-image: none !important; /* 清除可能的背景图 */
+    box-shadow: none !important; /* 去除阴影（若有） */
+  }
+
+  /* 修复头部内部元素的背景（如导航栏） */
+  #page-header .header-inner {
+    background-color: transparent !important;
+  }
+
+  /* 调整头部文字颜色（根据你的背景图明暗度修改） */
+  #page-header .nav-item a,
+  #page-header .site-title,
+  #page-header .site-subtitle {
+    color: #333 !important; /* 深色文字，背景浅时用；反之用#fff */
+  }
+    /* 确保背景图显示样式正确 */
+  body {
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+  background-size: cover !important;
+  background-position: center !important;
+  }
+</style>
+<meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="GoofySatoshi's Blog" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src= "/img/loading.png" data-lazy-src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">7</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">19</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">GoofySatoshi's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">Sentinel 学习笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Sentinel 学习笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-08-31T15:56:00.000Z" title="发表于 2025-08-31 23:56:00">2025-08-31</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-08-31T15:58:24.952Z" title="更新于 2025-08-31 23:58:24">2025-08-31</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%BE%AE%E6%9C%8D%E5%8A%A1/">微服务</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">1.3k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>4分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h2 id="一、Sentinel-基础概念与服务雪崩背景"><a href="#一、Sentinel-基础概念与服务雪崩背景" class="headerlink" title="一、Sentinel 基础概念与服务雪崩背景"></a>一、Sentinel 基础概念与服务雪崩背景</h2><h3 id="（一）服务雪崩现象剖析"><a href="#（一）服务雪崩现象剖析" class="headerlink" title="（一）服务雪崩现象剖析"></a>（一）服务雪崩现象剖析</h3><p>服务雪崩是微服务架构中的严重问题：当某服务因高并发不堪重负，其依赖链上的其他服务会受波及，影响层层传递，最终导致大量服务瘫痪。</p>
+<p>服务不可用的核心原因包括：</p>
+<ol>
+<li>程序 Bug：隐藏错误在特定场景（输入、环境、业务）下触发，导致服务异常。</li>
+<li>高并发冲击：突发请求远超服务器承载能力，资源被耗尽，无法及时处理请求。</li>
+<li>硬件故障：服务器硬件老化、损坏等物理问题，直接导致服务停运。</li>
+<li>缓存击穿：热点数据缓存过期瞬间，大量请求穿透缓存直达后端，造成服务压力激增。</li>
+</ol>
+<h3 id="（二）服务雪崩解决方案概述"><a href="#（二）服务雪崩解决方案概述" class="headerlink" title="（二）服务雪崩解决方案概述"></a>（二）服务雪崩解决方案概述</h3><p>应对服务雪崩的常见方案有四类：</p>
+<ol>
+<li>超时机制：为服务调用设超时时间，超时未响应则返回默认结果（如 false），避免调用方长时间等待。</li>
+<li>服务限流：限制单位时间内通过的请求数，拦截超额流量并返回“服务繁忙”提示，保护服务不被压垮。</li>
+<li>资源隔离：划分独立资源池（线程池、数据库连接等）给不同服务&#x2F;模块，某资源池耗尽不影响其他服务。</li>
+<li>熔断降级：若被调用服务频繁错误或崩溃，直接返回默认结果，防止影响在服务链蔓延。</li>
+</ol>
+<h3 id="（三）微服务流量治理技术选型对比"><a href="#（三）微服务流量治理技术选型对比" class="headerlink" title="（三）微服务流量治理技术选型对比"></a>（三）微服务流量治理技术选型对比</h3><p>微服务流量治理中，Hystrix 与 Sentinel 是主流选择，核心差异如下：</p>
+<ol>
+<li>Hystrix：核心聚焦“隔断+资源隔离+熔断”，提供 fallback 机制，服务异常时执行备用逻辑，保障基础可用性。</li>
+<li>Sentinel：功能更全面，除流量控制、熔断降级外，还支持系统负载保护、实时监控，且有控制台支持规则动态调整，灵活性更强。</li>
+</ol>
+<h2 id="二、Sentinel-核心概念与使用方式"><a href="#二、Sentinel-核心概念与使用方式" class="headerlink" title="二、Sentinel 核心概念与使用方式"></a>二、Sentinel 核心概念与使用方式</h2><h3 id="（一）Sentinel-核心概念详解"><a href="#（一）Sentinel-核心概念详解" class="headerlink" title="（一）Sentinel 核心概念详解"></a>（一）Sentinel 核心概念详解</h3><ol>
+<li>资源：经 Sentinel AOP 增强的代码接口（如微服务业务方法），是 Sentinel 监控和控制的核心对象。</li>
+<li>规则：围绕资源设定的控制策略，用于实现限流、降级等功能，支持在控制台实时动态调整，适配业务和系统变化。</li>
+</ol>
+<h3 id="（二）Sentinel-使用方式对比"><a href="#（二）Sentinel-使用方式对比" class="headerlink" title="（二）Sentinel 使用方式对比"></a>（二）Sentinel 使用方式对比</h3><ol>
+<li>原生使用：需引入多依赖，通过代码手动定义资源、规则，并在 post constructor 注入。弊端是业务代码与 Sentinel 配置耦合，可维护性差。</li>
+<li>灵活使用：微服务推荐方式，引入切面依赖后，通过配置函数、配置类或 YAML 文件配置，实现业务代码与配置逻辑分离，结构清晰易维护。</li>
+</ol>
+<h2 id="三、Sentinel-在微服务中的具体应用"><a href="#三、Sentinel-在微服务中的具体应用" class="headerlink" title="三、Sentinel 在微服务中的具体应用"></a>三、Sentinel 在微服务中的具体应用</h2><h3 id="（一）常用处理机制"><a href="#（一）常用处理机制" class="headerlink" title="（一）常用处理机制"></a>（一）常用处理机制</h3><ol>
+<li>block 流控异常处理：触发流控规则时，通过自定义逻辑返回友好提示（如“当前请求受限，请稍后重试”），提升用户体验。</li>
+<li>fallback 熔断降级函数：服务熔断时自动调用，返回备用结果，确保系统在部分服务不可用的情况下仍能提供基础功能。</li>
+</ol>
+<h3 id="（二）与-Sentinel-控制台交互"><a href="#（二）与-Sentinel-控制台交互" class="headerlink" title="（二）与 Sentinel 控制台交互"></a>（二）与 Sentinel 控制台交互</h3><ol>
+<li>注册流程：微服务 API 被调用时，Sentinel 读取 IP、端口等配置，在 HandlerInterceptor 预处理阶段，将客户端请求信息注册到 Sentinel Dashboard。</li>
+<li>提示优化：默认提示为 Sentinel 配置信息，可通过实现 block interceptor handler 或熔断 interceptor handler，自定义提示内容，适配业务需求。</li>
+</ol>
+<h3 id="（三）使用过程中的坑点及解决办法"><a href="#（三）使用过程中的坑点及解决办法" class="headerlink" title="（三）使用过程中的坑点及解决办法"></a>（三）使用过程中的坑点及解决办法</h3><p><strong>核心坑点</strong>：服务重启后，控制台手动配置的规则会丢失，导致流量控制&#x2F;熔断策略失效。<br><strong>解决方案</strong>：规则持久化，如结合 Nacos 配置中心，将规则存储在 Nacos，服务启动时从 Nacos 加载规则，避免规则丢失。</p>
+<h3 id="（四）微服务调用控制维度"><a href="#（四）微服务调用控制维度" class="headerlink" title="（四）微服务调用控制维度"></a>（四）微服务调用控制维度</h3><p>Sentinel 支持从两个维度对微服务调用进行熔断&#x2F;限流：</p>
+<ol>
+<li>微服务整体维度：针对整个服务（如“order”服务）设规则，例：限制单位时间内“order”服务的总请求数，或错误率达阈值时熔断。</li>
+<li>接口维度：针对服务下的具体接口（如“order”服务的下单接口）设独立规则，例：给下单接口设更高限流阈值，保障核心业务稳定性。</li>
+</ol>
+<h3 id="（五）与-Spring-Cloud-的整合要点及-YAML-配置示例"><a href="#（五）与-Spring-Cloud-的整合要点及-YAML-配置示例" class="headerlink" title="（五）与 Spring Cloud 的整合要点及 YAML 配置示例"></a>（五）与 Spring Cloud 的整合要点及 YAML 配置示例</h3><h4 id="1-OpenFeign-支持"><a href="#1-OpenFeign-支持" class="headerlink" title="1. OpenFeign 支持"></a>1. OpenFeign 支持</h4><p>需在 <code>application.yml</code> 中开启 OpenFeign 支持，并配置 fallback factory：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">feign:</span></span><br><span class="line">  <span class="attr">sentinel:</span></span><br><span class="line">    <span class="attr">enabled:</span> <span class="literal">true</span> <span class="comment"># 开启 Sentinel 对 OpenFeign 的支持</span></span><br><span class="line">  <span class="attr">client:</span></span><br><span class="line">    <span class="attr">config:</span></span><br><span class="line">      <span class="attr">default:</span></span><br><span class="line">        <span class="attr">fallbackFactory:</span> <span class="string">com.example.CustomFeignFallbackFactory</span> <span class="comment"># 配置自定义 fallback factory 类</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="2-流控规则持久化"><a href="#2-流控规则持久化" class="headerlink" title="2. 流控规则持久化"></a>2. 流控规则持久化</h4><p>引入 Nacos 数据源依赖（Maven），并在 <code>application.yml</code> 配置 Nacos 数据源：</p>
+<ul>
+<li>依赖引入：<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alibaba.csp<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>sentinel-datasource-nacos<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure></li>
+<li>YAML 配置：<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">cloud:</span></span><br><span class="line">    <span class="attr">sentinel:</span></span><br><span class="line">      <span class="attr">datasource:</span></span><br><span class="line">        <span class="attr">flow:</span> <span class="comment"># 流控规则数据源</span></span><br><span class="line">          <span class="attr">nacos:</span></span><br><span class="line">            <span class="attr">server-addr:</span> <span class="string">localhost:8848</span> <span class="comment"># Nacos 服务器地址</span></span><br><span class="line">            <span class="attr">dataId:</span> <span class="string">$&#123;spring.application.name&#125;-sentinel-flow</span> <span class="comment"># 规则数据 ID（结合服务名命名）</span></span><br><span class="line">            <span class="attr">groupId:</span> <span class="string">DEFAULT_GROUP</span> <span class="comment"># 分组</span></span><br><span class="line">            <span class="attr">data-type:</span> <span class="string">json</span> <span class="comment"># 数据格式</span></span><br><span class="line">            <span class="attr">rule-type:</span> <span class="string">flow</span> <span class="comment"># 规则类型（流控）</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://goofysatoshi.github.io">GoofySatoshi</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://goofysatoshi.github.io/2025/08/31/Sentinel%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">https://goofysatoshi.github.io/2025/08/31/Sentinel%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://goofysatoshi.github.io" target="_blank">GoofySatoshi's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Sentinel/">Sentinel</a><a class="post-meta__tags" href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%B2%BB%E7%90%86/">微服务治理</a><a class="post-meta__tags" href="/tags/%E6%B5%81%E9%87%8F%E6%8E%A7%E5%88%B6/">流量控制</a></div><div class="post-share"><div class="social-share" data-image="/img/avatar.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2025/08/30/Spring-Cloud-Nacos%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0/" title="Spring Cloud Nacos Config 配置中心源码学习"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Spring Cloud Nacos Config 配置中心源码学习</div></div><div class="info-2"><div class="info-item-1">一、引言：Nacos Config 的核心定位在 Spring Cloud 微服务架构中，配置管理是保障服务弹性与可维护性的关键环节。Nacos Config 作为官方推荐的配置中心，不仅实现了配置的集中存储与动态推送，还通过SPI 机制适配 Spring Boot 自动配置，解决了传统本地配置“修改需重启”“环境配置混乱”等问题。 本文基于源码视角，从配置加载优先级、事件驱动的变更流程两大核心维度展开，同时补充一致性保障、多环境管理、安全加密等生产级关键特性，形成完整的 Nacos Config 知识体系。 二、配置文件加载逻辑与优先级排序Nacos Config 本质是 Spring Boot 自动配置的扩展，其配置加载依赖 Bootstrap 上下文与 Spring 环境（Environment） 的初始化顺序，最终形成明确的优先级规则（优先级从高到低）：    优先级排序 配置文件类型 核心作用与场景    1（最高） 服务名-环境名.yaml 如 order-service-dev.yaml，针对特定服务+特定环境的精准配置（如开发环境的数据库地址），优先级最高，覆盖所...</div></div></div></a></nav><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="utterances-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src= "/img/loading.png" data-lazy-src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">GoofySatoshi</div><div class="author-info-description">分享技术、读书笔记和生活点滴</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">7</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">19</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/GoofySatoshi"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/GoofySatoshi" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">连雨不知春归去，一晴方觉夏已深</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81Sentinel-%E5%9F%BA%E7%A1%80%E6%A6%82%E5%BF%B5%E4%B8%8E%E6%9C%8D%E5%8A%A1%E9%9B%AA%E5%B4%A9%E8%83%8C%E6%99%AF"><span class="toc-number">1.</span> <span class="toc-text">一、Sentinel 基础概念与服务雪崩背景</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%EF%BC%88%E4%B8%80%EF%BC%89%E6%9C%8D%E5%8A%A1%E9%9B%AA%E5%B4%A9%E7%8E%B0%E8%B1%A1%E5%89%96%E6%9E%90"><span class="toc-number">1.1.</span> <span class="toc-text">（一）服务雪崩现象剖析</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%EF%BC%88%E4%BA%8C%EF%BC%89%E6%9C%8D%E5%8A%A1%E9%9B%AA%E5%B4%A9%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E6%A6%82%E8%BF%B0"><span class="toc-number">1.2.</span> <span class="toc-text">（二）服务雪崩解决方案概述</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%EF%BC%88%E4%B8%89%EF%BC%89%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%B5%81%E9%87%8F%E6%B2%BB%E7%90%86%E6%8A%80%E6%9C%AF%E9%80%89%E5%9E%8B%E5%AF%B9%E6%AF%94"><span class="toc-number">1.3.</span> <span class="toc-text">（三）微服务流量治理技术选型对比</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81Sentinel-%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5%E4%B8%8E%E4%BD%BF%E7%94%A8%E6%96%B9%E5%BC%8F"><span class="toc-number">2.</span> <span class="toc-text">二、Sentinel 核心概念与使用方式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%EF%BC%88%E4%B8%80%EF%BC%89Sentinel-%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5%E8%AF%A6%E8%A7%A3"><span class="toc-number">2.1.</span> <span class="toc-text">（一）Sentinel 核心概念详解</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%EF%BC%88%E4%BA%8C%EF%BC%89Sentinel-%E4%BD%BF%E7%94%A8%E6%96%B9%E5%BC%8F%E5%AF%B9%E6%AF%94"><span class="toc-number">2.2.</span> <span class="toc-text">（二）Sentinel 使用方式对比</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81Sentinel-%E5%9C%A8%E5%BE%AE%E6%9C%8D%E5%8A%A1%E4%B8%AD%E7%9A%84%E5%85%B7%E4%BD%93%E5%BA%94%E7%94%A8"><span class="toc-number">3.</span> <span class="toc-text">三、Sentinel 在微服务中的具体应用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%EF%BC%88%E4%B8%80%EF%BC%89%E5%B8%B8%E7%94%A8%E5%A4%84%E7%90%86%E6%9C%BA%E5%88%B6"><span class="toc-number">3.1.</span> <span class="toc-text">（一）常用处理机制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%EF%BC%88%E4%BA%8C%EF%BC%89%E4%B8%8E-Sentinel-%E6%8E%A7%E5%88%B6%E5%8F%B0%E4%BA%A4%E4%BA%92"><span class="toc-number">3.2.</span> <span class="toc-text">（二）与 Sentinel 控制台交互</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%EF%BC%88%E4%B8%89%EF%BC%89%E4%BD%BF%E7%94%A8%E8%BF%87%E7%A8%8B%E4%B8%AD%E7%9A%84%E5%9D%91%E7%82%B9%E5%8F%8A%E8%A7%A3%E5%86%B3%E5%8A%9E%E6%B3%95"><span class="toc-number">3.3.</span> <span class="toc-text">（三）使用过程中的坑点及解决办法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%EF%BC%88%E5%9B%9B%EF%BC%89%E5%BE%AE%E6%9C%8D%E5%8A%A1%E8%B0%83%E7%94%A8%E6%8E%A7%E5%88%B6%E7%BB%B4%E5%BA%A6"><span class="toc-number">3.4.</span> <span class="toc-text">（四）微服务调用控制维度</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%EF%BC%88%E4%BA%94%EF%BC%89%E4%B8%8E-Spring-Cloud-%E7%9A%84%E6%95%B4%E5%90%88%E8%A6%81%E7%82%B9%E5%8F%8A-YAML-%E9%85%8D%E7%BD%AE%E7%A4%BA%E4%BE%8B"><span class="toc-number">3.5.</span> <span class="toc-text">（五）与 Spring Cloud 的整合要点及 YAML 配置示例</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-OpenFeign-%E6%94%AF%E6%8C%81"><span class="toc-number">3.5.1.</span> <span class="toc-text">1. OpenFeign 支持</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96"><span class="toc-number">3.5.2.</span> <span class="toc-text">2. 流控规则持久化</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/08/31/Sentinel%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Sentinel 学习笔记">Sentinel 学习笔记</a><time datetime="2025-08-31T15:56:00.000Z" title="发表于 2025-08-31 23:56:00">2025-08-31</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/08/30/Spring-Cloud-Nacos%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0/" title="Spring Cloud Nacos Config 配置中心源码学习">Spring Cloud Nacos Config 配置中心源码学习</a><time datetime="2025-08-30T16:38:40.000Z" title="发表于 2025-08-31 00:38:40">2025-08-31</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/08/29/Hexo-GitHub-Actions-%E5%AE%9E%E7%8E%B0%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2%E5%AE%8C%E6%95%B4%E6%8C%87%E5%8D%97/" title="Hexo + GitHub Actions 实现自动化部署完整指南">Hexo + GitHub Actions 实现自动化部署完整指南</a><time datetime="2025-08-29T02:00:00.000Z" title="发表于 2025-08-29 10:00:00">2025-08-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/08/27/Nacos2-x%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Nacos 2.X 核心源码学习笔记">Nacos 2.X 核心源码学习笔记</a><time datetime="2025-08-27T15:11:00.000Z" title="发表于 2025-08-27 23:11:00">2025-08-27</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/08/26/Nacos-%E6%A0%B8%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Nacos 核心源码学习笔记">Nacos 核心源码学习笔记</a><time datetime="2025-08-26T15:43:00.000Z" title="发表于 2025-08-26 23:43:00">2025-08-26</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2019 - 2025 By GoofySatoshi</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/utils.min.js"></script><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/main.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+  const getUtterancesTheme = theme => theme === 'dark' ? 'github-dark' : 'github-light'
+
+  const loadUtterances = (el = document, key) => {
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyUtterances = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+
+    const config = {
+      src: 'https://utteranc.es/client.js',
+      repo: 'GoofySatoshi/GoofySatoshi.github.io',
+      theme: getUtterancesTheme(document.documentElement.getAttribute('data-theme')),
+      crossorigin: 'anonymous',
+      async: true,
+      ...option,
+      'issue-term': isShuoshuo ? key : (option && option['issue-term']) || 'pathname'
+    }
+
+    const ele = document.createElement('script')
+    Object.entries(config).forEach(([key, value]) => ele.setAttribute(key, value))
+    el.querySelector('#utterances-wrap').appendChild(ele)
+  }
+
+  const changeUtterancesTheme = theme => {
+    const iframe = document.querySelector('#utterances-wrap iframe')
+    if (iframe) {
+      const message = {
+        type: 'set-theme',
+        theme: getUtterancesTheme(theme)
+      };
+      iframe.contentWindow.postMessage(message, 'https://utteranc.es')
+    }
+  }
+
+  btf.addGlobalFn('themeChange', changeUtterancesTheme, 'utterances')
+
+  if (isShuoshuo) {
+    'Utterances' === 'Utterances'
+      ? window.shuoshuoComment = { loadComment: loadUtterances }
+      : window.loadOtherComment = loadUtterances
+    return
+  }
+  
+  if ('Utterances' === 'Utterances' || !false) {
+    if (false) btf.loadComment(document.getElementById('utterances-wrap'), loadUtterances)
+    else loadUtterances()
+  } else {
+    window.loadOtherComment = loadUtterances
+  }
+})()</script></div><script>
+  // 背景图片列表（替换为你的图片路径）
+  const backgroundImages = [
+    '/img/background1.jpg',
+    '/img/background2.png',
+    '/img/background3.jpg',
+    '/img/background4.jpg',
+    '/img/background5.jpg',
+    '/img/background6.jpg',
+    '/img/background7.jpg',
+    '/img/background8.jpg',
+    '/img/background9.jpg',
+    '/img/background10.jpg',
+    '/img/background11.jpg',
+    '/img/background12.jpg',
+    '/img/background13.jpg',
+    '/img/background14.jpg',
+    '/img/background15.jpg',
+    '/img/background16.jpg',
+    '/img/background17.jpg',
+    '/img/background18.jpg',
+    '/img/background19.jpg',
+    '/img/background20.jpg'
+  ];
+  // 随机选择一张图片
+  const randomImg = backgroundImages[Math.floor(Math.random() * backgroundImages.length)];
+  // 设置为背景
+  document.body.style.backgroundImage = `url(${randomImg})`;
+</script>
+<script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+POWERMODE.mobile = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章..." type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/search/local-search.min.js"></script></div></div></body></html>
