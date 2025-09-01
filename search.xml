@@ -711,7 +711,7 @@
   </entry>
   <entry>
     <title>Sentinel 控制台用法与工作原理学习笔记</title>
-    <url>/2025/09/01/Sentinel-%E6%8E%A7%E5%88%B6%E5%8F%B0%E7%94%A8%E6%B3%95%E4%B8%8E%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
+    <url>/2024/09/01/Sentinel-%E6%8E%A7%E5%88%B6%E5%8F%B0%E7%94%A8%E6%B3%95%E4%B8%8E%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
     <content><![CDATA[<h1 id="Sentinel-控制台用法与工作原理学习笔记"><a href="#Sentinel-控制台用法与工作原理学习笔记" class="headerlink" title="Sentinel 控制台用法与工作原理学习笔记"></a>Sentinel 控制台用法与工作原理学习笔记</h1><h2 id="一、流控规则配置"><a href="#一、流控规则配置" class="headerlink" title="一、流控规则配置"></a>一、流控规则配置</h2><ol>
 <li><strong>基础控制维度</strong>：支持对 QPS（每秒查询率）和并发线程数进行控制。</li>
 <li><strong>三种流控模式</strong>：<ul>
