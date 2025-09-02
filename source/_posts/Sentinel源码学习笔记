@@ -1,0 +1,67 @@
+Sentinel源码学习笔记
+ 
+- 日期：2025-09-03 02:05
+- 分类：中间件学习 / Sentinel
+
+ 
+一、客户端与服务端的交互流程
+ 
+1. 连接建立：客户端启动时通过配置的服务端地址（如  spring.cloud.sentinel.transport.dashboard.server ）与Sentinel Dashboard建立长连接（HTTP长轮询或WebSocket），定期发送心跳包保持连接。
+2. 数据同步：
+- 客户端将实时统计的监控数据（QPS、异常数等）通过长连接上报给服务端，服务端在控制台展示实时监控图表。
+- 服务端通过长连接向客户端推送规则配置（流控、熔断等），客户端接收后更新本地规则缓存并生效。
+3. 指令交互：服务端可通过控制台手动触发客户端规则更新、熔断状态重置等指令，客户端接收后执行对应操作并返回结果。
+ 
+二、自动配置类（以Spring Cloud整合为例）的核心逻辑
+ 
+ SentinelAutoConfiguration  是核心自动配置类，主要执行以下操作：
+ 
+1. 初始化核心组件：注册  SentinelResourceAspect  切面，通过AOP拦截被  @SentinelResource  注解标记的资源（方法/接口），触发责任链执行。
+2. 规则加载：通过  DataSource  加载预设规则（如Nacos、Apollo配置的流控/熔断规则），初始化到  RuleManager  中。
+3. 适配Spring生态：注册  SentinelWebInterceptor  拦截HTTP请求，将URL自动作为资源进行监控；适配Feign、Dubbo等组件，自动拦截远程调用作为资源。
+4. 异常处理：注册  SentinelExceptionHandler ，统一处理流控、熔断等异常（如  BlockException ），返回自定义响应。
+ 
+三、责任链（ProcessorSlotChain）的构建与核心插槽
+ 
+1. 构建流程
+ 
+- 客户端初始化时， SlotChainProvider  会通过SPI机制加载默认插槽链，并允许通过  SlotChainBuilder  自定义扩展。
+- 默认链顺序（按优先级执行）： NodeSelectorSlot  →  ClusterBuilderSlot  →  LogSlot  →  StatisticSlot  →  AuthoritySlot  →  FlowSlot  →  DegradeSlot  →  SystemSlot （顺序固定）。
+ 
+2. 关键插槽工作原理
+ 
+- StatisticSlot（统计插槽）：责任链核心，负责收集资源实时指标（QPS、响应时间、异常数等），为后续插槽提供数据支持；通过  ArrayMetric  维护滑动窗口统计，记录每个时间窗口的请求数、成功数等。
+- FlowSlot（流控插槽）：使用  StatisticSlot  提供的QPS/线程数数据，与预设流控规则对比，超过阈值则抛出  FlowException  拦截请求。
+- DegradeSlot（熔断插槽）：通过  StatisticSlot  获取异常比例/数、响应时间等数据，判断是否触发熔断（OPEN状态），拦截请求并抛出  DegradeException 。
+- NodeSelectorSlot：为资源创建唯一统计节点（ DefaultNode ），用于区分不同上下文的资源调用（如不同服务调用同一接口）。
+ 
+四、断路器（熔断）实现逻辑
+ 
+1. 状态机设计
+ 
+- CLOSED：正常允许请求， DegradeSlot  实时统计异常比例/数、响应时间。
+- OPEN：触发熔断（如异常比例超阈值），拦截所有请求；持续  waitTimeout  时间后转为 HALF_OPEN。
+- HALF_OPEN：允许少量请求通过，请求成功则转为 CLOSED，失败则重回 OPEN。
+ 
+2. 判断逻辑
+ 
+- 基于异常比例： （异常数 / 总请求数）> 阈值  且 总请求数≥最小请求数。
+- 基于响应时间：慢调用比例（响应时间>阈值的请求数/总请求数）> 阈值。
+ 
+五、限流实现逻辑
+ 
+1.  FlowSlot  在责任链中检查  StatisticSlot  统计的实时QPS/线程数，若超过预设规则阈值，直接抛出  FlowException  拦截请求。
+ 
+六、Fallback（降级）逻辑
+ 
+1. 触发场景：当资源被限流（ FlowException ）、熔断（ DegradeException ）或抛出业务异常时，执行预设的fallback逻辑。
+2. 实现方式：
+- 注解指定： @SentinelResource(fallback = "xxx") ，方法  xxx  需与原方法参数一致，可接收异常参数。
+- 全局配置：通过  GlobalFallback  定义全局fallback，统一处理未指定局部fallback的资源。
+3. 执行流程： SentinelResourceAspect  拦截到  BlockException  或业务异常后，通过反射调用fallback方法，返回降级结果。
+ 
+七、降级逻辑（与熔断的区别）
+ 
+- 熔断（Degrade）：服务端主动触发的保护机制（如异常率过高），属于“被动降级”，状态随指标自动切换（CLOSED→OPEN→HALF_OPEN→CLOSED）。
+- 限流（Flow）：主动限制请求量以防止资源耗尽，属于“主动降级”，触发条件是实时请求量超阈值。
+- 共性：两者最终均通过抛出异常被fallback逻辑捕获，返回降级响应，避免服务雪崩。
