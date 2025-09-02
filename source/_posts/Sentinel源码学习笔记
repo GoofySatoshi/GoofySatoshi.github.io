@@ -1,7 +1,16 @@
-Sentinel源码学习笔记
- 
-- 日期：2025-09-03 02:05
-- 分类：中间件学习 / Sentinel
+---
+title: Sentinel源码学习笔记
+date: 2025-09-03 02:05:00
+categories:
+  - 中间件学习
+  - Sentinel
+tags:
+  - Sentinel
+  - 源码解析
+  - 中间件
+---
+
+# Sentinel源码学习笔记
 
  
 一、客户端与服务端的交互流程
