@@ -92,60 +92,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Spring Cloud OpenFeign 学习笔记</title>
-    <url>/2025/08/26/Spring-Cloud-OpenFeign-%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
-    <content><![CDATA[<p>一、服务调用方式对比<br>在 Spring Cloud 中，引入 OpenFeign 之前，常使用 Ribbon（负载均衡器）与 RestTemplate 进行服务间调用。但此方式代码耦合性强，维护性与可读性差，修改不便。而 Spring Cloud OpenFeign 采用依赖注入方式调用，如同调用本地 service，极大提升了代码的简洁性与可维护性。</p>
-<p>二、OpenFeign 使用步骤</p>
-<ol>
-<li>引入依赖：在项目中引入 OpenFeign 的相关 Maven 依赖。</li>
-<li>添加注解：在 Spring Boot 启动类上添加 @EnableFeignClients 注解，开启 Feign 客户端功能。</li>
-<li>定义接口：</li>
-</ol>
-<ul>
-<li>方式一：在自定义的 SDK 中定义带有 @FeignClient 注解的接口。</li>
-<li>方式二：自行定义 OpenFeign 接口，该接口用于声明服务调用方法。</li>
-</ul>
-<ol start="4">
-<li>注入使用：将定义好的 Feign 接口注入到需要调用的地方，即可实现服务间的远程调用。<br>三、OpenFeign 接口参数处理</li>
-</ol>
-<ul>
-<li>默认 <strong>@RequestBody</strong>：若接口参数未添加其他注解，OpenFeign 默认添加 @RequestBody 注解。但 @RequestBody 通常只能接收一个对象，传入多个对象会报错。</li>
-<li>GET 请求参数：对于 GET 类型请求，可写多个基本类型参数，这些参数会自动拼接到 URL 上。若想用 form 表单形式传递参数，可使用 @SpringQueryMap 注解，同样会将参数拼接到 URL 上。<br>四、OpenFeign 结构与原理</li>
-<li>服务端与调用端：<ul>
-<li>服务提供端：通过在接口方法上添加 @FeignClient 注解，将服务封装成接口方法，并打包成 SDK。</li>
-<li>服务调用端：引入服务提供端的 SDK，在 Spring Boot 启动时，利用 JDK 动态代理生成代理对象，并注入到 Bean 容器中。当调用接口方法时，通过 InvocationHandler 调用处理器进行远程调用。</li>
-</ul>
-</li>
-<li>处理流程：<ul>
-<li>调用接口方法后，<strong>Contract</strong> 根据注解声明的规则解析底层的 <strong>MethodHandler</strong>。</li>
-<li>MethodHandler 底层调用 <strong>RequestTemplate</strong>，<strong>RequestTemplate</strong> 内部实现了编码和解码功能。服务发起端对请求进行编码，服务调用端在解析返回结果时进行解码。</li>
-<li>最外层有 Interceptors 拦截器，用于对请求和响应进行拦截，例如记录日志等操作。</li>
-<li>Feign Client 基于负载均衡器和重试器进行策略调控。请求到达服务调用端后，经过解码，<strong>MethodHandler</strong> 根据规则映射找到调用的方法，通过处理器获取 InvocationHandler 的调用结果，并解析成 Response 的 Bean。<br>五、OpenFeign 增强方式<br>（一）日志增强</li>
-</ul>
-</li>
-<li>配置 Feign 的 Config Bean 对象：通过配置该 Bean 对象可实现日志增强。</li>
-<li>YAML 文件配置：在 YAML 文件中进行配置，更为灵活且支持配置中心实时更改。</li>
-<li>日志级别：<ul>
-<li>NONE：不记录日志。</li>
-<li>BASIC：仅记录请求方法、URL、响应状态代码及执行时间。</li>
-<li>HEADERS：在 BASIC 基础上记录请求和响应的 Header。</li>
-<li>FULL：全量记录请求、响应的 Header、Body 及原始数据。<br>（二）HTTP 连接优化</li>
-</ul>
-</li>
-<li>引入 Feign HC5：OpenFeign 默认的 HTTP 连接无连接池，性能较差。引入 <strong>Feign HC5</strong>（Apache HTTP5 的实现）依赖，其内部自带连接池，可优化调用效率，减少连接的频繁创建与销毁。由于 OpenFeign 的自动配置类已将相关属性默认配置为启用状态，因此即便不在 YAML 中配置，引入依赖后也会生效。</li>
-<li>替换为 OKHTTP：除 Feign HC5 外，还可引入 OKHTTP 依赖，并在 YAML 中开启 OKHTTP 配置，将底层 HTTP 请求替换为 OKHTTP。<br>（三）压缩配置</li>
-<li>gzip 压缩：OpenFeign 支持 gzip 压缩配置，当请求超过某个阈值（如 1024 字节），可在 YAML 中开启 gzip 压缩，并配置需要压缩的请求类型及最小压缩阈值等参数，以优化请求体大小和传输效率。</li>
-<li>OKHTTP 特殊情况：若使用 OKHTTP 作为底层 HTTP 请求，因其内部默认使用 transparent 压缩方式，一般无需额外配置 gzip 压缩。<br>（四）自定义编解码器<br>OpenFeign 提供扩展点，可通过实现 Encoder 和 Decoder 接口来自定义编解码器，并在 YAML 中进行配置。</li>
-</ul>
-<p>（五）拦截器实现</p>
-<ul>
-<li>BasicAuthRequestInterceptor：通过注入该 Bean 并进行配置来实现拦截器功能，但此方式灵活性欠佳。</li>
-<li>实现 RequestInterceptor 接口：推荐使用此方式，通过实现接口来定义拦截逻辑，更加灵活。<br>六、YAML 基本配置示例<br>feign:<br>client:<br>config:<br>default:<br>loggerLevel: FULL # 日志级别设置为 FULL<br>httpclient:<br>enabled: true # 启用 Feign HC5 连接池<br>max-connections: 200 # 最大连接数<br>max-connections-per-route: 50 # 每个路由的最大连接数<br>compression:<br>request:<br>enabled: true # 开启请求压缩<br>mime-types: text&#x2F;xml,application&#x2F;xml,application&#x2F;json # 需要压缩的请求类型<br>min-request-size: 1024 # 最小压缩阈值<br>okhttp:<br>enabled: true # 启用 OKHTTP</li>
-</ul>
-<p>在对 OpenFeign 进行配置时，优先考虑 YAML 配置方式，因其可</p>
-]]></content>
-  </entry>
-  <entry>
     <title>Sentinel 学习笔记</title>
     <url>/2025/08/31/Sentinel%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
     <content><![CDATA[<h2 id="一、Sentinel-基础概念与服务雪崩背景"><a href="#一、Sentinel-基础概念与服务雪崩背景" class="headerlink" title="一、Sentinel 基础概念与服务雪崩背景"></a>一、Sentinel 基础概念与服务雪崩背景</h2><h3 id="（一）服务雪崩现象剖析"><a href="#（一）服务雪崩现象剖析" class="headerlink" title="（一）服务雪崩现象剖析"></a>（一）服务雪崩现象剖析</h3><p>服务雪崩是微服务架构中的严重问题：当某服务因高并发不堪重负，其依赖链上的其他服务会受波及，影响层层传递，最终导致大量服务瘫痪。</p>
@@ -207,6 +153,60 @@
         <tag>微服务治理</tag>
         <tag>流量控制</tag>
       </tags>
+  </entry>
+  <entry>
+    <title>Spring Cloud OpenFeign 学习笔记</title>
+    <url>/2025/08/26/Spring-Cloud-OpenFeign-%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
+    <content><![CDATA[<p>一、服务调用方式对比<br>在 Spring Cloud 中，引入 OpenFeign 之前，常使用 Ribbon（负载均衡器）与 RestTemplate 进行服务间调用。但此方式代码耦合性强，维护性与可读性差，修改不便。而 Spring Cloud OpenFeign 采用依赖注入方式调用，如同调用本地 service，极大提升了代码的简洁性与可维护性。</p>
+<p>二、OpenFeign 使用步骤</p>
+<ol>
+<li>引入依赖：在项目中引入 OpenFeign 的相关 Maven 依赖。</li>
+<li>添加注解：在 Spring Boot 启动类上添加 @EnableFeignClients 注解，开启 Feign 客户端功能。</li>
+<li>定义接口：</li>
+</ol>
+<ul>
+<li>方式一：在自定义的 SDK 中定义带有 @FeignClient 注解的接口。</li>
+<li>方式二：自行定义 OpenFeign 接口，该接口用于声明服务调用方法。</li>
+</ul>
+<ol start="4">
+<li>注入使用：将定义好的 Feign 接口注入到需要调用的地方，即可实现服务间的远程调用。<br>三、OpenFeign 接口参数处理</li>
+</ol>
+<ul>
+<li>默认 <strong>@RequestBody</strong>：若接口参数未添加其他注解，OpenFeign 默认添加 @RequestBody 注解。但 @RequestBody 通常只能接收一个对象，传入多个对象会报错。</li>
+<li>GET 请求参数：对于 GET 类型请求，可写多个基本类型参数，这些参数会自动拼接到 URL 上。若想用 form 表单形式传递参数，可使用 @SpringQueryMap 注解，同样会将参数拼接到 URL 上。<br>四、OpenFeign 结构与原理</li>
+<li>服务端与调用端：<ul>
+<li>服务提供端：通过在接口方法上添加 @FeignClient 注解，将服务封装成接口方法，并打包成 SDK。</li>
+<li>服务调用端：引入服务提供端的 SDK，在 Spring Boot 启动时，利用 JDK 动态代理生成代理对象，并注入到 Bean 容器中。当调用接口方法时，通过 InvocationHandler 调用处理器进行远程调用。</li>
+</ul>
+</li>
+<li>处理流程：<ul>
+<li>调用接口方法后，<strong>Contract</strong> 根据注解声明的规则解析底层的 <strong>MethodHandler</strong>。</li>
+<li>MethodHandler 底层调用 <strong>RequestTemplate</strong>，<strong>RequestTemplate</strong> 内部实现了编码和解码功能。服务发起端对请求进行编码，服务调用端在解析返回结果时进行解码。</li>
+<li>最外层有 Interceptors 拦截器，用于对请求和响应进行拦截，例如记录日志等操作。</li>
+<li>Feign Client 基于负载均衡器和重试器进行策略调控。请求到达服务调用端后，经过解码，<strong>MethodHandler</strong> 根据规则映射找到调用的方法，通过处理器获取 InvocationHandler 的调用结果，并解析成 Response 的 Bean。<br>五、OpenFeign 增强方式<br>（一）日志增强</li>
+</ul>
+</li>
+<li>配置 Feign 的 Config Bean 对象：通过配置该 Bean 对象可实现日志增强。</li>
+<li>YAML 文件配置：在 YAML 文件中进行配置，更为灵活且支持配置中心实时更改。</li>
+<li>日志级别：<ul>
+<li>NONE：不记录日志。</li>
+<li>BASIC：仅记录请求方法、URL、响应状态代码及执行时间。</li>
+<li>HEADERS：在 BASIC 基础上记录请求和响应的 Header。</li>
+<li>FULL：全量记录请求、响应的 Header、Body 及原始数据。<br>（二）HTTP 连接优化</li>
+</ul>
+</li>
+<li>引入 Feign HC5：OpenFeign 默认的 HTTP 连接无连接池，性能较差。引入 <strong>Feign HC5</strong>（Apache HTTP5 的实现）依赖，其内部自带连接池，可优化调用效率，减少连接的频繁创建与销毁。由于 OpenFeign 的自动配置类已将相关属性默认配置为启用状态，因此即便不在 YAML 中配置，引入依赖后也会生效。</li>
+<li>替换为 OKHTTP：除 Feign HC5 外，还可引入 OKHTTP 依赖，并在 YAML 中开启 OKHTTP 配置，将底层 HTTP 请求替换为 OKHTTP。<br>（三）压缩配置</li>
+<li>gzip 压缩：OpenFeign 支持 gzip 压缩配置，当请求超过某个阈值（如 1024 字节），可在 YAML 中开启 gzip 压缩，并配置需要压缩的请求类型及最小压缩阈值等参数，以优化请求体大小和传输效率。</li>
+<li>OKHTTP 特殊情况：若使用 OKHTTP 作为底层 HTTP 请求，因其内部默认使用 transparent 压缩方式，一般无需额外配置 gzip 压缩。<br>（四）自定义编解码器<br>OpenFeign 提供扩展点，可通过实现 Encoder 和 Decoder 接口来自定义编解码器，并在 YAML 中进行配置。</li>
+</ul>
+<p>（五）拦截器实现</p>
+<ul>
+<li>BasicAuthRequestInterceptor：通过注入该 Bean 并进行配置来实现拦截器功能，但此方式灵活性欠佳。</li>
+<li>实现 RequestInterceptor 接口：推荐使用此方式，通过实现接口来定义拦截逻辑，更加灵活。<br>六、YAML 基本配置示例<br>feign:<br>client:<br>config:<br>default:<br>loggerLevel: FULL # 日志级别设置为 FULL<br>httpclient:<br>enabled: true # 启用 Feign HC5 连接池<br>max-connections: 200 # 最大连接数<br>max-connections-per-route: 50 # 每个路由的最大连接数<br>compression:<br>request:<br>enabled: true # 开启请求压缩<br>mime-types: text&#x2F;xml,application&#x2F;xml,application&#x2F;json # 需要压缩的请求类型<br>min-request-size: 1024 # 最小压缩阈值<br>okhttp:<br>enabled: true # 启用 OKHTTP</li>
+</ul>
+<p>在对 OpenFeign 进行配置时，优先考虑 YAML 配置方式，因其可</p>
+]]></content>
   </entry>
   <entry>
     <title>Spring Cloud Nacos Config 配置中心源码学习</title>
@@ -840,6 +840,81 @@
         <tag>Sentinel</tag>
         <tag>源码解析</tag>
         <tag>中间件</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>今日学习笔记：Sentinel 核心原理与关键算法</title>
+    <url>/2024/05/20/Sentinel%E7%9A%84%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86%E5%92%8C%E5%85%B3%E9%94%AE%E7%AE%97%E6%B3%95/</url>
+    <content><![CDATA[<p>一、Sentinel 对外部请求的感知机制</p>
+<p>Sentinel 对请求的感知依赖于 Web 框架适配与拦截器机制，核心是通过自动装配实现请求链路的透明化监控，为后续流量控制提供数据基础。</p>
+<ol>
+<li>实现基础：SPI 与 Spring Boot 自动装配</li>
+</ol>
+<p>Sentinel 提供  sentinel-spring-webmvc-adapter  等适配模块，基于 Spring Boot 的 SPI 机制（META-INF&#x2F;spring.factories） 实现自动配置，无需手动注入拦截器，降低集成成本。</p>
+<ol start="2">
+<li>启动流程</li>
+</ol>
+<ul>
+<li>Spring Boot 容器启动时，Sentinel 自动加载并注册配置类 SentinelWebAutoConfiguration（用户原表述中“config-auto configuration”修正为标准类名）。</li>
+<li>该配置类向 Spring 容器注入 SentinelWebInterceptor（网络拦截器），拦截所有符合规则的 HTTP 请求（默认拦截 &#x2F;* 路径，可通过配置自定义）。</li>
+</ul>
+<ol start="3">
+<li>请求处理逻辑</li>
+</ol>
+<ul>
+<li>拦截器的  preHandle  方法（请求处理前执行）会提取请求关键信息：URL 路径（如 &#x2F;api&#x2F;user）、请求来源（serviceName）、HTTP 方法（GET&#x2F;POST）等。</li>
+<li>将提取的信息封装为 ResourceEntry 对象（Sentinel 中的“资源”载体，每个 ResourceEntry 对应一个可监控的请求节点），并将该资源的调用数据（如调用次数、耗时）上报至 Sentinel 核心引擎。</li>
+<li>核心引擎基于 ResourceEntry 的数据感知请求链路，为后续的限流、熔断、降级规则提供“靶向监控”能力（仅针对已感知的资源生效规则）。</li>
+</ul>
+<p>二、Sentinel 核心算法</p>
+<p>Sentinel 的流量控制、熔断降级功能依赖三大核心算法，分别对应“实时统计”“匀速排队”“突发流量兼容”三类场景，覆盖不同业务需求。</p>
+<ol>
+<li>滑动时间窗口算法（核心统计算法）</li>
+</ol>
+<p>核心思想</p>
+<p>基于 前缀和思想 实现实时流量统计：将“一段时间区间”（如1秒）划分为多个连续的“小格子”（如10个100ms的格子），每个格子存储该时间段内的请求数、QPS、异常数等指标；统计时通过“当前时间对应的格子数据 + 未过期格子数据总和”计算总流量，避免传统“固定时间窗口”的统计偏差（如1秒窗口在0:59和1:01的瞬时高流量无法识别）。</p>
+<p>底层实现</p>
+<ul>
+<li>数据存储：将时间窗口抽象为  MetricBucket  类（存储 pass&#x2F;block&#x2F;exception 等指标），用数组（ MetricArray ）存储多个  MetricBucket ，每个数组元素对应一个“小格子”（格子粒度可配置，粒度越细统计越精准，但内存消耗略高）。</li>
+<li>初始化逻辑：首次有请求进入时，初始化时间窗口数组，确定每个格子的时间范围（如第1个格子对应 0-100ms，第2个对应 100-200ms）。</li>
+<li>时钟回拨处理：若服务器时钟发生回拨（如窗口终止时间 &lt; 当前时间），直接丢弃过期格子数据并创建新窗口，避免因时钟异常导致的统计错误（正常生产环境极少触发，属于容错机制）。</li>
+<li>适用场景：所有需要实时统计流量的场景（如 QPS 限流、并发数控制），是 Sentinel 最基础的算法。</li>
+</ul>
+<ol start="2">
+<li>漏桶算法（匀速排队机制）</li>
+</ol>
+<p>核心思想</p>
+<p>模拟“漏桶倒水”过程：请求像“水流”一样进入漏桶，漏桶以 固定速率（如每秒100个请求）将请求“漏出”到业务系统；若请求进入速率超过漏桶漏出速率，多余请求会在桶内排队（或直接丢弃，取决于配置），确保业务系统接收的请求速率平稳，避免瞬时高负载。</p>
+<p>处理逻辑</p>
+<ul>
+<li>计算请求等待时间：根据“当前桶内排队请求数”和“漏出速率”，计算当前请求需等待的最小时间（如桶内有5个请求，漏出速率100个&#x2F;秒，则需等待 5*10ms&#x3D;50ms）。</li>
+<li>等待与放行：若等待时间在“最大排队时间”（如100ms）内，请求会睡眠至等待时间结束后放行；若等待时间超出最大排队时间，直接放行（避免请求排队过久导致超时）。</li>
+<li>超时拦截：校验“请求到达时间 + 等待时间”是否超过“请求超时时间”，若已超时则直接拦截（返回 block 信号），避免无效等待。</li>
+<li>适用场景：要求请求严格匀速处理的场景（如数据库写入、第三方接口调用，避免瞬时请求压垮下游服务）。</li>
+</ul>
+<ol start="3">
+<li>令牌桶算法（缓存预热机制）</li>
+</ol>
+<p>核心思想</p>
+<p>模拟“令牌生成与消耗”过程：Sentinel 按 预设速率（可配置） 定时向“令牌桶”中放入令牌（如每秒生成100个令牌），请求必须从桶中获取1个令牌才能放行；若桶内无令牌，请求会被限流（返回降级&#x2F;熔断信息）。同时支持“缓存预热（冷启动）”，避免服务刚启动时令牌生成过多导致的瞬时高负载。</p>
+<p>处理逻辑</p>
+<ul>
+<li>令牌生成：令牌桶有固定容量（如200个令牌），当桶内令牌数未达容量时，按“预热速率”生成令牌（预热阶段速率从低到高逐步提升，如初始50个&#x2F;秒，10秒后升至100个&#x2F;秒）；当桶满时，新生成的令牌直接丢弃。</li>
+<li>请求处理：请求到达时，先检查桶内是否有剩余令牌：</li>
+<li>若有令牌：获取1个令牌，请求正常放行，并记录请求数据。</li>
+<li>若无令牌：触发限流逻辑，返回降级响应（如默认提示“系统繁忙，请稍后再试”，可自定义降级页面）。</li>
+<li>突发流量兼容：令牌桶的容量决定了最大突发流量处理能力（如桶容量200，当瞬时有200个请求时，可一次性消耗所有令牌，后续请求需等待新令牌生成）。</li>
+<li>适用场景：允许一定突发流量的场景（如 API 网关、用户登录接口，既控制长期流量，又兼容短时间内的流量峰值）。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>Sentinel</tag>
+        <tag>流量控制</tag>
+        <tag>微服务</tag>
+        <tag>Java</tag>
       </tags>
   </entry>
 </search>
