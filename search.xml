@@ -920,17 +920,11 @@
   <entry>
     <title>Sentinel 拉模式实现详解</title>
     <url>/2025/09/04/sentinel%E6%8B%89%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/</url>
-    <content><![CDATA[<p>一、为什么需要 Sentinel 拉模式？</p>
-<p>Sentinel 默认的内存模式存在明显缺陷：限流规则仅存储在客户端内存中，应用重启后规则全部丢失，无法满足生产环境的规则持久化与统一管理需求。</p>
+    <content><![CDATA[<h2 id="一、为什么需要-Sentinel-拉模式？"><a href="#一、为什么需要-Sentinel-拉模式？" class="headerlink" title="一、为什么需要 Sentinel 拉模式？"></a>一、为什么需要 Sentinel 拉模式？</h2><p>Sentinel 默认的内存模式存在明显缺陷：限流规则仅存储在客户端内存中，应用重启后规则全部丢失，无法满足生产环境的规则持久化与统一管理需求。</p>
 <p>拉模式是 Sentinel 规则持久化的核心方案之一，其核心逻辑是客户端主动通过定时轮询，从外部存储（如 MySQL、本地文件）拉取规则，并结合 SPI 扩展机制实现自定义数据源，彻底解决“重启失效”问题。本文将完整拆解拉模式的实现流程，基于 MySQL 存储规则，适配 Spring Boot 场景。</p>
-<p>二、拉模式与 SPI 的关系</p>
-<p>在动手实现前，先理清两个关键概念，避免与推模式混淆：</p>
+<h2 id="二、拉模式与-SPI-的关系"><a href="#二、拉模式与-SPI-的关系" class="headerlink" title="二、拉模式与 SPI 的关系"></a>二、拉模式与 SPI 的关系</h2><p>在动手实现前，先理清两个关键概念，避免与推模式混淆：</p>
 <p>概念 作用说明<br>拉模式 客户端通过定时任务主动轮询外部存储（如 MySQL），获取最新规则并加载到 Sentinel，实时性取决于轮询间隔。<br>SPI 扩展机制 Sentinel 提供  ReadableDataSource  接口作为 SPI 扩展点，允许自定义“规则读取逻辑”，框架启动时自动扫描加载。 </p>
-<p>三、完整实现步骤（基于 MySQL + Spring Boot）</p>
-<ol>
-<li>环境准备：引入依赖</li>
-</ol>
-<p>在  pom.xml  中添加 Sentinel 核心依赖、SPI 扩展依赖及 MySQL 连接依赖（使用 Druid 连接池简化操作）：</p>
+<h2 id="三、完整实现步骤（基于-MySQL-Spring-Boot）"><a href="#三、完整实现步骤（基于-MySQL-Spring-Boot）" class="headerlink" title="三、完整实现步骤（基于 MySQL + Spring Boot）"></a>三、完整实现步骤（基于 MySQL + Spring Boot）</h2><h3 id="1-环境准备：引入依赖"><a href="#1-环境准备：引入依赖" class="headerlink" title="1. 环境准备：引入依赖"></a>1. 环境准备：引入依赖</h3><p>在  pom.xml  中添加 Sentinel 核心依赖、SPI 扩展依赖及 MySQL 连接依赖（使用 Druid 连接池简化操作）：</p>
 <!-- 1. Sentinel 核心依赖 -->
 <dependency>
     <groupId>com.alibaba.csp</groupId>
@@ -967,20 +961,13 @@
 </dependency>
  
  
-<ol start="2">
-<li>存储设计：创建 MySQL 规则表</li>
-</ol>
-<p>在 MySQL 中创建 Sentinel 限流规则表，用于持久化存储规则配置（支持后续扩展降级、热点规则等）：</p>
+<h3 id="2-存储设计：创建-MySQL-规则表"><a href="#2-存储设计：创建-MySQL-规则表" class="headerlink" title="2. 存储设计：创建 MySQL 规则表"></a>2. 存储设计：创建 MySQL 规则表</h3><p>在 MySQL 中创建 Sentinel 限流规则表，用于持久化存储规则配置（支持后续扩展降级、热点规则等）：</p>
 <p>– 数据库：sentinel_db（可自定义）<br>CREATE DATABASE IF NOT EXISTS sentinel_db DEFAULT CHARSET utf8mb4;<br>USE sentinel_db;</p>
 <p>– 限流规则表<br>CREATE TABLE IF NOT EXISTS sentinel_flow_rule (<br>  <code>id</code> bigint(20) NOT NULL AUTO_INCREMENT COMMENT ‘主键ID’,<br>  <code>resource</code> varchar(255) NOT NULL COMMENT ‘限流资源名（如接口路径 &#x2F;order&#x2F;create）’,<br>  <code>limit_app</code> varchar(64) DEFAULT ‘default’ COMMENT ‘限制来源（默认所有来源）’,<br>  <code>grade</code> tinyint(1) NOT NULL COMMENT ‘限流类型：1&#x3D;QPS，0&#x3D;线程数’,<br>  <code>count</code> double NOT NULL COMMENT ‘限流阈值（如 QPS&#x3D;10）’,<br>  <code>strategy</code> tinyint(1) DEFAULT 0 COMMENT ‘流控策略：0&#x3D;直接模式，1&#x3D;关联模式，2&#x3D;链路模式’,<br>  <code>control_behavior</code> tinyint(1) DEFAULT 0 COMMENT ‘流控效果：0&#x3D;快速失败，1&#x3D;预热，2&#x3D;排队’,<br>  PRIMARY KEY (<code>id</code>)<br>) ENGINE&#x3D;InnoDB DEFAULT CHARSET&#x3D;utf8mb4 COMMENT ‘Sentinel 限流规则表’;</p>
 <p>– 插入测试数据：对 &#x2F;order&#x2F;create 接口限制 QPS&#x3D;10<br>INSERT INTO sentinel_flow_rule (resource, limit_app, grade, count, strategy, control_behavior)<br>VALUES (‘&#x2F;order&#x2F;create’, ‘default’, 1, 10, 0, 0);
  </p>
-<ol start="3">
-<li>核心实现：自定义 SPI 数据源（DataSource）</li>
-</ol>
-<p>拉模式的核心是实现  ReadableDataSource  接口（Sentinel 的 SPI 扩展点），在类中封装“定时轮询逻辑”与“MySQL 规则读取逻辑”。</p>
-<p>3.1 自定义 DataSource 代码</p>
-<p>package com.example.sentinel.datasource;</p>
+<h3 id="3-核心实现：自定义-SPI-数据源（DataSource）"><a href="#3-核心实现：自定义-SPI-数据源（DataSource）" class="headerlink" title="3. 核心实现：自定义 SPI 数据源（DataSource）"></a>3. 核心实现：自定义 SPI 数据源（DataSource）</h3><p>拉模式的核心是实现  ReadableDataSource  接口（Sentinel 的 SPI 扩展点），在类中封装“定时轮询逻辑”与“MySQL 规则读取逻辑”。</p>
+<h4 id="自定义-DataSource-代码"><a href="#自定义-DataSource-代码" class="headerlink" title="自定义 DataSource 代码"></a>自定义 DataSource 代码</h4><p>package com.example.sentinel.datasource;</p>
 <p>import com.alibaba.csp.sentinel.datasource.ReadableDataSource;<br>import com.alibaba.csp.sentinel.slots.block.flow.FlowRule;<br>import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;<br>import com.alibaba.druid.pool.DruidDataSource;</p>
 <p>import java.sql.Connection;<br>import java.sql.PreparedStatement;<br>import java.sql.ResultSet;<br>import java.util.ArrayList;<br>import java.util.List;<br>import java.util.concurrent.Executors;<br>import java.util.concurrent.ScheduledExecutorService;<br>import java.util.concurrent.TimeUnit;</p>
 <p>&#x2F;**</p>
@@ -1015,17 +1002,11 @@
 </ul>
 <p>}
  </p>
-<ol start="4">
-<li>SPI 注册：让 Sentinel 识别自定义数据源</li>
-</ol>
-<p>Sentinel 启动时会扫描  META-INF&#x2F;services  目录下的 SPI 配置文件，自动加载  ReadableDataSource  的实现类。需手动创建配置文件：</p>
+<h3 id="4-SPI-注册：让-Sentinel-识别自定义数据源"><a href="#4-SPI-注册：让-Sentinel-识别自定义数据源" class="headerlink" title="4. SPI 注册：让 Sentinel 识别自定义数据源"></a>4. SPI 注册：让 Sentinel 识别自定义数据源</h3><p>Sentinel 启动时会扫描  META-INF&#x2F;services  目录下的 SPI 配置文件，自动加载  ReadableDataSource  的实现类。需手动创建配置文件：</p>
 <p>1. 创建 SPI 配置文件路径：在项目的  src&#x2F;main&#x2F;resources  目录下，新建路径  META-INF&#x2F;services 。<br>2. 创建 SPI 配置文件：在上述路径下创建文件，文件名必须为  com.alibaba.csp.sentinel.datasource.ReadableDataSource （即  ReadableDataSource  接口的全路径）。<br>3. 写入自定义 DataSource 全类名：在配置文件中添加自定义 DataSource 的完整包名+类名（确保 Sentinel 能扫描到）：</p>
 <p>com.example.sentinel.datasource.MysqlPullFlowRuleDataSource
  </p>
-<ol start="5">
-<li>Spring Boot 集成：初始化数据源</li>
-</ol>
-<p>将自定义 DataSource 注册为 Spring Bean，确保项目启动时自动执行构造方法（初始化连接池与定时任务）：</p>
+<h3 id="5-Spring-Boot-集成：初始化数据源"><a href="#5-Spring-Boot-集成：初始化数据源" class="headerlink" title="5. Spring Boot 集成：初始化数据源"></a>5. Spring Boot 集成：初始化数据源</h3><p>将自定义 DataSource 注册为 Spring Bean，确保项目启动时自动执行构造方法（初始化连接池与定时任务）：</p>
 <p>package com.example.sentinel.config;</p>
 <p>import com.example.sentinel.datasource.MysqlPullFlowRuleDataSource;<br>import org.springframework.context.annotation.Bean;<br>import org.springframework.context.annotation.Configuration;</p>
 <p>@Configuration<br>public class SentinelPullConfig {</p>
@@ -1041,19 +1022,14 @@ public MysqlPullFlowRuleDataSource mysqlPullFlowRuleDataSource() &#123;
 </code></pre>
 <p>}
  </p>
-<ol start="6">
-<li>验证：拉模式是否生效</li>
-</ol>
-<p>1. 启动 Spring Boot 项目：控制台会打印  [Sentinel 拉模式] 规则加载完成：共 1 条规则 ，说明定时任务已启动，首次拉取规则成功。<br>2. 修改 MySQL 规则：执行 SQL 语句修改阈值（如将 QPS 从 10 改为 5）：<br>UPDATE sentinel_flow_rule SET count &#x3D; 5 WHERE resource &#x3D; ‘&#x2F;order&#x2F;create’;<br> <br>3. 等待轮询间隔：5 秒后，控制台会再次打印规则加载日志，说明规则已自动更新。<br>4. 测试接口限流：用 Postman 或 JMeter 压测  &#x2F;order&#x2F;create  接口，当 QPS 超过 5 时，接口会返回 Sentinel 限流提示（如  Blocked by Sentinel (flow limiting) ），验证规则生效。</p>
-<p>四、拉模式的优势与注意事项</p>
-<p>优势</p>
+<h3 id="6-验证：拉模式是否生效"><a href="#6-验证：拉模式是否生效" class="headerlink" title="6. 验证：拉模式是否生效"></a>6. 验证：拉模式是否生效</h3><p>1. 启动 Spring Boot 项目：控制台会打印  [Sentinel 拉模式] 规则加载完成：共 1 条规则 ，说明定时任务已启动，首次拉取规则成功。<br>2. 修改 MySQL 规则：执行 SQL 语句修改阈值（如将 QPS 从 10 改为 5）：<br>UPDATE sentinel_flow_rule SET count &#x3D; 5 WHERE resource &#x3D; ‘&#x2F;order&#x2F;create’;<br> <br>3. 等待轮询间隔：5 秒后，控制台会再次打印规则加载日志，说明规则已自动更新。<br>4. 测试接口限流：用 Postman 或 JMeter 压测  &#x2F;order&#x2F;create  接口，当 QPS 超过 5 时，接口会返回 Sentinel 限流提示（如  Blocked by Sentinel (flow limiting) ），验证规则生效。</p>
+<h2 id="四、拉模式的优势与注意事项"><a href="#四、拉模式的优势与注意事项" class="headerlink" title="四、拉模式的优势与注意事项"></a>四、拉模式的优势与注意事项</h2><p>优势</p>
 <ul>
 <li>规则持久化：规则存储在 MySQL 中，应用重启后自动拉取，解决默认内存模式的痛点。</li>
 <li>实现成本低：无需依赖配置中心（如 Nacos、ZooKeeper），仅需定时轮询，适合中小项目。</li>
 <li>扩展灵活：可替换存储介质（如本地文件、Redis），只需修改  readRuleFromMysql()  中的读取逻辑。</li>
 </ul>
-<p>注意事项</p>
-<ul>
+<h2 id="注意事项"><a href="#注意事项" class="headerlink" title="注意事项"></a>注意事项</h2><ul>
 <li>实时性平衡：轮询间隔越小，实时性越高，但会增加数据库压力（建议设置 3-10 秒）。</li>
 <li>避免重复加载：确保 DataSource 仅初始化一次（如 Spring Bean 单例），避免多定时任务冲突。</li>
 <li>生产环境优化：</li>
@@ -1061,8 +1037,7 @@ public MysqlPullFlowRuleDataSource mysqlPullFlowRuleDataSource() &#123;
 <li>增加规则缓存，减少数据库查询次数。</li>
 <li>对 SQL 执行异常添加重试机制。</li>
 </ul>
-<p>总结</p>
-<p>Sentinel 拉模式的核心是“SPI 扩展自定义 DataSource + 客户端定时轮询”：</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Sentinel 拉模式的核心是“SPI 扩展自定义 DataSource + 客户端定时轮询”：</p>
 <p>1. 通过 SPI 机制让 Sentinel 加载自定义的“MySQL 规则读取逻辑”；<br>2. 通过定时任务主动拉取规则并注入 Sentinel 核心；<br>3. 最终实现规则的持久化与自动更新，解决默认内存模式的缺陷。</p>
 <p>拉模式适合对规则实时性要求不高、不想依赖配置中心的场景，是中小项目实现 Sentinel 规则持久化的优选方案。</p>
 ]]></content>
