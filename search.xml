@@ -710,6 +710,38 @@
       </tags>
   </entry>
   <entry>
+    <title></title>
+    <url>/2025/09/10/SEATA%E6%BA%90%E7%A0%81%EF%BC%9AAT%E4%B8%8EXA%E6%A8%A1%E5%BC%8F%E5%AD%A6%E4%B9%A0/</url>
+    <content><![CDATA[<h1 id="Seata-AT-模式与-XA-模式的区别"><a href="#Seata-AT-模式与-XA-模式的区别" class="headerlink" title="Seata AT 模式与 XA 模式的区别"></a>Seata AT 模式与 XA 模式的区别</h1><h2 id="1-模式区别"><a href="#1-模式区别" class="headerlink" title="1. 模式区别"></a>1. 模式区别</h2><ul>
+<li><strong>AT 模式</strong>：生成的是数据源代理（DataSource Proxy），通过代理拦截 SQL 执行，无需额外配置默认模式（Seata 默认支持 AT 模式），而非“数据库动态代理”（表述更精准）。</li>
+<li><strong>XA 模式</strong>：生成的是 XA 数据源代理（XADataSource Proxy），需在 YAML 中显式配置 <code>seata.tx-mode=XA</code>（而非仅“配置默认模式为 XA”），且依赖数据库原生 XA 协议支持（如 MySQL、Oracle 的 XA 事务能力）。</li>
+</ul>
+<h2 id="2-AT-模式流程"><a href="#2-AT-模式流程" class="headerlink" title="2. AT 模式流程"></a>2. AT 模式流程</h2><ul>
+<li>第一步会申请<strong>全局事务 ID（XID）</strong>（需明确“全局”，与分支事务 ID 区分）。</li>
+<li>基于原有分布式服务调用逻辑扩展，实现异常后的<strong>自动回滚</strong>（而非“自动补偿”）——补偿逻辑通过 Undo Log 反向生成 SQL 实现，需明确概念。</li>
+<li><strong>事务开始前</strong>：申请 XID 并存储到 ThreadLocal（Seata 内部通过 <code>RootContext</code> 管理 XID，MDC 通常用于日志打印携带 XID，非核心存储位置，修正存储载体）；往 TC（事务协调器）的全局事务表（global_table）插入记录；将数据库连接的 Auto Commit 改为 <code>false</code>（手动提交）。</li>
+<li><strong>SQL 执行前</strong>：仅对<strong>写操作（insert&#x2F;update&#x2F;delete）</strong> 分析语法并生成前置镜像（查询操作不会触发镜像生成，也不会拼接 <code>for update</code>——<code>for update</code> 是用户业务 SQL 自主使用的行锁语法，AT 模式通过全局锁控制并发，修正“查询加锁”错误）。</li>
+<li><strong>SQL 执行后</strong>：对写操作获取后置镜像（基于主键&#x2F;唯一键查询，确保与前置镜像对应），此时事务未提交。</li>
+<li><strong>后续操作</strong>：将前置&#x2F;后置镜像、Undo Log 写入本地数据库的 undo_log 表（而非“Seata 的 TC 表”，TC 不存储镜像，仅管理事务状态）；向 TC 注册分支事务，TC 分配分支事务 ID（Branch ID），并将分支事务与全局事务关联；同时获取全局锁（往 TC 的 lock_table 插入记录，键为“表名+主键”，而非“事务 ID 作为标识”，修正锁标识逻辑）。</li>
+<li><strong>事务提交&#x2F;回滚</strong>：<ul>
+<li>若正常提交：TC 通知各分支删除 Undo Log，释放全局锁；</li>
+<li>若出现异常：TC 通知各分支执行 Undo Log 回滚（反向 SQL 恢复数据），之后删除 Undo Log 并释放锁；</li>
+<li>后置处理：清除 <code>RootContext</code> 中的 XID，释放数据库连接等资源（修正“清除 XID”的载体）。</li>
+</ul>
+</li>
+</ul>
+<h2 id="3-XID-传递"><a href="#3-XID-传递" class="headerlink" title="3. XID 传递"></a>3. XID 传递</h2><ul>
+<li>微服务间调用时，发起方从 <code>RootContext</code>（而非仅 MDC）获取 XID，通过 HTTP 请求头（默认键为 <code>TX_XID</code>）传递给接收方；</li>
+<li>接收方通过 Spring MVC 拦截器&#x2F;Feign 拦截器解析请求头中的 <code>TX_XID</code>，并绑定到自身的 <code>RootContext</code> 中，从而实现 XID 跨服务传递（MDC 仅用于日志携带 XID，方便排查，非传递核心逻辑）。</li>
+</ul>
+<h2 id="4-其他要点"><a href="#4-其他要点" class="headerlink" title="4. 其他要点"></a>4. 其他要点</h2><ul>
+<li><strong>AT 模式的全局锁</strong>：获取时往 TC 的 <code>lock_table</code> 插入记录，键为“<code>resource_id</code>（数据源标识）+表名+主键”（而非“事务 ID 作为标识”，事务 ID 用于关联全局事务，锁键才是唯一标识）；插入失败时会阻塞并重试（默认重试次数可配置），避免并发写冲突。</li>
+<li><strong>AT 模式的默认隔离级别</strong>：读已提交（Read Committed），但通过“全局锁+本地锁”的协同，可避免“脏写”，并在一定程度上缓解“不可重复读”（需补充隔离级别的实际效果）。</li>
+<li><strong>取消全局事务绑定</strong>：若某服务不想参与全局事务，需在调用下游服务前执行 <code>RootContext.unbind()</code>（解除当前 XID 绑定），下游服务将不会注册分支事务；若后续需重新参与，需再次绑定 XID（修正“调用下游前再重新绑定”的顺序逻辑）。</li>
+</ul>
+]]></content>
+  </entry>
+  <entry>
     <title>Seata 分布式事务其他模式学习笔记</title>
     <url>/2025/09/07/Seata%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/</url>
     <content><![CDATA[<p> </p>
@@ -849,6 +881,76 @@
       </tags>
   </entry>
   <entry>
+    <title>Sentinel源码学习笔记</title>
+    <url>/2025/09/02/Sentinel%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
+    <content><![CDATA[<h1 id="Sentinel源码学习笔记"><a href="#Sentinel源码学习笔记" class="headerlink" title="Sentinel源码学习笔记"></a>Sentinel源码学习笔记</h1><p>一、客户端与服务端的交互流程</p>
+<p>1. 连接建立：客户端启动时通过配置的服务端地址（如  spring.cloud.sentinel.transport.dashboard.server ）与Sentinel Dashboard建立长连接（HTTP长轮询或WebSocket），定期发送心跳包保持连接。<br>2. 数据同步：</p>
+<ul>
+<li>客户端将实时统计的监控数据（QPS、异常数等）通过长连接上报给服务端，服务端在控制台展示实时监控图表。</li>
+<li>服务端通过长连接向客户端推送规则配置（流控、熔断等），客户端接收后更新本地规则缓存并生效。<br>3. 指令交互：服务端可通过控制台手动触发客户端规则更新、熔断状态重置等指令，客户端接收后执行对应操作并返回结果。</li>
+</ul>
+<p>二、自动配置类（以Spring Cloud整合为例）的核心逻辑</p>
+<p> SentinelAutoConfiguration  是核心自动配置类，主要执行以下操作：</p>
+<p>1. 初始化核心组件：注册  SentinelResourceAspect  切面，通过AOP拦截被  @SentinelResource  注解标记的资源（方法&#x2F;接口），触发责任链执行。<br>2. 规则加载：通过  DataSource  加载预设规则（如Nacos、Apollo配置的流控&#x2F;熔断规则），初始化到  RuleManager  中。<br>3. 适配Spring生态：注册  SentinelWebInterceptor  拦截HTTP请求，将URL自动作为资源进行监控；适配Feign、Dubbo等组件，自动拦截远程调用作为资源。<br>4. 异常处理：注册  SentinelExceptionHandler ，统一处理流控、熔断等异常（如  BlockException ），返回自定义响应。</p>
+<p>三、责任链（ProcessorSlotChain）的构建与核心插槽</p>
+<ol>
+<li>构建流程</li>
+</ol>
+<ul>
+<li>客户端初始化时， SlotChainProvider  会通过SPI机制加载默认插槽链，并允许通过  SlotChainBuilder  自定义扩展。</li>
+<li>默认链顺序（按优先级执行）： NodeSelectorSlot  →  ClusterBuilderSlot  →  LogSlot  →  StatisticSlot  →  AuthoritySlot  →  FlowSlot  →  DegradeSlot  →  SystemSlot （顺序固定）。</li>
+</ul>
+<ol start="2">
+<li>关键插槽工作原理</li>
+</ol>
+<ul>
+<li>StatisticSlot（统计插槽）：责任链核心，负责收集资源实时指标（QPS、响应时间、异常数等），为后续插槽提供数据支持；通过  ArrayMetric  维护滑动窗口统计，记录每个时间窗口的请求数、成功数等。</li>
+<li>FlowSlot（流控插槽）：使用  StatisticSlot  提供的QPS&#x2F;线程数数据，与预设流控规则对比，超过阈值则抛出  FlowException  拦截请求。</li>
+<li>DegradeSlot（熔断插槽）：通过  StatisticSlot  获取异常比例&#x2F;数、响应时间等数据，判断是否触发熔断（OPEN状态），拦截请求并抛出  DegradeException 。</li>
+<li>NodeSelectorSlot：为资源创建唯一统计节点（ DefaultNode ），用于区分不同上下文的资源调用（如不同服务调用同一接口）。</li>
+</ul>
+<p>四、断路器（熔断）实现逻辑</p>
+<ol>
+<li>状态机设计</li>
+</ol>
+<ul>
+<li>CLOSED：正常允许请求， DegradeSlot  实时统计异常比例&#x2F;数、响应时间。</li>
+<li>OPEN：触发熔断（如异常比例超阈值），拦截所有请求；持续  waitTimeout  时间后转为 HALF_OPEN。</li>
+<li>HALF_OPEN：允许少量请求通过，请求成功则转为 CLOSED，失败则重回 OPEN。</li>
+</ul>
+<ol start="2">
+<li>判断逻辑</li>
+</ol>
+<ul>
+<li>基于异常比例： （异常数 &#x2F; 总请求数）&gt; 阈值  且 总请求数≥最小请求数。</li>
+<li>基于响应时间：慢调用比例（响应时间&gt;阈值的请求数&#x2F;总请求数）&gt; 阈值。</li>
+</ul>
+<p>五、限流实现逻辑</p>
+<p>1.  FlowSlot  在责任链中检查  StatisticSlot  统计的实时QPS&#x2F;线程数，若超过预设规则阈值，直接抛出  FlowException  拦截请求。</p>
+<p>六、Fallback（降级）逻辑</p>
+<p>1. 触发场景：当资源被限流（ FlowException ）、熔断（ DegradeException ）或抛出业务异常时，执行预设的fallback逻辑。<br>2. 实现方式：</p>
+<ul>
+<li>注解指定： @SentinelResource(fallback &#x3D; “xxx”) ，方法  xxx  需与原方法参数一致，可接收异常参数。</li>
+<li>全局配置：通过  GlobalFallback  定义全局fallback，统一处理未指定局部fallback的资源。<br>3. 执行流程： SentinelResourceAspect  拦截到  BlockException  或业务异常后，通过反射调用fallback方法，返回降级结果。</li>
+</ul>
+<p>七、降级逻辑（与熔断的区别）</p>
+<ul>
+<li>熔断（Degrade）：服务端主动触发的保护机制（如异常率过高），属于“被动降级”，状态随指标自动切换（CLOSED→OPEN→HALF_OPEN→CLOSED）。</li>
+<li>限流（Flow）：主动限制请求量以防止资源耗尽，属于“主动降级”，触发条件是实时请求量超阈值。</li>
+<li>共性：两者最终均通过抛出异常被fallback逻辑捕获，返回降级响应，避免服务雪崩。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>中间件学习</category>
+        <category>Sentinel</category>
+      </categories>
+      <tags>
+        <tag>Sentinel</tag>
+        <tag>源码解析</tag>
+        <tag>中间件</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>今日学习笔记：Sentinel 核心原理与关键算法</title>
     <url>/2024/05/20/Sentinel%E7%9A%84%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86%E5%92%8C%E5%85%B3%E9%94%AE%E7%AE%97%E6%B3%95/</url>
     <content><![CDATA[<p>一、Sentinel 对外部请求的感知机制</p>
@@ -921,76 +1023,6 @@
         <tag>流量控制</tag>
         <tag>微服务</tag>
         <tag>Java</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Sentinel源码学习笔记</title>
-    <url>/2025/09/02/Sentinel%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
-    <content><![CDATA[<h1 id="Sentinel源码学习笔记"><a href="#Sentinel源码学习笔记" class="headerlink" title="Sentinel源码学习笔记"></a>Sentinel源码学习笔记</h1><p>一、客户端与服务端的交互流程</p>
-<p>1. 连接建立：客户端启动时通过配置的服务端地址（如  spring.cloud.sentinel.transport.dashboard.server ）与Sentinel Dashboard建立长连接（HTTP长轮询或WebSocket），定期发送心跳包保持连接。<br>2. 数据同步：</p>
-<ul>
-<li>客户端将实时统计的监控数据（QPS、异常数等）通过长连接上报给服务端，服务端在控制台展示实时监控图表。</li>
-<li>服务端通过长连接向客户端推送规则配置（流控、熔断等），客户端接收后更新本地规则缓存并生效。<br>3. 指令交互：服务端可通过控制台手动触发客户端规则更新、熔断状态重置等指令，客户端接收后执行对应操作并返回结果。</li>
-</ul>
-<p>二、自动配置类（以Spring Cloud整合为例）的核心逻辑</p>
-<p> SentinelAutoConfiguration  是核心自动配置类，主要执行以下操作：</p>
-<p>1. 初始化核心组件：注册  SentinelResourceAspect  切面，通过AOP拦截被  @SentinelResource  注解标记的资源（方法&#x2F;接口），触发责任链执行。<br>2. 规则加载：通过  DataSource  加载预设规则（如Nacos、Apollo配置的流控&#x2F;熔断规则），初始化到  RuleManager  中。<br>3. 适配Spring生态：注册  SentinelWebInterceptor  拦截HTTP请求，将URL自动作为资源进行监控；适配Feign、Dubbo等组件，自动拦截远程调用作为资源。<br>4. 异常处理：注册  SentinelExceptionHandler ，统一处理流控、熔断等异常（如  BlockException ），返回自定义响应。</p>
-<p>三、责任链（ProcessorSlotChain）的构建与核心插槽</p>
-<ol>
-<li>构建流程</li>
-</ol>
-<ul>
-<li>客户端初始化时， SlotChainProvider  会通过SPI机制加载默认插槽链，并允许通过  SlotChainBuilder  自定义扩展。</li>
-<li>默认链顺序（按优先级执行）： NodeSelectorSlot  →  ClusterBuilderSlot  →  LogSlot  →  StatisticSlot  →  AuthoritySlot  →  FlowSlot  →  DegradeSlot  →  SystemSlot （顺序固定）。</li>
-</ul>
-<ol start="2">
-<li>关键插槽工作原理</li>
-</ol>
-<ul>
-<li>StatisticSlot（统计插槽）：责任链核心，负责收集资源实时指标（QPS、响应时间、异常数等），为后续插槽提供数据支持；通过  ArrayMetric  维护滑动窗口统计，记录每个时间窗口的请求数、成功数等。</li>
-<li>FlowSlot（流控插槽）：使用  StatisticSlot  提供的QPS&#x2F;线程数数据，与预设流控规则对比，超过阈值则抛出  FlowException  拦截请求。</li>
-<li>DegradeSlot（熔断插槽）：通过  StatisticSlot  获取异常比例&#x2F;数、响应时间等数据，判断是否触发熔断（OPEN状态），拦截请求并抛出  DegradeException 。</li>
-<li>NodeSelectorSlot：为资源创建唯一统计节点（ DefaultNode ），用于区分不同上下文的资源调用（如不同服务调用同一接口）。</li>
-</ul>
-<p>四、断路器（熔断）实现逻辑</p>
-<ol>
-<li>状态机设计</li>
-</ol>
-<ul>
-<li>CLOSED：正常允许请求， DegradeSlot  实时统计异常比例&#x2F;数、响应时间。</li>
-<li>OPEN：触发熔断（如异常比例超阈值），拦截所有请求；持续  waitTimeout  时间后转为 HALF_OPEN。</li>
-<li>HALF_OPEN：允许少量请求通过，请求成功则转为 CLOSED，失败则重回 OPEN。</li>
-</ul>
-<ol start="2">
-<li>判断逻辑</li>
-</ol>
-<ul>
-<li>基于异常比例： （异常数 &#x2F; 总请求数）&gt; 阈值  且 总请求数≥最小请求数。</li>
-<li>基于响应时间：慢调用比例（响应时间&gt;阈值的请求数&#x2F;总请求数）&gt; 阈值。</li>
-</ul>
-<p>五、限流实现逻辑</p>
-<p>1.  FlowSlot  在责任链中检查  StatisticSlot  统计的实时QPS&#x2F;线程数，若超过预设规则阈值，直接抛出  FlowException  拦截请求。</p>
-<p>六、Fallback（降级）逻辑</p>
-<p>1. 触发场景：当资源被限流（ FlowException ）、熔断（ DegradeException ）或抛出业务异常时，执行预设的fallback逻辑。<br>2. 实现方式：</p>
-<ul>
-<li>注解指定： @SentinelResource(fallback &#x3D; “xxx”) ，方法  xxx  需与原方法参数一致，可接收异常参数。</li>
-<li>全局配置：通过  GlobalFallback  定义全局fallback，统一处理未指定局部fallback的资源。<br>3. 执行流程： SentinelResourceAspect  拦截到  BlockException  或业务异常后，通过反射调用fallback方法，返回降级结果。</li>
-</ul>
-<p>七、降级逻辑（与熔断的区别）</p>
-<ul>
-<li>熔断（Degrade）：服务端主动触发的保护机制（如异常率过高），属于“被动降级”，状态随指标自动切换（CLOSED→OPEN→HALF_OPEN→CLOSED）。</li>
-<li>限流（Flow）：主动限制请求量以防止资源耗尽，属于“主动降级”，触发条件是实时请求量超阈值。</li>
-<li>共性：两者最终均通过抛出异常被fallback逻辑捕获，返回降级响应，避免服务雪崩。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>中间件学习</category>
-        <category>Sentinel</category>
-      </categories>
-      <tags>
-        <tag>Sentinel</tag>
-        <tag>源码解析</tag>
-        <tag>中间件</tag>
       </tags>
   </entry>
   <entry>
@@ -1129,7 +1161,7 @@ public MysqlPullFlowRuleDataSource mysqlPullFlowRuleDataSource() &#123;
   </entry>
   <entry>
     <title></title>
-    <url>/2025/09/07/sentinel%E6%8E%A8%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/</url>
+    <url>/2025/09/10/sentinel%E6%8E%A8%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/</url>
     <content><![CDATA[<p>深入理解 Sentinel 限流组件推模式实现</p>
 <p>在微服务架构中，流量控制是保障系统稳定性的核心手段，Sentinel 作为主流限流组件，其规则同步模式直接影响分布式环境下的可用性。本文将聚焦 Sentinel 推模式的实现细节，对比拉模式的局限性，并补充多种主流实现方案，为线上分布式场景提供实践参考。</p>
 <p>一、Sentinel 规则同步的两种核心模式</p>
