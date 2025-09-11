@@ -312,6 +312,353 @@
       </tags>
   </entry>
   <entry>
+    <title>Spring Cloud Gateway 学习总结（优化版）</title>
+    <url>/2024/05/20/Gateway%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
+    <content><![CDATA[<h2 id="一、核心原理补充（易混淆点）"><a href="#一、核心原理补充（易混淆点）" class="headerlink" title="一、核心原理补充（易混淆点）"></a>一、核心原理补充（易混淆点）</h2><h3 id="1-响应式架构本质"><a href="#1-响应式架构本质" class="headerlink" title="1. 响应式架构本质"></a>1. 响应式架构本质</h3><p>Spring Cloud Gateway 基于 WebFlux 框架实现，底层依赖 Netty 实现异步非阻塞通信，与传统 Spring MVC 框架存在本质区别：</p>
+<ul>
+<li>严禁引入 <code>spring-boot-starter-web</code> 依赖，否则会因 Servlet API 与 Netty 通信模型冲突导致启动失败</li>
+<li>核心优势：高并发场景下资源利用率更高，适合作为微服务入口网关承载大流量</li>
+</ul>
+<h3 id="2-路由核心组件逻辑"><a href="#2-路由核心组件逻辑" class="headerlink" title="2. 路由核心组件逻辑"></a>2. 路由核心组件逻辑</h3><ul>
+<li><strong>断言（Predicate）</strong>：路由匹配的”判断条件”，支持路径、请求头、参数等多种匹配规则，多个断言需<strong>同时满足</strong>才会触发路由</li>
+<li><strong>过滤器（Filter）</strong>：路由执行的”动作处理器”，按顺序对请求&#x2F;响应进行加工<ul>
+<li>局部过滤器：仅对当前路由生效</li>
+<li>全局过滤器（Global Filter）：对所有路由生效，适合实现认证、限流等通用功能</li>
+</ul>
+</li>
+</ul>
+<h2 id="二、实战配置核心要点"><a href="#二、实战配置核心要点" class="headerlink" title="二、实战配置核心要点"></a>二、实战配置核心要点</h2><h3 id="1-基础依赖配置（Spring-Boot-3-x）"><a href="#1-基础依赖配置（Spring-Boot-3-x）" class="headerlink" title="1. 基础依赖配置（Spring Boot 3.x）"></a>1. 基础依赖配置（Spring Boot 3.x）</h3><pre><code class="xml">&lt;!-- Gateway 核心依赖 --&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-starter-gateway&lt;/artifactId&gt;
+&lt;/dependency&gt;
+
+&lt;!-- 服务发现（配合 Nacos 使用） --&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;com.alibaba.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-starter-alibaba-nacos-discovery&lt;/artifactId&gt;
+&lt;/dependency&gt;
+
+&lt;!-- 负载均衡（配合 lb:// 协议使用） --&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-starter-loadbalancer&lt;/artifactId&gt;
+&lt;/dependency&gt;
+ 
+ 
+2. 核心配置示例（application.yml）
+ 
+spring:
+  cloud:
+    gateway:
+      # 路由配置
+      routes:
+        - id: user-service-route  # 路由唯一标识
+          uri: lb://user-service  # 目标服务（lb:// 表示启用负载均衡）
+          predicates:             # 路由断言（匹配条件）
+            - Path=/user/**       # 路径匹配：以 /user 开头的请求
+            - Method=GET,POST     # 限制请求方法
+          filters:                # 路由过滤器
+            - AddRequestHeader=X-Request-Source, gateway  # 添加请求头
+            - AddRequestParameter=version, v1              # 添加请求参数
+            - name: RequestRateLimiter                     # 限流配置
+              args:
+                redis-rate-limiter.replenishRate: 10       # 令牌生成速率
+                redis-rate-limiter.burstCapacity: 20       # 令牌桶容量
+
+      # 全局跨域配置
+      globalcors:
+        cors-configurations:
+          &#39;[/**]&#39;:
+            allowed-origins: 
+              - &quot;https://example.com&quot;
+              - &quot;https://api.example.com&quot;
+            allowed-methods: &quot;*&quot;  # 允许所有请求方法
+            allowed-headers: &quot;*&quot;  # 允许所有请求头
+            allow-credentials: true  # 允许携带cookie
+            max-age: 3600         # 预检请求缓存时间（秒）
+ 
+ 
+三、进阶功能实现指南
+ 
+1. 自定义全局过滤器
+ 
+推荐实现  GlobalFilter + Ordered  接口，实现全路由生效的通用功能：
+ 
+@Component
+public class LoggingFilter implements GlobalFilter, Ordered &#123;
+
+    @Override
+    public Mono&lt;Void&gt; filter(ServerWebExchange exchange, GatewayFilterChain chain) &#123;
+        // 前置处理：记录请求信息
+        log.info(&quot;Request: &#123;&#125; &#123;&#125;&quot;, 
+                 exchange.getRequest().getMethod(), 
+                 exchange.getRequest().getPath());
+        
+        // 继续执行过滤器链
+        return chain.filter(exchange)
+            // 后置处理：记录响应信息
+            .doFinally(signal -&gt; log.info(&quot;Response: &#123;&#125;&quot;, 
+                                          exchange.getResponse().getStatusCode()));
+    &#125;
+
+    @Override
+    public int getOrder() &#123;
+        return -10;  // 数值越小，执行优先级越高
+    &#125;
+&#125;
+ 
+ 
+2. 令牌桶限流实现
+ 
+基于 Redis + Lua 脚本实现分布式限流，核心依赖：
+ 
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-data-redis-reactive&lt;/artifactId&gt;
+&lt;/dependency&gt;
+ 
+ 
+关键配置：通过  KeyResolver  指定限流维度（如IP、用户ID）
+ 
+@Bean
+public KeyResolver ipKeyResolver() &#123;
+    return exchange -&gt; Mono.just(
+        exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
+    );
+&#125;
+ 
+ 
+3. 请求生命周期流程
+ 
+客户端请求 → 
+HandlerMapping（路由匹配） → 
+GatewayWebHandler（构建过滤器链） → 
+「前置过滤」 → 
+NettyRoutingFilter（转发请求到目标服务） → 
+「后置过滤」 → 
+返回响应给客户端
+ 
+ 
+四、常见问题解决方案
+ 
+问题场景 排查方向 解决方案 
+路由匹配失效 1. 断言条件冲突 2. 路由ID重复 3. 依赖冲突 1. 调整断言顺序 2. 保证路由ID唯一性 3. 移除 spring-boot-starter-web 依赖 
+跨域配置不生效 1. 允许源与credentials冲突 2. 路径匹配不全 1. 明确指定allowed-origins而非* 2. 用&#39;/**&#39;覆盖所有路径 
+过滤器执行顺序异常 1. Ordered接口实现错误 2. 过滤器类型冲突（局部/全局） 1. 统一通过getOrder()定义顺序 2. 全局过滤器优先使用较低order值 
+服务路由超时 1. 后端服务响应慢 2. 超时配置缺失 1. 优化后端服务性能 2. 配置 connect-timeout 和 response-timeout 
+ 
+五、生产环境部署建议
+ 
+1. 高可用部署
+- 多实例集群部署，配合 Nginx 实现负载均衡
+- 避免单点故障：Redis、服务注册中心等依赖组件同样需要集群部署
+2. 性能优化
+- 调整 Netty 线程池参数： spring.cloud.gateway.netty.worker-threads 
+- 启用连接池： spring.cloud.gateway.httpclient.pool.enabled=true 
+- 合理设置超时时间，避免长连接阻塞
+3. 监控与运维
+- 集成 Spring Boot Actuator 暴露监控端点：
+management:
+  endpoints:
+    web:
+      exposure:
+        include: gateway,health,info,metrics
+ 
+- 配置日志输出关键信息：路由匹配结果、过滤器执行耗时、异常堆栈等
+4. 安全防护
+- 前置 WAF 防护Web攻击
+- 实现 JWT 令牌验证过滤器拦截未授权请求
+- 配置 HTTPS： spring.cloud.gateway.httpserver.ssl.enabled=true
+## 六、与其他Spring Cloud组件集成
+
+### 1. 服务发现集成（Nacos）
+通过Nacos实现服务自动注册与发现，路由配置示例：
+```yaml
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true        # 启用服务发现路由
+          lower-case-service-id: true  # 服务名转小写
+          predicates:
+            - Path=/nacos/**  # 自动生成以服务名开头的路由
+ 
+ 
+2. 链路追踪（Sleuth）
+ 
+添加依赖：
+ 
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-starter-sleuth&lt;/artifactId&gt;
+&lt;/dependency&gt;
+ 
+ 
+配置日志格式（logback.xml）：
+ 
+&lt;encoder&gt;
+    &lt;pattern&gt;%d&#123;HH:mm:ss.SSS&#125; [$&#123;spring.application.name:&#125;,%X&#123;traceId:-&#125;,%X&#123;spanId:-&#125;] %-5level %logger&#123;36&#125; - %msg%n&lt;/pattern&gt;
+&lt;/encoder&gt;
+ 
+ 
+3. 服务降级（Resilience4j）
+ 
+添加依赖：
+ 
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-starter-circuitbreaker-reactor-resilience4j&lt;/artifactId&gt;
+&lt;/dependency&gt;
+ 
+ 
+配置降级逻辑（自定义过滤器）：
+ 
+@Bean
+public RouteLocator customRouteLocator(RouteLocatorBuilder builder) &#123;
+    return builder.routes()
+        .route(&quot;user-service&quot;, r -&gt; r
+            .path(&quot;/user/**&quot;)
+            .filters(f -&gt; f
+                .circuitBreaker(c -&gt; c
+                    .name(&quot;userService&quot;)
+                    .fallbackUri(&quot;forward:/fallback/user&quot;)
+                )
+            )
+            .uri(&quot;lb://user-service&quot;)
+        )
+        .build();
+&#125;
+ 
+ 
+七、性能调优策略
+ 
+1. Netty线程池优化
+ 
+spring:
+  cloud:
+    gateway:
+      httpclient:
+        # 连接池配置
+        pool:
+          max-concurrent-connections: 2000  # 最大并发连接数
+          max-pending-connections: 500     # 最大等待连接数
+        # 超时配置
+        connect-timeout: 1000ms
+        response-timeout: 5000ms
+      netty:
+        worker-threads: 40  # 根据CPU核心数调整（推荐公式：CPU核心数 * 2）
+ 
+ 
+2. 缓存优化
+ 
+// 配置缓存管理器
+@Bean
+public RedisCacheManagerBuilderCustomizer redisCacheManagerBuilderCustomizer(RedisConnectionFactory connectionFactory) &#123;
+    return builder -&gt; builder
+        .withCacheConfiguration(&quot;route-cache&quot;,
+            RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(Duration.ofHours(1))
+                .disableCachingNullValues());
+&#125;
+
+// 在路由配置中使用缓存
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: cached-route
+          uri: lb://product-service
+          predicates:
+            - Path=/product/**
+          metadata:
+            caching:
+              cacheName: route-cache
+              cacheKey: &quot;#&#123;request.path&#125;&quot;
+ 
+ 
+八、版本升级注意事项
+ 
+1. Spring Boot 3.x 升级要点
+ 
+- 必须使用 Java 17+
+- WebFlux 默认使用 Reactor 3.5+
+- 移除  spring-boot-starter-actuator  依赖，改为  spring-boot-starter-management 
+ 
+2. Spring Cloud Gateway 4.x 新特性
+ 
+- 支持 WebFlux.fn 函数式路由定义
+- 增强的限流支持（RateLimiter 改进）
+- 新增 WebClient 集成方式
+ 
+3. 依赖版本矩阵
+ 
+组件 Spring Boot 3.x 版本 Spring Cloud 版本 
+Gateway 3.2.0+ 2023.0.3+ 
+Nacos Discovery 0.13.0+ 2023.0.3+ 
+LoadBalancer 3.2.0+ 2023.0.3+ 
+ 
+</code></pre>
+]]></content>
+      <categories>
+        <category>微服务架构</category>
+        <category>技术总结</category>
+      </categories>
+      <tags>
+        <tag>Spring Cloud</tag>
+        <tag>微服务网关</tag>
+        <tag>Gateway</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Nacos 核心源码学习笔记</title>
+    <url>/2025/08/26/Nacos-%E6%A0%B8%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
+    <content><![CDATA[<h1 id="Nacos-核心源码学习笔记"><a href="#Nacos-核心源码学习笔记" class="headerlink" title="Nacos 核心源码学习笔记"></a>Nacos 核心源码学习笔记</h1><p>Nacos 作为微服务架构中核心的服务注册发现与配置中心，其底层设计与实现逻辑对理解微服务治理至关重要。本文从源码入口、服务注册、心跳检测、集群一致性四个核心维度，梳理 Nacos 关键机制的实现原理。</p>
+<h2 id="一、源码入口与初始化机制"><a href="#一、源码入口与初始化机制" class="headerlink" title="一、源码入口与初始化机制"></a>一、源码入口与初始化机制</h2><h3 id="1-源码入口定位"><a href="#1-源码入口定位" class="headerlink" title="1. 源码入口定位"></a>1. 源码入口定位</h3><p>分析 Nacos 源码时，可通过启动脚本定位启动类，或直接聚焦服务发现核心 Jar 包（如 <code>nacos-discovery</code>）。其初始化逻辑依赖 <strong>Spring Boot SPI 机制</strong>，核心流程如下：</p>
+<ul>
+<li>在 <code>META-INF/spring.factories</code> 中配置自动配置类（如服务发现场景的 <code>NacosDiscoveryAutoConfiguration</code>）；</li>
+<li>启用 Jar 包时，Spring 容器通过 <code>@EnableAutoConfiguration</code> 触发自动配置类加载；</li>
+<li>自动配置类初始化 <code>NacosServiceRegistry</code>（服务注册）、<code>NacosDiscoveryClient</code>（服务发现）等核心组件，并向 Nacos 服务端发起请求，建立基础通信链路。</li>
+</ul>
+<h2 id="二、服务注册流程与高并发设计"><a href="#二、服务注册流程与高并发设计" class="headerlink" title="二、服务注册流程与高并发设计"></a>二、服务注册流程与高并发设计</h2><h3 id="1-核心注册流程"><a href="#1-核心注册流程" class="headerlink" title="1. 核心注册流程"></a>1. 核心注册流程</h3><ol>
+<li>客户端封装服务信息（IP、端口、服务名等）为 <code>Instance</code> 对象，发送注册请求至服务端；</li>
+<li>服务端接收请求后，先将 <code>Instance</code> 存入 <code>BlockingQueue</code> 阻塞队列，作为请求缓冲层；</li>
+<li>后台专用线程从队列中持续取出 <code>Instance</code>，写入注册表（嵌套 <code>Map</code> 结构：<code>serviceName -&gt; cluster -&gt; Instance</code>）。</li>
+</ol>
+<h3 id="2-高并发支撑策略"><a href="#2-高并发支撑策略" class="headerlink" title="2. 高并发支撑策略"></a>2. 高并发支撑策略</h3><ul>
+<li><strong>阻塞队列缓冲</strong>：通过“生产者-消费者”模式解耦请求接收与数据写入，避免直接操作注册表导致的锁竞争；</li>
+<li><strong>读写分离架构</strong>：<ul>
+<li>写操作（注册&#x2F;更新）：拷贝目标服务的 <code>Instance</code> 集合（<code>Set</code>），在副本中修改，不影响原集合；</li>
+<li>读操作（服务发现）：直接从原 <code>Set</code> 读取数据，保证查询无阻塞；</li>
+</ul>
+</li>
+<li><strong>原子替换</strong>：修改完成后，用新 <code>Set</code> 原子替换原 <code>Set</code>，兼顾数据一致性与并发效率。</li>
+</ul>
+<h2 id="三、心跳检测机制"><a href="#三、心跳检测机制" class="headerlink" title="三、心跳检测机制"></a>三、心跳检测机制</h2><h3 id="1-客户端心跳发送"><a href="#1-客户端心跳发送" class="headerlink" title="1. 客户端心跳发送"></a>1. 客户端心跳发送</h3><p>服务实例注册成功后，客户端默认每 <strong>5 秒</strong> 向 Nacos 服务端发送心跳请求，携带实例 ID 等唯一标识信息。</p>
+<h3 id="2-服务端健康检查"><a href="#2-服务端健康检查" class="headerlink" title="2. 服务端健康检查"></a>2. 服务端健康检查</h3><p>服务端维护每个实例的“最后心跳时间”，通过时间差判断实例健康状态：</p>
+<ul>
+<li>若 <code>当前时间 - 最后心跳时间 &gt; 15 秒</code>：标记实例为不健康（<code>healthy = false</code>），服务发现时不返回该实例；</li>
+<li>若 <code>当前时间 - 最后心跳时间 &gt; 30 秒</code>：直接从注册表中移除实例，视为服务下线。</li>
+</ul>
+<h2 id="四、集群-CP-模式与-Raft-协议"><a href="#四、集群-CP-模式与-Raft-协议" class="headerlink" title="四、集群 CP 模式与 Raft 协议"></a>四、集群 CP 模式与 Raft 协议</h2><h3 id="1-CP-模式适用场景"><a href="#1-CP-模式适用场景" class="headerlink" title="1. CP 模式适用场景"></a>1. CP 模式适用场景</h3><p>通过配置 <code>nacos.core.protocol=cp</code> 开启 CP 模式，适用于数据一致性要求极高的场景（如金融领域服务注册）。</p>
+<h3 id="2-Raft-协议核心作用"><a href="#2-Raft-协议核心作用" class="headerlink" title="2. Raft 协议核心作用"></a>2. Raft 协议核心作用</h3><p>服务注册、实例状态变更等操作会触发 Raft 协议，保障集群数据一致性：</p>
+<ul>
+<li><strong>Leader 选举</strong>：集群节点通过 Raft 选举产生 Leader，由 Leader 统一处理客户端请求并协调数据同步；</li>
+<li><strong>日志复制</strong>：Leader 将数据变更记录为日志，同步至所有 Follower 节点，待多数节点确认后才提交变更（如写入注册表）；</li>
+<li>基于 Raft 协议，Nacos 集群在节点故障、网络分区时仍能保证数据一致，实现高可靠服务治理。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>Nacos</tag>
+        <tag>微服务</tag>
+        <tag>源码分析</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Hexo + GitHub Actions 实现自动化部署完整指南</title>
     <url>/2025/08/29/Hexo-GitHub-Actions-%E5%AE%9E%E7%8E%B0%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2%E5%AE%8C%E6%95%B4%E6%8C%87%E5%8D%97/</url>
     <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在使用 Hexo 搭建个人博客时，当我们终于把hexo生成的页面挂载到github页面后，每次提交博客都需要使用<code>hexo clean &amp;&amp; hexo g &amp;&amp; hexo d</code>来部署很麻烦，可以借助github actions来实现流水线布置，我们每次提交源代码到github存放源码的分支上，一旦监听到源代码的push事件，流水线就会就会自动拉取环境自动部署，所以我们需要一个存放源代码的分支，以及我们的发布分支，可以使用git命令创建这两个分支，自动CI&#x2F;CD,github需要密钥用来保证项目拉取和部署的权限，需要在本地生成ssh的密钥，公钥用来拉取项目，私钥用来部署推送更新页面，而且github对于npm安装有频率限制，我们可以通过配置国内镜像源+缓存配置，避免每次全量拉取，提高依赖安装以及部署的速度</p>
@@ -416,53 +763,6 @@
         <tag>Hexo</tag>
         <tag>GitHub</tag>
         <tag>CI/CD</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Nacos 核心源码学习笔记</title>
-    <url>/2025/08/26/Nacos-%E6%A0%B8%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
-    <content><![CDATA[<h1 id="Nacos-核心源码学习笔记"><a href="#Nacos-核心源码学习笔记" class="headerlink" title="Nacos 核心源码学习笔记"></a>Nacos 核心源码学习笔记</h1><p>Nacos 作为微服务架构中核心的服务注册发现与配置中心，其底层设计与实现逻辑对理解微服务治理至关重要。本文从源码入口、服务注册、心跳检测、集群一致性四个核心维度，梳理 Nacos 关键机制的实现原理。</p>
-<h2 id="一、源码入口与初始化机制"><a href="#一、源码入口与初始化机制" class="headerlink" title="一、源码入口与初始化机制"></a>一、源码入口与初始化机制</h2><h3 id="1-源码入口定位"><a href="#1-源码入口定位" class="headerlink" title="1. 源码入口定位"></a>1. 源码入口定位</h3><p>分析 Nacos 源码时，可通过启动脚本定位启动类，或直接聚焦服务发现核心 Jar 包（如 <code>nacos-discovery</code>）。其初始化逻辑依赖 <strong>Spring Boot SPI 机制</strong>，核心流程如下：</p>
-<ul>
-<li>在 <code>META-INF/spring.factories</code> 中配置自动配置类（如服务发现场景的 <code>NacosDiscoveryAutoConfiguration</code>）；</li>
-<li>启用 Jar 包时，Spring 容器通过 <code>@EnableAutoConfiguration</code> 触发自动配置类加载；</li>
-<li>自动配置类初始化 <code>NacosServiceRegistry</code>（服务注册）、<code>NacosDiscoveryClient</code>（服务发现）等核心组件，并向 Nacos 服务端发起请求，建立基础通信链路。</li>
-</ul>
-<h2 id="二、服务注册流程与高并发设计"><a href="#二、服务注册流程与高并发设计" class="headerlink" title="二、服务注册流程与高并发设计"></a>二、服务注册流程与高并发设计</h2><h3 id="1-核心注册流程"><a href="#1-核心注册流程" class="headerlink" title="1. 核心注册流程"></a>1. 核心注册流程</h3><ol>
-<li>客户端封装服务信息（IP、端口、服务名等）为 <code>Instance</code> 对象，发送注册请求至服务端；</li>
-<li>服务端接收请求后，先将 <code>Instance</code> 存入 <code>BlockingQueue</code> 阻塞队列，作为请求缓冲层；</li>
-<li>后台专用线程从队列中持续取出 <code>Instance</code>，写入注册表（嵌套 <code>Map</code> 结构：<code>serviceName -&gt; cluster -&gt; Instance</code>）。</li>
-</ol>
-<h3 id="2-高并发支撑策略"><a href="#2-高并发支撑策略" class="headerlink" title="2. 高并发支撑策略"></a>2. 高并发支撑策略</h3><ul>
-<li><strong>阻塞队列缓冲</strong>：通过“生产者-消费者”模式解耦请求接收与数据写入，避免直接操作注册表导致的锁竞争；</li>
-<li><strong>读写分离架构</strong>：<ul>
-<li>写操作（注册&#x2F;更新）：拷贝目标服务的 <code>Instance</code> 集合（<code>Set</code>），在副本中修改，不影响原集合；</li>
-<li>读操作（服务发现）：直接从原 <code>Set</code> 读取数据，保证查询无阻塞；</li>
-</ul>
-</li>
-<li><strong>原子替换</strong>：修改完成后，用新 <code>Set</code> 原子替换原 <code>Set</code>，兼顾数据一致性与并发效率。</li>
-</ul>
-<h2 id="三、心跳检测机制"><a href="#三、心跳检测机制" class="headerlink" title="三、心跳检测机制"></a>三、心跳检测机制</h2><h3 id="1-客户端心跳发送"><a href="#1-客户端心跳发送" class="headerlink" title="1. 客户端心跳发送"></a>1. 客户端心跳发送</h3><p>服务实例注册成功后，客户端默认每 <strong>5 秒</strong> 向 Nacos 服务端发送心跳请求，携带实例 ID 等唯一标识信息。</p>
-<h3 id="2-服务端健康检查"><a href="#2-服务端健康检查" class="headerlink" title="2. 服务端健康检查"></a>2. 服务端健康检查</h3><p>服务端维护每个实例的“最后心跳时间”，通过时间差判断实例健康状态：</p>
-<ul>
-<li>若 <code>当前时间 - 最后心跳时间 &gt; 15 秒</code>：标记实例为不健康（<code>healthy = false</code>），服务发现时不返回该实例；</li>
-<li>若 <code>当前时间 - 最后心跳时间 &gt; 30 秒</code>：直接从注册表中移除实例，视为服务下线。</li>
-</ul>
-<h2 id="四、集群-CP-模式与-Raft-协议"><a href="#四、集群-CP-模式与-Raft-协议" class="headerlink" title="四、集群 CP 模式与 Raft 协议"></a>四、集群 CP 模式与 Raft 协议</h2><h3 id="1-CP-模式适用场景"><a href="#1-CP-模式适用场景" class="headerlink" title="1. CP 模式适用场景"></a>1. CP 模式适用场景</h3><p>通过配置 <code>nacos.core.protocol=cp</code> 开启 CP 模式，适用于数据一致性要求极高的场景（如金融领域服务注册）。</p>
-<h3 id="2-Raft-协议核心作用"><a href="#2-Raft-协议核心作用" class="headerlink" title="2. Raft 协议核心作用"></a>2. Raft 协议核心作用</h3><p>服务注册、实例状态变更等操作会触发 Raft 协议，保障集群数据一致性：</p>
-<ul>
-<li><strong>Leader 选举</strong>：集群节点通过 Raft 选举产生 Leader，由 Leader 统一处理客户端请求并协调数据同步；</li>
-<li><strong>日志复制</strong>：Leader 将数据变更记录为日志，同步至所有 Follower 节点，待多数节点确认后才提交变更（如写入注册表）；</li>
-<li>基于 Raft 协议，Nacos 集群在节点故障、网络分区时仍能保证数据一致，实现高可靠服务治理。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>技术笔记</category>
-      </categories>
-      <tags>
-        <tag>Nacos</tag>
-        <tag>微服务</tag>
-        <tag>源码分析</tag>
       </tags>
   </entry>
   <entry>
@@ -711,7 +1011,7 @@
   </entry>
   <entry>
     <title></title>
-    <url>/2025/09/10/SEATA%E6%BA%90%E7%A0%81%EF%BC%9AAT%E4%B8%8EXA%E6%A8%A1%E5%BC%8F%E5%AD%A6%E4%B9%A0/</url>
+    <url>/2025/09/11/SEATA%E6%BA%90%E7%A0%81%EF%BC%9AAT%E4%B8%8EXA%E6%A8%A1%E5%BC%8F%E5%AD%A6%E4%B9%A0/</url>
     <content><![CDATA[<h1 id="Seata-AT-模式与-XA-模式的区别"><a href="#Seata-AT-模式与-XA-模式的区别" class="headerlink" title="Seata AT 模式与 XA 模式的区别"></a>Seata AT 模式与 XA 模式的区别</h1><h2 id="1-模式区别"><a href="#1-模式区别" class="headerlink" title="1. 模式区别"></a>1. 模式区别</h2><ul>
 <li><strong>AT 模式</strong>：生成的是数据源代理（DataSource Proxy），通过代理拦截 SQL 执行，无需额外配置默认模式（Seata 默认支持 AT 模式），而非“数据库动态代理”（表述更精准）。</li>
 <li><strong>XA 模式</strong>：生成的是 XA 数据源代理（XADataSource Proxy），需在 YAML 中显式配置 <code>seata.tx-mode=XA</code>（而非仅“配置默认模式为 XA”），且依赖数据库原生 XA 协议支持（如 MySQL、Oracle 的 XA 事务能力）。</li>
@@ -951,81 +1251,6 @@
       </tags>
   </entry>
   <entry>
-    <title>今日学习笔记：Sentinel 核心原理与关键算法</title>
-    <url>/2024/05/20/Sentinel%E7%9A%84%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86%E5%92%8C%E5%85%B3%E9%94%AE%E7%AE%97%E6%B3%95/</url>
-    <content><![CDATA[<p>一、Sentinel 对外部请求的感知机制</p>
-<p>Sentinel 对请求的感知依赖于 Web 框架适配与拦截器机制，核心是通过自动装配实现请求链路的透明化监控，为后续流量控制提供数据基础。</p>
-<ol>
-<li>实现基础：SPI 与 Spring Boot 自动装配</li>
-</ol>
-<p>Sentinel 提供  sentinel-spring-webmvc-adapter  等适配模块，基于 Spring Boot 的 SPI 机制（META-INF&#x2F;spring.factories） 实现自动配置，无需手动注入拦截器，降低集成成本。</p>
-<ol start="2">
-<li>启动流程</li>
-</ol>
-<ul>
-<li>Spring Boot 容器启动时，Sentinel 自动加载并注册配置类 SentinelWebAutoConfiguration（用户原表述中“config-auto configuration”修正为标准类名）。</li>
-<li>该配置类向 Spring 容器注入 SentinelWebInterceptor（网络拦截器），拦截所有符合规则的 HTTP 请求（默认拦截 &#x2F;* 路径，可通过配置自定义）。</li>
-</ul>
-<ol start="3">
-<li>请求处理逻辑</li>
-</ol>
-<ul>
-<li>拦截器的  preHandle  方法（请求处理前执行）会提取请求关键信息：URL 路径（如 &#x2F;api&#x2F;user）、请求来源（serviceName）、HTTP 方法（GET&#x2F;POST）等。</li>
-<li>将提取的信息封装为 ResourceEntry 对象（Sentinel 中的“资源”载体，每个 ResourceEntry 对应一个可监控的请求节点），并将该资源的调用数据（如调用次数、耗时）上报至 Sentinel 核心引擎。</li>
-<li>核心引擎基于 ResourceEntry 的数据感知请求链路，为后续的限流、熔断、降级规则提供“靶向监控”能力（仅针对已感知的资源生效规则）。</li>
-</ul>
-<p>二、Sentinel 核心算法</p>
-<p>Sentinel 的流量控制、熔断降级功能依赖三大核心算法，分别对应“实时统计”“匀速排队”“突发流量兼容”三类场景，覆盖不同业务需求。</p>
-<ol>
-<li>滑动时间窗口算法（核心统计算法）</li>
-</ol>
-<p>核心思想</p>
-<p>基于 前缀和思想 实现实时流量统计：将“一段时间区间”（如1秒）划分为多个连续的“小格子”（如10个100ms的格子），每个格子存储该时间段内的请求数、QPS、异常数等指标；统计时通过“当前时间对应的格子数据 + 未过期格子数据总和”计算总流量，避免传统“固定时间窗口”的统计偏差（如1秒窗口在0:59和1:01的瞬时高流量无法识别）。</p>
-<p>底层实现</p>
-<ul>
-<li>数据存储：将时间窗口抽象为  MetricBucket  类（存储 pass&#x2F;block&#x2F;exception 等指标），用数组（ MetricArray ）存储多个  MetricBucket ，每个数组元素对应一个“小格子”（格子粒度可配置，粒度越细统计越精准，但内存消耗略高）。</li>
-<li>初始化逻辑：首次有请求进入时，初始化时间窗口数组，确定每个格子的时间范围（如第1个格子对应 0-100ms，第2个对应 100-200ms）。</li>
-<li>时钟回拨处理：若服务器时钟发生回拨（如窗口终止时间 &lt; 当前时间），直接丢弃过期格子数据并创建新窗口，避免因时钟异常导致的统计错误（正常生产环境极少触发，属于容错机制）。</li>
-<li>适用场景：所有需要实时统计流量的场景（如 QPS 限流、并发数控制），是 Sentinel 最基础的算法。</li>
-</ul>
-<ol start="2">
-<li>漏桶算法（匀速排队机制）</li>
-</ol>
-<p>核心思想</p>
-<p>模拟“漏桶倒水”过程：请求像“水流”一样进入漏桶，漏桶以 固定速率（如每秒100个请求）将请求“漏出”到业务系统；若请求进入速率超过漏桶漏出速率，多余请求会在桶内排队（或直接丢弃，取决于配置），确保业务系统接收的请求速率平稳，避免瞬时高负载。</p>
-<p>处理逻辑</p>
-<ul>
-<li>计算请求等待时间：根据“当前桶内排队请求数”和“漏出速率”，计算当前请求需等待的最小时间（如桶内有5个请求，漏出速率100个&#x2F;秒，则需等待 5*10ms&#x3D;50ms）。</li>
-<li>等待与放行：若等待时间在“最大排队时间”（如100ms）内，请求会睡眠至等待时间结束后放行；若等待时间超出最大排队时间，直接放行（避免请求排队过久导致超时）。</li>
-<li>超时拦截：校验“请求到达时间 + 等待时间”是否超过“请求超时时间”，若已超时则直接拦截（返回 block 信号），避免无效等待。</li>
-<li>适用场景：要求请求严格匀速处理的场景（如数据库写入、第三方接口调用，避免瞬时请求压垮下游服务）。</li>
-</ul>
-<ol start="3">
-<li>令牌桶算法（缓存预热机制）</li>
-</ol>
-<p>核心思想</p>
-<p>模拟“令牌生成与消耗”过程：Sentinel 按 预设速率（可配置） 定时向“令牌桶”中放入令牌（如每秒生成100个令牌），请求必须从桶中获取1个令牌才能放行；若桶内无令牌，请求会被限流（返回降级&#x2F;熔断信息）。同时支持“缓存预热（冷启动）”，避免服务刚启动时令牌生成过多导致的瞬时高负载。</p>
-<p>处理逻辑</p>
-<ul>
-<li>令牌生成：令牌桶有固定容量（如200个令牌），当桶内令牌数未达容量时，按“预热速率”生成令牌（预热阶段速率从低到高逐步提升，如初始50个&#x2F;秒，10秒后升至100个&#x2F;秒）；当桶满时，新生成的令牌直接丢弃。</li>
-<li>请求处理：请求到达时，先检查桶内是否有剩余令牌：</li>
-<li>若有令牌：获取1个令牌，请求正常放行，并记录请求数据。</li>
-<li>若无令牌：触发限流逻辑，返回降级响应（如默认提示“系统繁忙，请稍后再试”，可自定义降级页面）。</li>
-<li>突发流量兼容：令牌桶的容量决定了最大突发流量处理能力（如桶容量200，当瞬时有200个请求时，可一次性消耗所有令牌，后续请求需等待新令牌生成）。</li>
-<li>适用场景：允许一定突发流量的场景（如 API 网关、用户登录接口，既控制长期流量，又兼容短时间内的流量峰值）。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>技术笔记</category>
-      </categories>
-      <tags>
-        <tag>Sentinel</tag>
-        <tag>流量控制</tag>
-        <tag>微服务</tag>
-        <tag>Java</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Sentinel 拉模式实现详解</title>
     <url>/2025/09/04/sentinel%E6%8B%89%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/</url>
     <content><![CDATA[<h2 id="一、为什么需要-Sentinel-拉模式？"><a href="#一、为什么需要-Sentinel-拉模式？" class="headerlink" title="一、为什么需要 Sentinel 拉模式？"></a>一、为什么需要 Sentinel 拉模式？</h2><p>Sentinel 默认的内存模式存在明显缺陷：限流规则仅存储在客户端内存中，应用重启后规则全部丢失，无法满足生产环境的规则持久化与统一管理需求。</p>
@@ -1161,7 +1386,7 @@ public MysqlPullFlowRuleDataSource mysqlPullFlowRuleDataSource() &#123;
   </entry>
   <entry>
     <title></title>
-    <url>/2025/09/10/sentinel%E6%8E%A8%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/</url>
+    <url>/2025/09/11/sentinel%E6%8E%A8%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/</url>
     <content><![CDATA[<p>深入理解 Sentinel 限流组件推模式实现</p>
 <p>在微服务架构中，流量控制是保障系统稳定性的核心手段，Sentinel 作为主流限流组件，其规则同步模式直接影响分布式环境下的可用性。本文将聚焦 Sentinel 推模式的实现细节，对比拉模式的局限性，并补充多种主流实现方案，为线上分布式场景提供实践参考。</p>
 <p>一、Sentinel 规则同步的两种核心模式</p>
@@ -1241,5 +1466,80 @@ public MysqlPullFlowRuleDataSource mysqlPullFlowRuleDataSource() &#123;
 <p>总结</p>
 <p>Sentinel 推模式通过统一配置中心解决了拉模式的分布式痛点，是线上环境的最优选择。本文介绍的 Nacos 两种方案、Spring 整合方案、Guava 轻量方案，覆盖了不同技术栈的需求。在实际落地时，需结合业务场景选择合适的方案，并做好异常处理与版本管理，才能充分发挥 Sentinel 的流量控制能力，保障微服务稳定运行。</p>
 ]]></content>
+  </entry>
+  <entry>
+    <title>今日学习笔记：Sentinel 核心原理与关键算法</title>
+    <url>/2024/05/20/Sentinel%E7%9A%84%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86%E5%92%8C%E5%85%B3%E9%94%AE%E7%AE%97%E6%B3%95/</url>
+    <content><![CDATA[<p>一、Sentinel 对外部请求的感知机制</p>
+<p>Sentinel 对请求的感知依赖于 Web 框架适配与拦截器机制，核心是通过自动装配实现请求链路的透明化监控，为后续流量控制提供数据基础。</p>
+<ol>
+<li>实现基础：SPI 与 Spring Boot 自动装配</li>
+</ol>
+<p>Sentinel 提供  sentinel-spring-webmvc-adapter  等适配模块，基于 Spring Boot 的 SPI 机制（META-INF&#x2F;spring.factories） 实现自动配置，无需手动注入拦截器，降低集成成本。</p>
+<ol start="2">
+<li>启动流程</li>
+</ol>
+<ul>
+<li>Spring Boot 容器启动时，Sentinel 自动加载并注册配置类 SentinelWebAutoConfiguration（用户原表述中“config-auto configuration”修正为标准类名）。</li>
+<li>该配置类向 Spring 容器注入 SentinelWebInterceptor（网络拦截器），拦截所有符合规则的 HTTP 请求（默认拦截 &#x2F;* 路径，可通过配置自定义）。</li>
+</ul>
+<ol start="3">
+<li>请求处理逻辑</li>
+</ol>
+<ul>
+<li>拦截器的  preHandle  方法（请求处理前执行）会提取请求关键信息：URL 路径（如 &#x2F;api&#x2F;user）、请求来源（serviceName）、HTTP 方法（GET&#x2F;POST）等。</li>
+<li>将提取的信息封装为 ResourceEntry 对象（Sentinel 中的“资源”载体，每个 ResourceEntry 对应一个可监控的请求节点），并将该资源的调用数据（如调用次数、耗时）上报至 Sentinel 核心引擎。</li>
+<li>核心引擎基于 ResourceEntry 的数据感知请求链路，为后续的限流、熔断、降级规则提供“靶向监控”能力（仅针对已感知的资源生效规则）。</li>
+</ul>
+<p>二、Sentinel 核心算法</p>
+<p>Sentinel 的流量控制、熔断降级功能依赖三大核心算法，分别对应“实时统计”“匀速排队”“突发流量兼容”三类场景，覆盖不同业务需求。</p>
+<ol>
+<li>滑动时间窗口算法（核心统计算法）</li>
+</ol>
+<p>核心思想</p>
+<p>基于 前缀和思想 实现实时流量统计：将“一段时间区间”（如1秒）划分为多个连续的“小格子”（如10个100ms的格子），每个格子存储该时间段内的请求数、QPS、异常数等指标；统计时通过“当前时间对应的格子数据 + 未过期格子数据总和”计算总流量，避免传统“固定时间窗口”的统计偏差（如1秒窗口在0:59和1:01的瞬时高流量无法识别）。</p>
+<p>底层实现</p>
+<ul>
+<li>数据存储：将时间窗口抽象为  MetricBucket  类（存储 pass&#x2F;block&#x2F;exception 等指标），用数组（ MetricArray ）存储多个  MetricBucket ，每个数组元素对应一个“小格子”（格子粒度可配置，粒度越细统计越精准，但内存消耗略高）。</li>
+<li>初始化逻辑：首次有请求进入时，初始化时间窗口数组，确定每个格子的时间范围（如第1个格子对应 0-100ms，第2个对应 100-200ms）。</li>
+<li>时钟回拨处理：若服务器时钟发生回拨（如窗口终止时间 &lt; 当前时间），直接丢弃过期格子数据并创建新窗口，避免因时钟异常导致的统计错误（正常生产环境极少触发，属于容错机制）。</li>
+<li>适用场景：所有需要实时统计流量的场景（如 QPS 限流、并发数控制），是 Sentinel 最基础的算法。</li>
+</ul>
+<ol start="2">
+<li>漏桶算法（匀速排队机制）</li>
+</ol>
+<p>核心思想</p>
+<p>模拟“漏桶倒水”过程：请求像“水流”一样进入漏桶，漏桶以 固定速率（如每秒100个请求）将请求“漏出”到业务系统；若请求进入速率超过漏桶漏出速率，多余请求会在桶内排队（或直接丢弃，取决于配置），确保业务系统接收的请求速率平稳，避免瞬时高负载。</p>
+<p>处理逻辑</p>
+<ul>
+<li>计算请求等待时间：根据“当前桶内排队请求数”和“漏出速率”，计算当前请求需等待的最小时间（如桶内有5个请求，漏出速率100个&#x2F;秒，则需等待 5*10ms&#x3D;50ms）。</li>
+<li>等待与放行：若等待时间在“最大排队时间”（如100ms）内，请求会睡眠至等待时间结束后放行；若等待时间超出最大排队时间，直接放行（避免请求排队过久导致超时）。</li>
+<li>超时拦截：校验“请求到达时间 + 等待时间”是否超过“请求超时时间”，若已超时则直接拦截（返回 block 信号），避免无效等待。</li>
+<li>适用场景：要求请求严格匀速处理的场景（如数据库写入、第三方接口调用，避免瞬时请求压垮下游服务）。</li>
+</ul>
+<ol start="3">
+<li>令牌桶算法（缓存预热机制）</li>
+</ol>
+<p>核心思想</p>
+<p>模拟“令牌生成与消耗”过程：Sentinel 按 预设速率（可配置） 定时向“令牌桶”中放入令牌（如每秒生成100个令牌），请求必须从桶中获取1个令牌才能放行；若桶内无令牌，请求会被限流（返回降级&#x2F;熔断信息）。同时支持“缓存预热（冷启动）”，避免服务刚启动时令牌生成过多导致的瞬时高负载。</p>
+<p>处理逻辑</p>
+<ul>
+<li>令牌生成：令牌桶有固定容量（如200个令牌），当桶内令牌数未达容量时，按“预热速率”生成令牌（预热阶段速率从低到高逐步提升，如初始50个&#x2F;秒，10秒后升至100个&#x2F;秒）；当桶满时，新生成的令牌直接丢弃。</li>
+<li>请求处理：请求到达时，先检查桶内是否有剩余令牌：</li>
+<li>若有令牌：获取1个令牌，请求正常放行，并记录请求数据。</li>
+<li>若无令牌：触发限流逻辑，返回降级响应（如默认提示“系统繁忙，请稍后再试”，可自定义降级页面）。</li>
+<li>突发流量兼容：令牌桶的容量决定了最大突发流量处理能力（如桶容量200，当瞬时有200个请求时，可一次性消耗所有令牌，后续请求需等待新令牌生成）。</li>
+<li>适用场景：允许一定突发流量的场景（如 API 网关、用户登录接口，既控制长期流量，又兼容短时间内的流量峰值）。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>Sentinel</tag>
+        <tag>流量控制</tag>
+        <tag>微服务</tag>
+        <tag>Java</tag>
+      </tags>
   </entry>
 </search>
