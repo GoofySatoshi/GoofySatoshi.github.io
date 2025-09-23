@@ -312,6 +312,146 @@
       </tags>
   </entry>
   <entry>
+    <title></title>
+    <url>/2025/09/22/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/</url>
+    <content><![CDATA[<h1 id="G1垃圾收集器学习笔记"><a href="#G1垃圾收集器学习笔记" class="headerlink" title="G1垃圾收集器学习笔记"></a>G1垃圾收集器学习笔记</h1><h2 id="2025-09-23"><a href="#2025-09-23" class="headerlink" title="2025-09-23"></a>2025-09-23</h2><h2 id="一、G1垃圾收集器概述"><a href="#一、G1垃圾收集器概述" class="headerlink" title="一、G1垃圾收集器概述"></a>一、G1垃圾收集器概述</h2><p>G1（Garbage-First）是Java 9默认的垃圾收集器，核心特性如下：  </p>
+<ul>
+<li><strong>取消物理分代</strong>：将内存划分为2048个逻辑<code>Region</code>（默认值）  </li>
+<li><strong>动态分区管理</strong>：年轻代&#x2F;老年代区域可相互转化  </li>
+<li><strong>巨型对象处理</strong>：新增<code>Humongous</code>区存储超Region 50%的大对象</li>
+</ul>
+<h2 id="二、内存管理机制"><a href="#二、内存管理机制" class="headerlink" title="二、内存管理机制"></a>二、内存管理机制</h2><h3 id="1-内存分区"><a href="#1-内存分区" class="headerlink" title="1. 内存分区"></a>1. 内存分区</h3><ul>
+<li><strong>逻辑分区</strong>：保留年轻代（Eden&#x2F;Survivor）、老年代概念  </li>
+<li><strong>物理结构</strong>：  <ul>
+<li>默认2048个Region（通过<code>-XX:G1HeapRegionSize</code>调整）  </li>
+<li>年轻代初始占比5%（动态调整，上限60%）  </li>
+<li>Eden:Survivor默认比例8:1:1</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-特殊区域"><a href="#2-特殊区域" class="headerlink" title="2. 特殊区域"></a>2. 特殊区域</h3><ul>
+<li><strong>Humongous区</strong>：  <ul>
+<li>存储超过Region 50%的大对象  </li>
+<li>若对象超过单个Region大小，会被分割存储于多个连续Region</li>
+</ul>
+</li>
+</ul>
+<h2 id="三、垃圾回收流程"><a href="#三、垃圾回收流程" class="headerlink" title="三、垃圾回收流程"></a>三、垃圾回收流程</h2><p>G1回收分为四个阶段：  </p>
+<ol>
+<li><strong>初始标记</strong>（Stop The World）  <ul>
+<li>标记GC Roots直接引用对象</li>
+</ul>
+</li>
+<li><strong>并发标记</strong>（Concurrent）  <ul>
+<li>与工作线程并行标记存活对象</li>
+</ul>
+</li>
+<li><strong>最终标记</strong>（Stop The World）  <ul>
+<li>修正并发阶段的增量引用</li>
+</ul>
+</li>
+<li><strong>筛选回收</strong>（Concurrent）  <ul>
+<li>按回收价值排序Region  </li>
+<li>执行复制算法整理内存</li>
+</ul>
+</li>
+</ol>
+<h2 id="四、核心特性"><a href="#四、核心特性" class="headerlink" title="四、核心特性"></a>四、核心特性</h2><ol>
+<li><strong>并行与并发</strong>  <ul>
+<li>多核CPU缩短停顿时间</li>
+</ul>
+</li>
+<li><strong>分代抽象管理</strong>  <ul>
+<li>逻辑分代替代物理分区</li>
+</ul>
+</li>
+<li><strong>空间整合</strong>  <ul>
+<li>整体标记整理 + 局部复制算法  </li>
+<li>减少内存碎片</li>
+</ul>
+</li>
+</ol>
+<h2 id="五、垃圾收集分类"><a href="#五、垃圾收集分类" class="headerlink" title="五、垃圾收集分类"></a>五、垃圾收集分类</h2><h3 id="1-YoungGC（年轻代回收）"><a href="#1-YoungGC（年轻代回收）" class="headerlink" title="1. YoungGC（年轻代回收）"></a>1. YoungGC（年轻代回收）</h3><ul>
+<li><strong>触发条件</strong>：  <ul>
+<li>伊甸区填满时预估回收时间：  <ul>
+<li>若预估时间 &lt; <code>MaxGCPauseMillis</code> → 新增年轻代Region  </li>
+<li>若预估时间 ≈ <code>MaxGCPauseMillis</code> → 触发回收</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>执行逻辑</strong>：  <ul>
+<li>回收所有年轻代Region  </li>
+<li>存活对象晋升至老年代&#x2F;Survivor区</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-MixedGC（混合回收）"><a href="#2-MixedGC（混合回收）" class="headerlink" title="2. MixedGC（混合回收）"></a>2. MixedGC（混合回收）</h3><ul>
+<li><strong>触发条件</strong>：  <ul>
+<li>老年代占用率超过阈值（<code>-XX:InitiatingHeapOccupancyPercent</code>）</li>
+</ul>
+</li>
+<li><strong>执行逻辑</strong>：  <ul>
+<li>回收所有年轻代 + 部分老年代Region（非全部老年代）  </li>
+<li>具体回收数量由回收价值决定</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-Full-GC（负GC）"><a href="#3-Full-GC（负GC）" class="headerlink" title="3. Full GC（负GC）"></a>3. Full GC（负GC）</h3><ul>
+<li><strong>触发条件</strong>：  <ul>
+<li>内存不足（如MixedGC无法完成回收）</li>
+</ul>
+</li>
+<li><strong>执行逻辑</strong>：  <ul>
+<li>单线程标记-清理-压缩内存  </li>
+<li>现代JVM（Java 11+）通过<code>-XX:+UseG1GC -XX:-UseAdaptiveSizePolicy</code>可减少Full GC</li>
+</ul>
+</li>
+</ul>
+<h2 id="六、关键参数"><a href="#六、关键参数" class="headerlink" title="六、关键参数"></a>六、关键参数</h2><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-XX:MaxGCPauseMillis</code></td>
+<td>目标最大停顿时间（默认200ms）</td>
+</tr>
+<tr>
+<td><code>-XX:G1HeapRegionSize</code></td>
+<td>Region大小（推荐1MB-32MB）</td>
+</tr>
+<tr>
+<td><code>-XX:InitiatingHeapOccupancyPercent</code></td>
+<td>老年代触发并发回收阈值（默认45%）</td>
+</tr>
+</tbody></table>
+<h2 id="七、注意事项"><a href="#七、注意事项" class="headerlink" title="七、注意事项"></a>七、注意事项</h2><ul>
+<li>过度追求低停顿可能导致：  <ul>
+<li>垃圾堆积 → 负GC → 回收成本上升</li>
+</ul>
+</li>
+<li>生产环境建议保持默认参数配置  </li>
+<li>通过<code>-XX:+PrintGCDetails -XX:+PrintGCDateStamps</code>监控GC行为</li>
+</ul>
+<h2 id="八、其他相关回收器"><a href="#八、其他相关回收器" class="headerlink" title="八、其他相关回收器"></a>八、其他相关回收器</h2><ul>
+<li><strong>ZGC</strong>（JDK 11引入的低延迟垃圾收集器）：  <ul>
+<li>支持TB级内存  </li>
+<li>停顿时间&lt;10ms  </li>
+<li>基于Region的着色指针技术</li>
+</ul>
+</li>
+</ul>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a href="https://docs.oracle.com/javase/9/gctuning/garbage-first-garbage-collector.htm">G1官方文档</a>  </li>
+<li><a href="https://docs.oracle.com/javase/11/gctuning/z-garbage-collector.htm">ZGC官方文档</a>  </li>
+<li>《深入理解Java虚拟机》第三版（周志明）</li>
+</ul>
+]]></content>
+  </entry>
+  <entry>
     <title>Spring Cloud Gateway 学习总结（优化版）</title>
     <url>/2024/05/20/Gateway%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
     <content><![CDATA[<h2 id="一、核心原理补充（易混淆点）"><a href="#一、核心原理补充（易混淆点）" class="headerlink" title="一、核心原理补充（易混淆点）"></a>一、核心原理补充（易混淆点）</h2><h3 id="1-响应式架构本质"><a href="#1-响应式架构本质" class="headerlink" title="1. 响应式架构本质"></a>1. 响应式架构本质</h3><p>Spring Cloud Gateway 基于 WebFlux 框架实现，底层依赖 Netty 实现异步非阻塞通信，与传统 Spring MVC 框架存在本质区别：</p>
@@ -612,53 +752,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title>Nacos 核心源码学习笔记</title>
-    <url>/2025/08/26/Nacos-%E6%A0%B8%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
-    <content><![CDATA[<h1 id="Nacos-核心源码学习笔记"><a href="#Nacos-核心源码学习笔记" class="headerlink" title="Nacos 核心源码学习笔记"></a>Nacos 核心源码学习笔记</h1><p>Nacos 作为微服务架构中核心的服务注册发现与配置中心，其底层设计与实现逻辑对理解微服务治理至关重要。本文从源码入口、服务注册、心跳检测、集群一致性四个核心维度，梳理 Nacos 关键机制的实现原理。</p>
-<h2 id="一、源码入口与初始化机制"><a href="#一、源码入口与初始化机制" class="headerlink" title="一、源码入口与初始化机制"></a>一、源码入口与初始化机制</h2><h3 id="1-源码入口定位"><a href="#1-源码入口定位" class="headerlink" title="1. 源码入口定位"></a>1. 源码入口定位</h3><p>分析 Nacos 源码时，可通过启动脚本定位启动类，或直接聚焦服务发现核心 Jar 包（如 <code>nacos-discovery</code>）。其初始化逻辑依赖 <strong>Spring Boot SPI 机制</strong>，核心流程如下：</p>
-<ul>
-<li>在 <code>META-INF/spring.factories</code> 中配置自动配置类（如服务发现场景的 <code>NacosDiscoveryAutoConfiguration</code>）；</li>
-<li>启用 Jar 包时，Spring 容器通过 <code>@EnableAutoConfiguration</code> 触发自动配置类加载；</li>
-<li>自动配置类初始化 <code>NacosServiceRegistry</code>（服务注册）、<code>NacosDiscoveryClient</code>（服务发现）等核心组件，并向 Nacos 服务端发起请求，建立基础通信链路。</li>
-</ul>
-<h2 id="二、服务注册流程与高并发设计"><a href="#二、服务注册流程与高并发设计" class="headerlink" title="二、服务注册流程与高并发设计"></a>二、服务注册流程与高并发设计</h2><h3 id="1-核心注册流程"><a href="#1-核心注册流程" class="headerlink" title="1. 核心注册流程"></a>1. 核心注册流程</h3><ol>
-<li>客户端封装服务信息（IP、端口、服务名等）为 <code>Instance</code> 对象，发送注册请求至服务端；</li>
-<li>服务端接收请求后，先将 <code>Instance</code> 存入 <code>BlockingQueue</code> 阻塞队列，作为请求缓冲层；</li>
-<li>后台专用线程从队列中持续取出 <code>Instance</code>，写入注册表（嵌套 <code>Map</code> 结构：<code>serviceName -&gt; cluster -&gt; Instance</code>）。</li>
-</ol>
-<h3 id="2-高并发支撑策略"><a href="#2-高并发支撑策略" class="headerlink" title="2. 高并发支撑策略"></a>2. 高并发支撑策略</h3><ul>
-<li><strong>阻塞队列缓冲</strong>：通过“生产者-消费者”模式解耦请求接收与数据写入，避免直接操作注册表导致的锁竞争；</li>
-<li><strong>读写分离架构</strong>：<ul>
-<li>写操作（注册&#x2F;更新）：拷贝目标服务的 <code>Instance</code> 集合（<code>Set</code>），在副本中修改，不影响原集合；</li>
-<li>读操作（服务发现）：直接从原 <code>Set</code> 读取数据，保证查询无阻塞；</li>
-</ul>
-</li>
-<li><strong>原子替换</strong>：修改完成后，用新 <code>Set</code> 原子替换原 <code>Set</code>，兼顾数据一致性与并发效率。</li>
-</ul>
-<h2 id="三、心跳检测机制"><a href="#三、心跳检测机制" class="headerlink" title="三、心跳检测机制"></a>三、心跳检测机制</h2><h3 id="1-客户端心跳发送"><a href="#1-客户端心跳发送" class="headerlink" title="1. 客户端心跳发送"></a>1. 客户端心跳发送</h3><p>服务实例注册成功后，客户端默认每 <strong>5 秒</strong> 向 Nacos 服务端发送心跳请求，携带实例 ID 等唯一标识信息。</p>
-<h3 id="2-服务端健康检查"><a href="#2-服务端健康检查" class="headerlink" title="2. 服务端健康检查"></a>2. 服务端健康检查</h3><p>服务端维护每个实例的“最后心跳时间”，通过时间差判断实例健康状态：</p>
-<ul>
-<li>若 <code>当前时间 - 最后心跳时间 &gt; 15 秒</code>：标记实例为不健康（<code>healthy = false</code>），服务发现时不返回该实例；</li>
-<li>若 <code>当前时间 - 最后心跳时间 &gt; 30 秒</code>：直接从注册表中移除实例，视为服务下线。</li>
-</ul>
-<h2 id="四、集群-CP-模式与-Raft-协议"><a href="#四、集群-CP-模式与-Raft-协议" class="headerlink" title="四、集群 CP 模式与 Raft 协议"></a>四、集群 CP 模式与 Raft 协议</h2><h3 id="1-CP-模式适用场景"><a href="#1-CP-模式适用场景" class="headerlink" title="1. CP 模式适用场景"></a>1. CP 模式适用场景</h3><p>通过配置 <code>nacos.core.protocol=cp</code> 开启 CP 模式，适用于数据一致性要求极高的场景（如金融领域服务注册）。</p>
-<h3 id="2-Raft-协议核心作用"><a href="#2-Raft-协议核心作用" class="headerlink" title="2. Raft 协议核心作用"></a>2. Raft 协议核心作用</h3><p>服务注册、实例状态变更等操作会触发 Raft 协议，保障集群数据一致性：</p>
-<ul>
-<li><strong>Leader 选举</strong>：集群节点通过 Raft 选举产生 Leader，由 Leader 统一处理客户端请求并协调数据同步；</li>
-<li><strong>日志复制</strong>：Leader 将数据变更记录为日志，同步至所有 Follower 节点，待多数节点确认后才提交变更（如写入注册表）；</li>
-<li>基于 Raft 协议，Nacos 集群在节点故障、网络分区时仍能保证数据一致，实现高可靠服务治理。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>技术笔记</category>
-      </categories>
-      <tags>
-        <tag>Nacos</tag>
-        <tag>微服务</tag>
-        <tag>源码分析</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Hexo + GitHub Actions 实现自动化部署完整指南</title>
     <url>/2025/08/29/Hexo-GitHub-Actions-%E5%AE%9E%E7%8E%B0%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2%E5%AE%8C%E6%95%B4%E6%8C%87%E5%8D%97/</url>
     <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在使用 Hexo 搭建个人博客时，当我们终于把hexo生成的页面挂载到github页面后，每次提交博客都需要使用<code>hexo clean &amp;&amp; hexo g &amp;&amp; hexo d</code>来部署很麻烦，可以借助github actions来实现流水线布置，我们每次提交源代码到github存放源码的分支上，一旦监听到源代码的push事件，流水线就会就会自动拉取环境自动部署，所以我们需要一个存放源代码的分支，以及我们的发布分支，可以使用git命令创建这两个分支，自动CI&#x2F;CD,github需要密钥用来保证项目拉取和部署的权限，需要在本地生成ssh的密钥，公钥用来拉取项目，私钥用来部署推送更新页面，而且github对于npm安装有频率限制，我们可以通过配置国内镜像源+缓存配置，避免每次全量拉取，提高依赖安装以及部署的速度</p>
@@ -763,6 +856,53 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>Hexo</tag>
         <tag>GitHub</tag>
         <tag>CI/CD</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Nacos 核心源码学习笔记</title>
+    <url>/2025/08/26/Nacos-%E6%A0%B8%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
+    <content><![CDATA[<h1 id="Nacos-核心源码学习笔记"><a href="#Nacos-核心源码学习笔记" class="headerlink" title="Nacos 核心源码学习笔记"></a>Nacos 核心源码学习笔记</h1><p>Nacos 作为微服务架构中核心的服务注册发现与配置中心，其底层设计与实现逻辑对理解微服务治理至关重要。本文从源码入口、服务注册、心跳检测、集群一致性四个核心维度，梳理 Nacos 关键机制的实现原理。</p>
+<h2 id="一、源码入口与初始化机制"><a href="#一、源码入口与初始化机制" class="headerlink" title="一、源码入口与初始化机制"></a>一、源码入口与初始化机制</h2><h3 id="1-源码入口定位"><a href="#1-源码入口定位" class="headerlink" title="1. 源码入口定位"></a>1. 源码入口定位</h3><p>分析 Nacos 源码时，可通过启动脚本定位启动类，或直接聚焦服务发现核心 Jar 包（如 <code>nacos-discovery</code>）。其初始化逻辑依赖 <strong>Spring Boot SPI 机制</strong>，核心流程如下：</p>
+<ul>
+<li>在 <code>META-INF/spring.factories</code> 中配置自动配置类（如服务发现场景的 <code>NacosDiscoveryAutoConfiguration</code>）；</li>
+<li>启用 Jar 包时，Spring 容器通过 <code>@EnableAutoConfiguration</code> 触发自动配置类加载；</li>
+<li>自动配置类初始化 <code>NacosServiceRegistry</code>（服务注册）、<code>NacosDiscoveryClient</code>（服务发现）等核心组件，并向 Nacos 服务端发起请求，建立基础通信链路。</li>
+</ul>
+<h2 id="二、服务注册流程与高并发设计"><a href="#二、服务注册流程与高并发设计" class="headerlink" title="二、服务注册流程与高并发设计"></a>二、服务注册流程与高并发设计</h2><h3 id="1-核心注册流程"><a href="#1-核心注册流程" class="headerlink" title="1. 核心注册流程"></a>1. 核心注册流程</h3><ol>
+<li>客户端封装服务信息（IP、端口、服务名等）为 <code>Instance</code> 对象，发送注册请求至服务端；</li>
+<li>服务端接收请求后，先将 <code>Instance</code> 存入 <code>BlockingQueue</code> 阻塞队列，作为请求缓冲层；</li>
+<li>后台专用线程从队列中持续取出 <code>Instance</code>，写入注册表（嵌套 <code>Map</code> 结构：<code>serviceName -&gt; cluster -&gt; Instance</code>）。</li>
+</ol>
+<h3 id="2-高并发支撑策略"><a href="#2-高并发支撑策略" class="headerlink" title="2. 高并发支撑策略"></a>2. 高并发支撑策略</h3><ul>
+<li><strong>阻塞队列缓冲</strong>：通过“生产者-消费者”模式解耦请求接收与数据写入，避免直接操作注册表导致的锁竞争；</li>
+<li><strong>读写分离架构</strong>：<ul>
+<li>写操作（注册&#x2F;更新）：拷贝目标服务的 <code>Instance</code> 集合（<code>Set</code>），在副本中修改，不影响原集合；</li>
+<li>读操作（服务发现）：直接从原 <code>Set</code> 读取数据，保证查询无阻塞；</li>
+</ul>
+</li>
+<li><strong>原子替换</strong>：修改完成后，用新 <code>Set</code> 原子替换原 <code>Set</code>，兼顾数据一致性与并发效率。</li>
+</ul>
+<h2 id="三、心跳检测机制"><a href="#三、心跳检测机制" class="headerlink" title="三、心跳检测机制"></a>三、心跳检测机制</h2><h3 id="1-客户端心跳发送"><a href="#1-客户端心跳发送" class="headerlink" title="1. 客户端心跳发送"></a>1. 客户端心跳发送</h3><p>服务实例注册成功后，客户端默认每 <strong>5 秒</strong> 向 Nacos 服务端发送心跳请求，携带实例 ID 等唯一标识信息。</p>
+<h3 id="2-服务端健康检查"><a href="#2-服务端健康检查" class="headerlink" title="2. 服务端健康检查"></a>2. 服务端健康检查</h3><p>服务端维护每个实例的“最后心跳时间”，通过时间差判断实例健康状态：</p>
+<ul>
+<li>若 <code>当前时间 - 最后心跳时间 &gt; 15 秒</code>：标记实例为不健康（<code>healthy = false</code>），服务发现时不返回该实例；</li>
+<li>若 <code>当前时间 - 最后心跳时间 &gt; 30 秒</code>：直接从注册表中移除实例，视为服务下线。</li>
+</ul>
+<h2 id="四、集群-CP-模式与-Raft-协议"><a href="#四、集群-CP-模式与-Raft-协议" class="headerlink" title="四、集群 CP 模式与 Raft 协议"></a>四、集群 CP 模式与 Raft 协议</h2><h3 id="1-CP-模式适用场景"><a href="#1-CP-模式适用场景" class="headerlink" title="1. CP 模式适用场景"></a>1. CP 模式适用场景</h3><p>通过配置 <code>nacos.core.protocol=cp</code> 开启 CP 模式，适用于数据一致性要求极高的场景（如金融领域服务注册）。</p>
+<h3 id="2-Raft-协议核心作用"><a href="#2-Raft-协议核心作用" class="headerlink" title="2. Raft 协议核心作用"></a>2. Raft 协议核心作用</h3><p>服务注册、实例状态变更等操作会触发 Raft 协议，保障集群数据一致性：</p>
+<ul>
+<li><strong>Leader 选举</strong>：集群节点通过 Raft 选举产生 Leader，由 Leader 统一处理客户端请求并协调数据同步；</li>
+<li><strong>日志复制</strong>：Leader 将数据变更记录为日志，同步至所有 Follower 节点，待多数节点确认后才提交变更（如写入注册表）；</li>
+<li>基于 Raft 协议，Nacos 集群在节点故障、网络分区时仍能保证数据一致，实现高可靠服务治理。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>Nacos</tag>
+        <tag>微服务</tag>
+        <tag>源码分析</tag>
       </tags>
   </entry>
   <entry>
@@ -1011,7 +1151,7 @@ LoadBalancer 3.2.0+ 2023.0.3+
   </entry>
   <entry>
     <title></title>
-    <url>/2025/09/11/SEATA%E6%BA%90%E7%A0%81%EF%BC%9AAT%E4%B8%8EXA%E6%A8%A1%E5%BC%8F%E5%AD%A6%E4%B9%A0/</url>
+    <url>/2025/09/23/SEATA%E6%BA%90%E7%A0%81%EF%BC%9AAT%E4%B8%8EXA%E6%A8%A1%E5%BC%8F%E5%AD%A6%E4%B9%A0/</url>
     <content><![CDATA[<h1 id="Seata-AT-模式与-XA-模式的区别"><a href="#Seata-AT-模式与-XA-模式的区别" class="headerlink" title="Seata AT 模式与 XA 模式的区别"></a>Seata AT 模式与 XA 模式的区别</h1><h2 id="1-模式区别"><a href="#1-模式区别" class="headerlink" title="1. 模式区别"></a>1. 模式区别</h2><ul>
 <li><strong>AT 模式</strong>：生成的是数据源代理（DataSource Proxy），通过代理拦截 SQL 执行，无需额外配置默认模式（Seata 默认支持 AT 模式），而非“数据库动态代理”（表述更精准）。</li>
 <li><strong>XA 模式</strong>：生成的是 XA 数据源代理（XADataSource Proxy），需在 YAML 中显式配置 <code>seata.tx-mode=XA</code>（而非仅“配置默认模式为 XA”），且依赖数据库原生 XA 协议支持（如 MySQL、Oracle 的 XA 事务能力）。</li>
@@ -1251,6 +1391,81 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
+    <title>今日学习笔记：Sentinel 核心原理与关键算法</title>
+    <url>/2024/05/20/Sentinel%E7%9A%84%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86%E5%92%8C%E5%85%B3%E9%94%AE%E7%AE%97%E6%B3%95/</url>
+    <content><![CDATA[<p>一、Sentinel 对外部请求的感知机制</p>
+<p>Sentinel 对请求的感知依赖于 Web 框架适配与拦截器机制，核心是通过自动装配实现请求链路的透明化监控，为后续流量控制提供数据基础。</p>
+<ol>
+<li>实现基础：SPI 与 Spring Boot 自动装配</li>
+</ol>
+<p>Sentinel 提供  sentinel-spring-webmvc-adapter  等适配模块，基于 Spring Boot 的 SPI 机制（META-INF&#x2F;spring.factories） 实现自动配置，无需手动注入拦截器，降低集成成本。</p>
+<ol start="2">
+<li>启动流程</li>
+</ol>
+<ul>
+<li>Spring Boot 容器启动时，Sentinel 自动加载并注册配置类 SentinelWebAutoConfiguration（用户原表述中“config-auto configuration”修正为标准类名）。</li>
+<li>该配置类向 Spring 容器注入 SentinelWebInterceptor（网络拦截器），拦截所有符合规则的 HTTP 请求（默认拦截 &#x2F;* 路径，可通过配置自定义）。</li>
+</ul>
+<ol start="3">
+<li>请求处理逻辑</li>
+</ol>
+<ul>
+<li>拦截器的  preHandle  方法（请求处理前执行）会提取请求关键信息：URL 路径（如 &#x2F;api&#x2F;user）、请求来源（serviceName）、HTTP 方法（GET&#x2F;POST）等。</li>
+<li>将提取的信息封装为 ResourceEntry 对象（Sentinel 中的“资源”载体，每个 ResourceEntry 对应一个可监控的请求节点），并将该资源的调用数据（如调用次数、耗时）上报至 Sentinel 核心引擎。</li>
+<li>核心引擎基于 ResourceEntry 的数据感知请求链路，为后续的限流、熔断、降级规则提供“靶向监控”能力（仅针对已感知的资源生效规则）。</li>
+</ul>
+<p>二、Sentinel 核心算法</p>
+<p>Sentinel 的流量控制、熔断降级功能依赖三大核心算法，分别对应“实时统计”“匀速排队”“突发流量兼容”三类场景，覆盖不同业务需求。</p>
+<ol>
+<li>滑动时间窗口算法（核心统计算法）</li>
+</ol>
+<p>核心思想</p>
+<p>基于 前缀和思想 实现实时流量统计：将“一段时间区间”（如1秒）划分为多个连续的“小格子”（如10个100ms的格子），每个格子存储该时间段内的请求数、QPS、异常数等指标；统计时通过“当前时间对应的格子数据 + 未过期格子数据总和”计算总流量，避免传统“固定时间窗口”的统计偏差（如1秒窗口在0:59和1:01的瞬时高流量无法识别）。</p>
+<p>底层实现</p>
+<ul>
+<li>数据存储：将时间窗口抽象为  MetricBucket  类（存储 pass&#x2F;block&#x2F;exception 等指标），用数组（ MetricArray ）存储多个  MetricBucket ，每个数组元素对应一个“小格子”（格子粒度可配置，粒度越细统计越精准，但内存消耗略高）。</li>
+<li>初始化逻辑：首次有请求进入时，初始化时间窗口数组，确定每个格子的时间范围（如第1个格子对应 0-100ms，第2个对应 100-200ms）。</li>
+<li>时钟回拨处理：若服务器时钟发生回拨（如窗口终止时间 &lt; 当前时间），直接丢弃过期格子数据并创建新窗口，避免因时钟异常导致的统计错误（正常生产环境极少触发，属于容错机制）。</li>
+<li>适用场景：所有需要实时统计流量的场景（如 QPS 限流、并发数控制），是 Sentinel 最基础的算法。</li>
+</ul>
+<ol start="2">
+<li>漏桶算法（匀速排队机制）</li>
+</ol>
+<p>核心思想</p>
+<p>模拟“漏桶倒水”过程：请求像“水流”一样进入漏桶，漏桶以 固定速率（如每秒100个请求）将请求“漏出”到业务系统；若请求进入速率超过漏桶漏出速率，多余请求会在桶内排队（或直接丢弃，取决于配置），确保业务系统接收的请求速率平稳，避免瞬时高负载。</p>
+<p>处理逻辑</p>
+<ul>
+<li>计算请求等待时间：根据“当前桶内排队请求数”和“漏出速率”，计算当前请求需等待的最小时间（如桶内有5个请求，漏出速率100个&#x2F;秒，则需等待 5*10ms&#x3D;50ms）。</li>
+<li>等待与放行：若等待时间在“最大排队时间”（如100ms）内，请求会睡眠至等待时间结束后放行；若等待时间超出最大排队时间，直接放行（避免请求排队过久导致超时）。</li>
+<li>超时拦截：校验“请求到达时间 + 等待时间”是否超过“请求超时时间”，若已超时则直接拦截（返回 block 信号），避免无效等待。</li>
+<li>适用场景：要求请求严格匀速处理的场景（如数据库写入、第三方接口调用，避免瞬时请求压垮下游服务）。</li>
+</ul>
+<ol start="3">
+<li>令牌桶算法（缓存预热机制）</li>
+</ol>
+<p>核心思想</p>
+<p>模拟“令牌生成与消耗”过程：Sentinel 按 预设速率（可配置） 定时向“令牌桶”中放入令牌（如每秒生成100个令牌），请求必须从桶中获取1个令牌才能放行；若桶内无令牌，请求会被限流（返回降级&#x2F;熔断信息）。同时支持“缓存预热（冷启动）”，避免服务刚启动时令牌生成过多导致的瞬时高负载。</p>
+<p>处理逻辑</p>
+<ul>
+<li>令牌生成：令牌桶有固定容量（如200个令牌），当桶内令牌数未达容量时，按“预热速率”生成令牌（预热阶段速率从低到高逐步提升，如初始50个&#x2F;秒，10秒后升至100个&#x2F;秒）；当桶满时，新生成的令牌直接丢弃。</li>
+<li>请求处理：请求到达时，先检查桶内是否有剩余令牌：</li>
+<li>若有令牌：获取1个令牌，请求正常放行，并记录请求数据。</li>
+<li>若无令牌：触发限流逻辑，返回降级响应（如默认提示“系统繁忙，请稍后再试”，可自定义降级页面）。</li>
+<li>突发流量兼容：令牌桶的容量决定了最大突发流量处理能力（如桶容量200，当瞬时有200个请求时，可一次性消耗所有令牌，后续请求需等待新令牌生成）。</li>
+<li>适用场景：允许一定突发流量的场景（如 API 网关、用户登录接口，既控制长期流量，又兼容短时间内的流量峰值）。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>Sentinel</tag>
+        <tag>流量控制</tag>
+        <tag>微服务</tag>
+        <tag>Java</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Sentinel 拉模式实现详解</title>
     <url>/2025/09/04/sentinel%E6%8B%89%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/</url>
     <content><![CDATA[<h2 id="一、为什么需要-Sentinel-拉模式？"><a href="#一、为什么需要-Sentinel-拉模式？" class="headerlink" title="一、为什么需要 Sentinel 拉模式？"></a>一、为什么需要 Sentinel 拉模式？</h2><p>Sentinel 默认的内存模式存在明显缺陷：限流规则仅存储在客户端内存中，应用重启后规则全部丢失，无法满足生产环境的规则持久化与统一管理需求。</p>
@@ -1386,7 +1601,7 @@ public MysqlPullFlowRuleDataSource mysqlPullFlowRuleDataSource() &#123;
   </entry>
   <entry>
     <title></title>
-    <url>/2025/09/11/sentinel%E6%8E%A8%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/</url>
+    <url>/2025/09/23/sentinel%E6%8E%A8%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/</url>
     <content><![CDATA[<p>深入理解 Sentinel 限流组件推模式实现</p>
 <p>在微服务架构中，流量控制是保障系统稳定性的核心手段，Sentinel 作为主流限流组件，其规则同步模式直接影响分布式环境下的可用性。本文将聚焦 Sentinel 推模式的实现细节，对比拉模式的局限性，并补充多种主流实现方案，为线上分布式场景提供实践参考。</p>
 <p>一、Sentinel 规则同步的两种核心模式</p>
@@ -1466,80 +1681,5 @@ public MysqlPullFlowRuleDataSource mysqlPullFlowRuleDataSource() &#123;
 <p>总结</p>
 <p>Sentinel 推模式通过统一配置中心解决了拉模式的分布式痛点，是线上环境的最优选择。本文介绍的 Nacos 两种方案、Spring 整合方案、Guava 轻量方案，覆盖了不同技术栈的需求。在实际落地时，需结合业务场景选择合适的方案，并做好异常处理与版本管理，才能充分发挥 Sentinel 的流量控制能力，保障微服务稳定运行。</p>
 ]]></content>
-  </entry>
-  <entry>
-    <title>今日学习笔记：Sentinel 核心原理与关键算法</title>
-    <url>/2024/05/20/Sentinel%E7%9A%84%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86%E5%92%8C%E5%85%B3%E9%94%AE%E7%AE%97%E6%B3%95/</url>
-    <content><![CDATA[<p>一、Sentinel 对外部请求的感知机制</p>
-<p>Sentinel 对请求的感知依赖于 Web 框架适配与拦截器机制，核心是通过自动装配实现请求链路的透明化监控，为后续流量控制提供数据基础。</p>
-<ol>
-<li>实现基础：SPI 与 Spring Boot 自动装配</li>
-</ol>
-<p>Sentinel 提供  sentinel-spring-webmvc-adapter  等适配模块，基于 Spring Boot 的 SPI 机制（META-INF&#x2F;spring.factories） 实现自动配置，无需手动注入拦截器，降低集成成本。</p>
-<ol start="2">
-<li>启动流程</li>
-</ol>
-<ul>
-<li>Spring Boot 容器启动时，Sentinel 自动加载并注册配置类 SentinelWebAutoConfiguration（用户原表述中“config-auto configuration”修正为标准类名）。</li>
-<li>该配置类向 Spring 容器注入 SentinelWebInterceptor（网络拦截器），拦截所有符合规则的 HTTP 请求（默认拦截 &#x2F;* 路径，可通过配置自定义）。</li>
-</ul>
-<ol start="3">
-<li>请求处理逻辑</li>
-</ol>
-<ul>
-<li>拦截器的  preHandle  方法（请求处理前执行）会提取请求关键信息：URL 路径（如 &#x2F;api&#x2F;user）、请求来源（serviceName）、HTTP 方法（GET&#x2F;POST）等。</li>
-<li>将提取的信息封装为 ResourceEntry 对象（Sentinel 中的“资源”载体，每个 ResourceEntry 对应一个可监控的请求节点），并将该资源的调用数据（如调用次数、耗时）上报至 Sentinel 核心引擎。</li>
-<li>核心引擎基于 ResourceEntry 的数据感知请求链路，为后续的限流、熔断、降级规则提供“靶向监控”能力（仅针对已感知的资源生效规则）。</li>
-</ul>
-<p>二、Sentinel 核心算法</p>
-<p>Sentinel 的流量控制、熔断降级功能依赖三大核心算法，分别对应“实时统计”“匀速排队”“突发流量兼容”三类场景，覆盖不同业务需求。</p>
-<ol>
-<li>滑动时间窗口算法（核心统计算法）</li>
-</ol>
-<p>核心思想</p>
-<p>基于 前缀和思想 实现实时流量统计：将“一段时间区间”（如1秒）划分为多个连续的“小格子”（如10个100ms的格子），每个格子存储该时间段内的请求数、QPS、异常数等指标；统计时通过“当前时间对应的格子数据 + 未过期格子数据总和”计算总流量，避免传统“固定时间窗口”的统计偏差（如1秒窗口在0:59和1:01的瞬时高流量无法识别）。</p>
-<p>底层实现</p>
-<ul>
-<li>数据存储：将时间窗口抽象为  MetricBucket  类（存储 pass&#x2F;block&#x2F;exception 等指标），用数组（ MetricArray ）存储多个  MetricBucket ，每个数组元素对应一个“小格子”（格子粒度可配置，粒度越细统计越精准，但内存消耗略高）。</li>
-<li>初始化逻辑：首次有请求进入时，初始化时间窗口数组，确定每个格子的时间范围（如第1个格子对应 0-100ms，第2个对应 100-200ms）。</li>
-<li>时钟回拨处理：若服务器时钟发生回拨（如窗口终止时间 &lt; 当前时间），直接丢弃过期格子数据并创建新窗口，避免因时钟异常导致的统计错误（正常生产环境极少触发，属于容错机制）。</li>
-<li>适用场景：所有需要实时统计流量的场景（如 QPS 限流、并发数控制），是 Sentinel 最基础的算法。</li>
-</ul>
-<ol start="2">
-<li>漏桶算法（匀速排队机制）</li>
-</ol>
-<p>核心思想</p>
-<p>模拟“漏桶倒水”过程：请求像“水流”一样进入漏桶，漏桶以 固定速率（如每秒100个请求）将请求“漏出”到业务系统；若请求进入速率超过漏桶漏出速率，多余请求会在桶内排队（或直接丢弃，取决于配置），确保业务系统接收的请求速率平稳，避免瞬时高负载。</p>
-<p>处理逻辑</p>
-<ul>
-<li>计算请求等待时间：根据“当前桶内排队请求数”和“漏出速率”，计算当前请求需等待的最小时间（如桶内有5个请求，漏出速率100个&#x2F;秒，则需等待 5*10ms&#x3D;50ms）。</li>
-<li>等待与放行：若等待时间在“最大排队时间”（如100ms）内，请求会睡眠至等待时间结束后放行；若等待时间超出最大排队时间，直接放行（避免请求排队过久导致超时）。</li>
-<li>超时拦截：校验“请求到达时间 + 等待时间”是否超过“请求超时时间”，若已超时则直接拦截（返回 block 信号），避免无效等待。</li>
-<li>适用场景：要求请求严格匀速处理的场景（如数据库写入、第三方接口调用，避免瞬时请求压垮下游服务）。</li>
-</ul>
-<ol start="3">
-<li>令牌桶算法（缓存预热机制）</li>
-</ol>
-<p>核心思想</p>
-<p>模拟“令牌生成与消耗”过程：Sentinel 按 预设速率（可配置） 定时向“令牌桶”中放入令牌（如每秒生成100个令牌），请求必须从桶中获取1个令牌才能放行；若桶内无令牌，请求会被限流（返回降级&#x2F;熔断信息）。同时支持“缓存预热（冷启动）”，避免服务刚启动时令牌生成过多导致的瞬时高负载。</p>
-<p>处理逻辑</p>
-<ul>
-<li>令牌生成：令牌桶有固定容量（如200个令牌），当桶内令牌数未达容量时，按“预热速率”生成令牌（预热阶段速率从低到高逐步提升，如初始50个&#x2F;秒，10秒后升至100个&#x2F;秒）；当桶满时，新生成的令牌直接丢弃。</li>
-<li>请求处理：请求到达时，先检查桶内是否有剩余令牌：</li>
-<li>若有令牌：获取1个令牌，请求正常放行，并记录请求数据。</li>
-<li>若无令牌：触发限流逻辑，返回降级响应（如默认提示“系统繁忙，请稍后再试”，可自定义降级页面）。</li>
-<li>突发流量兼容：令牌桶的容量决定了最大突发流量处理能力（如桶容量200，当瞬时有200个请求时，可一次性消耗所有令牌，后续请求需等待新令牌生成）。</li>
-<li>适用场景：允许一定突发流量的场景（如 API 网关、用户登录接口，既控制长期流量，又兼容短时间内的流量峰值）。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>技术笔记</category>
-      </categories>
-      <tags>
-        <tag>Sentinel</tag>
-        <tag>流量控制</tag>
-        <tag>微服务</tag>
-        <tag>Java</tag>
-      </tags>
   </entry>
 </search>
