@@ -11,42 +11,6 @@
   </url>
   
   <url>
-    <loc>https://goofysatoshi.github.io/2025/09/22/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/</loc>
-    
-    <lastmod>2025-10-10</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://goofysatoshi.github.io/2024/05/20/Gateway%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</loc>
-    
-    <lastmod>2025-10-10</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://goofysatoshi.github.io/2025/08/29/Hexo-GitHub-Actions-%E5%AE%9E%E7%8E%B0%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2%E5%AE%8C%E6%95%B4%E6%8C%87%E5%8D%97/</loc>
-    
-    <lastmod>2025-10-10</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://goofysatoshi.github.io/2025/08/26/Nacos-%E6%A0%B8%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</loc>
-    
-    <lastmod>2025-10-10</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
     <loc>https://goofysatoshi.github.io/2025/08/27/Nacos2-x%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</loc>
     
     <lastmod>2025-10-10</lastmod>
@@ -83,15 +47,6 @@
   </url>
   
   <url>
-    <loc>https://goofysatoshi.github.io/2025/09/02/Sentinel%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</loc>
-    
-    <lastmod>2025-10-10</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
     <loc>https://goofysatoshi.github.io/2024/05/20/Sentinel%E7%9A%84%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86%E5%92%8C%E5%85%B3%E9%94%AE%E7%AE%97%E6%B3%95/</loc>
     
     <lastmod>2025-10-10</lastmod>
@@ -101,7 +56,25 @@
   </url>
   
   <url>
+    <loc>https://goofysatoshi.github.io/2025/09/02/Sentinel%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</loc>
+    
+    <lastmod>2025-10-10</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://goofysatoshi.github.io/2025/10/10/TomCat%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E4%BB%A5%E5%8F%8A%E8%AE%BE%E8%AE%A1%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</loc>
+    
+    <lastmod>2025-10-10</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/2025/10/10/Tomcat%E7%9A%84IO%E6%A8%A1%E5%9E%8B/</loc>
     
     <lastmod>2025-10-10</lastmod>
     
@@ -128,7 +101,7 @@
   </url>
   
   <url>
-    <loc>https://goofysatoshi.github.io/categories/index.html</loc>
+    <loc>https://goofysatoshi.github.io/about/index.html</loc>
     
     <lastmod>2025-10-10</lastmod>
     
@@ -137,7 +110,7 @@
   </url>
   
   <url>
-    <loc>https://goofysatoshi.github.io/about/index.html</loc>
+    <loc>https://goofysatoshi.github.io/categories/index.html</loc>
     
     <lastmod>2025-10-10</lastmod>
     
@@ -174,6 +147,42 @@
   
   <url>
     <loc>https://goofysatoshi.github.io/2025/08/30/Spring-Cloud-Nacos%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0/</loc>
+    
+    <lastmod>2025-10-10</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/2025/09/22/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/</loc>
+    
+    <lastmod>2025-10-10</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/2024/05/20/Gateway%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</loc>
+    
+    <lastmod>2025-10-10</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/2025/08/29/Hexo-GitHub-Actions-%E5%AE%9E%E7%8E%B0%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2%E5%AE%8C%E6%95%B4%E6%8C%87%E5%8D%97/</loc>
+    
+    <lastmod>2025-10-10</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://goofysatoshi.github.io/2025/08/26/Nacos-%E6%A0%B8%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</loc>
     
     <lastmod>2025-10-10</lastmod>
     
@@ -359,14 +368,14 @@
   </url>
   
   <url>
-    <loc>https://goofysatoshi.github.io/tags/%E4%B8%AD%E9%97%B4%E4%BB%B6/</loc>
+    <loc>https://goofysatoshi.github.io/tags/Java/</loc>
     <lastmod>2025-10-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
-    <loc>https://goofysatoshi.github.io/tags/Java/</loc>
+    <loc>https://goofysatoshi.github.io/tags/%E4%B8%AD%E9%97%B4%E4%BB%B6/</loc>
     <lastmod>2025-10-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -452,14 +461,14 @@
   </url>
   
   <url>
-    <loc>https://goofysatoshi.github.io/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%AD%A6%E4%B9%A0/</loc>
+    <loc>https://goofysatoshi.github.io/categories/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84/%E6%8A%80%E6%9C%AF%E6%80%BB%E7%BB%93/</loc>
     <lastmod>2025-10-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
-    <loc>https://goofysatoshi.github.io/categories/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84/%E6%8A%80%E6%9C%AF%E6%80%BB%E7%BB%93/</loc>
+    <loc>https://goofysatoshi.github.io/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%AD%A6%E4%B9%A0/</loc>
     <lastmod>2025-10-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>

@@ -1321,76 +1321,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title>Sentinel源码学习笔记</title>
-    <url>/2025/09/02/Sentinel%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
-    <content><![CDATA[<h1 id="Sentinel源码学习笔记"><a href="#Sentinel源码学习笔记" class="headerlink" title="Sentinel源码学习笔记"></a>Sentinel源码学习笔记</h1><p>一、客户端与服务端的交互流程</p>
-<p>1. 连接建立：客户端启动时通过配置的服务端地址（如  spring.cloud.sentinel.transport.dashboard.server ）与Sentinel Dashboard建立长连接（HTTP长轮询或WebSocket），定期发送心跳包保持连接。<br>2. 数据同步：</p>
-<ul>
-<li>客户端将实时统计的监控数据（QPS、异常数等）通过长连接上报给服务端，服务端在控制台展示实时监控图表。</li>
-<li>服务端通过长连接向客户端推送规则配置（流控、熔断等），客户端接收后更新本地规则缓存并生效。<br>3. 指令交互：服务端可通过控制台手动触发客户端规则更新、熔断状态重置等指令，客户端接收后执行对应操作并返回结果。</li>
-</ul>
-<p>二、自动配置类（以Spring Cloud整合为例）的核心逻辑</p>
-<p> SentinelAutoConfiguration  是核心自动配置类，主要执行以下操作：</p>
-<p>1. 初始化核心组件：注册  SentinelResourceAspect  切面，通过AOP拦截被  @SentinelResource  注解标记的资源（方法&#x2F;接口），触发责任链执行。<br>2. 规则加载：通过  DataSource  加载预设规则（如Nacos、Apollo配置的流控&#x2F;熔断规则），初始化到  RuleManager  中。<br>3. 适配Spring生态：注册  SentinelWebInterceptor  拦截HTTP请求，将URL自动作为资源进行监控；适配Feign、Dubbo等组件，自动拦截远程调用作为资源。<br>4. 异常处理：注册  SentinelExceptionHandler ，统一处理流控、熔断等异常（如  BlockException ），返回自定义响应。</p>
-<p>三、责任链（ProcessorSlotChain）的构建与核心插槽</p>
-<ol>
-<li>构建流程</li>
-</ol>
-<ul>
-<li>客户端初始化时， SlotChainProvider  会通过SPI机制加载默认插槽链，并允许通过  SlotChainBuilder  自定义扩展。</li>
-<li>默认链顺序（按优先级执行）： NodeSelectorSlot  →  ClusterBuilderSlot  →  LogSlot  →  StatisticSlot  →  AuthoritySlot  →  FlowSlot  →  DegradeSlot  →  SystemSlot （顺序固定）。</li>
-</ul>
-<ol start="2">
-<li>关键插槽工作原理</li>
-</ol>
-<ul>
-<li>StatisticSlot（统计插槽）：责任链核心，负责收集资源实时指标（QPS、响应时间、异常数等），为后续插槽提供数据支持；通过  ArrayMetric  维护滑动窗口统计，记录每个时间窗口的请求数、成功数等。</li>
-<li>FlowSlot（流控插槽）：使用  StatisticSlot  提供的QPS&#x2F;线程数数据，与预设流控规则对比，超过阈值则抛出  FlowException  拦截请求。</li>
-<li>DegradeSlot（熔断插槽）：通过  StatisticSlot  获取异常比例&#x2F;数、响应时间等数据，判断是否触发熔断（OPEN状态），拦截请求并抛出  DegradeException 。</li>
-<li>NodeSelectorSlot：为资源创建唯一统计节点（ DefaultNode ），用于区分不同上下文的资源调用（如不同服务调用同一接口）。</li>
-</ul>
-<p>四、断路器（熔断）实现逻辑</p>
-<ol>
-<li>状态机设计</li>
-</ol>
-<ul>
-<li>CLOSED：正常允许请求， DegradeSlot  实时统计异常比例&#x2F;数、响应时间。</li>
-<li>OPEN：触发熔断（如异常比例超阈值），拦截所有请求；持续  waitTimeout  时间后转为 HALF_OPEN。</li>
-<li>HALF_OPEN：允许少量请求通过，请求成功则转为 CLOSED，失败则重回 OPEN。</li>
-</ul>
-<ol start="2">
-<li>判断逻辑</li>
-</ol>
-<ul>
-<li>基于异常比例： （异常数 &#x2F; 总请求数）&gt; 阈值  且 总请求数≥最小请求数。</li>
-<li>基于响应时间：慢调用比例（响应时间&gt;阈值的请求数&#x2F;总请求数）&gt; 阈值。</li>
-</ul>
-<p>五、限流实现逻辑</p>
-<p>1.  FlowSlot  在责任链中检查  StatisticSlot  统计的实时QPS&#x2F;线程数，若超过预设规则阈值，直接抛出  FlowException  拦截请求。</p>
-<p>六、Fallback（降级）逻辑</p>
-<p>1. 触发场景：当资源被限流（ FlowException ）、熔断（ DegradeException ）或抛出业务异常时，执行预设的fallback逻辑。<br>2. 实现方式：</p>
-<ul>
-<li>注解指定： @SentinelResource(fallback &#x3D; “xxx”) ，方法  xxx  需与原方法参数一致，可接收异常参数。</li>
-<li>全局配置：通过  GlobalFallback  定义全局fallback，统一处理未指定局部fallback的资源。<br>3. 执行流程： SentinelResourceAspect  拦截到  BlockException  或业务异常后，通过反射调用fallback方法，返回降级结果。</li>
-</ul>
-<p>七、降级逻辑（与熔断的区别）</p>
-<ul>
-<li>熔断（Degrade）：服务端主动触发的保护机制（如异常率过高），属于“被动降级”，状态随指标自动切换（CLOSED→OPEN→HALF_OPEN→CLOSED）。</li>
-<li>限流（Flow）：主动限制请求量以防止资源耗尽，属于“主动降级”，触发条件是实时请求量超阈值。</li>
-<li>共性：两者最终均通过抛出异常被fallback逻辑捕获，返回降级响应，避免服务雪崩。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>中间件学习</category>
-        <category>Sentinel</category>
-      </categories>
-      <tags>
-        <tag>Sentinel</tag>
-        <tag>源码解析</tag>
-        <tag>中间件</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>今日学习笔记：Sentinel 核心原理与关键算法</title>
     <url>/2024/05/20/Sentinel%E7%9A%84%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86%E5%92%8C%E5%85%B3%E9%94%AE%E7%AE%97%E6%B3%95/</url>
     <content><![CDATA[<p>一、Sentinel 对外部请求的感知机制</p>
@@ -1463,6 +1393,76 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>流量控制</tag>
         <tag>微服务</tag>
         <tag>Java</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Sentinel源码学习笔记</title>
+    <url>/2025/09/02/Sentinel%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
+    <content><![CDATA[<h1 id="Sentinel源码学习笔记"><a href="#Sentinel源码学习笔记" class="headerlink" title="Sentinel源码学习笔记"></a>Sentinel源码学习笔记</h1><p>一、客户端与服务端的交互流程</p>
+<p>1. 连接建立：客户端启动时通过配置的服务端地址（如  spring.cloud.sentinel.transport.dashboard.server ）与Sentinel Dashboard建立长连接（HTTP长轮询或WebSocket），定期发送心跳包保持连接。<br>2. 数据同步：</p>
+<ul>
+<li>客户端将实时统计的监控数据（QPS、异常数等）通过长连接上报给服务端，服务端在控制台展示实时监控图表。</li>
+<li>服务端通过长连接向客户端推送规则配置（流控、熔断等），客户端接收后更新本地规则缓存并生效。<br>3. 指令交互：服务端可通过控制台手动触发客户端规则更新、熔断状态重置等指令，客户端接收后执行对应操作并返回结果。</li>
+</ul>
+<p>二、自动配置类（以Spring Cloud整合为例）的核心逻辑</p>
+<p> SentinelAutoConfiguration  是核心自动配置类，主要执行以下操作：</p>
+<p>1. 初始化核心组件：注册  SentinelResourceAspect  切面，通过AOP拦截被  @SentinelResource  注解标记的资源（方法&#x2F;接口），触发责任链执行。<br>2. 规则加载：通过  DataSource  加载预设规则（如Nacos、Apollo配置的流控&#x2F;熔断规则），初始化到  RuleManager  中。<br>3. 适配Spring生态：注册  SentinelWebInterceptor  拦截HTTP请求，将URL自动作为资源进行监控；适配Feign、Dubbo等组件，自动拦截远程调用作为资源。<br>4. 异常处理：注册  SentinelExceptionHandler ，统一处理流控、熔断等异常（如  BlockException ），返回自定义响应。</p>
+<p>三、责任链（ProcessorSlotChain）的构建与核心插槽</p>
+<ol>
+<li>构建流程</li>
+</ol>
+<ul>
+<li>客户端初始化时， SlotChainProvider  会通过SPI机制加载默认插槽链，并允许通过  SlotChainBuilder  自定义扩展。</li>
+<li>默认链顺序（按优先级执行）： NodeSelectorSlot  →  ClusterBuilderSlot  →  LogSlot  →  StatisticSlot  →  AuthoritySlot  →  FlowSlot  →  DegradeSlot  →  SystemSlot （顺序固定）。</li>
+</ul>
+<ol start="2">
+<li>关键插槽工作原理</li>
+</ol>
+<ul>
+<li>StatisticSlot（统计插槽）：责任链核心，负责收集资源实时指标（QPS、响应时间、异常数等），为后续插槽提供数据支持；通过  ArrayMetric  维护滑动窗口统计，记录每个时间窗口的请求数、成功数等。</li>
+<li>FlowSlot（流控插槽）：使用  StatisticSlot  提供的QPS&#x2F;线程数数据，与预设流控规则对比，超过阈值则抛出  FlowException  拦截请求。</li>
+<li>DegradeSlot（熔断插槽）：通过  StatisticSlot  获取异常比例&#x2F;数、响应时间等数据，判断是否触发熔断（OPEN状态），拦截请求并抛出  DegradeException 。</li>
+<li>NodeSelectorSlot：为资源创建唯一统计节点（ DefaultNode ），用于区分不同上下文的资源调用（如不同服务调用同一接口）。</li>
+</ul>
+<p>四、断路器（熔断）实现逻辑</p>
+<ol>
+<li>状态机设计</li>
+</ol>
+<ul>
+<li>CLOSED：正常允许请求， DegradeSlot  实时统计异常比例&#x2F;数、响应时间。</li>
+<li>OPEN：触发熔断（如异常比例超阈值），拦截所有请求；持续  waitTimeout  时间后转为 HALF_OPEN。</li>
+<li>HALF_OPEN：允许少量请求通过，请求成功则转为 CLOSED，失败则重回 OPEN。</li>
+</ul>
+<ol start="2">
+<li>判断逻辑</li>
+</ol>
+<ul>
+<li>基于异常比例： （异常数 &#x2F; 总请求数）&gt; 阈值  且 总请求数≥最小请求数。</li>
+<li>基于响应时间：慢调用比例（响应时间&gt;阈值的请求数&#x2F;总请求数）&gt; 阈值。</li>
+</ul>
+<p>五、限流实现逻辑</p>
+<p>1.  FlowSlot  在责任链中检查  StatisticSlot  统计的实时QPS&#x2F;线程数，若超过预设规则阈值，直接抛出  FlowException  拦截请求。</p>
+<p>六、Fallback（降级）逻辑</p>
+<p>1. 触发场景：当资源被限流（ FlowException ）、熔断（ DegradeException ）或抛出业务异常时，执行预设的fallback逻辑。<br>2. 实现方式：</p>
+<ul>
+<li>注解指定： @SentinelResource(fallback &#x3D; “xxx”) ，方法  xxx  需与原方法参数一致，可接收异常参数。</li>
+<li>全局配置：通过  GlobalFallback  定义全局fallback，统一处理未指定局部fallback的资源。<br>3. 执行流程： SentinelResourceAspect  拦截到  BlockException  或业务异常后，通过反射调用fallback方法，返回降级结果。</li>
+</ul>
+<p>七、降级逻辑（与熔断的区别）</p>
+<ul>
+<li>熔断（Degrade）：服务端主动触发的保护机制（如异常率过高），属于“被动降级”，状态随指标自动切换（CLOSED→OPEN→HALF_OPEN→CLOSED）。</li>
+<li>限流（Flow）：主动限制请求量以防止资源耗尽，属于“主动降级”，触发条件是实时请求量超阈值。</li>
+<li>共性：两者最终均通过抛出异常被fallback逻辑捕获，返回降级响应，避免服务雪崩。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>中间件学习</category>
+        <category>Sentinel</category>
+      </categories>
+      <tags>
+        <tag>Sentinel</tag>
+        <tag>源码解析</tag>
+        <tag>中间件</tag>
       </tags>
   </entry>
   <entry>
@@ -1739,6 +1739,106 @@ LoadBalancer 3.2.0+ 2023.0.3+
 <p>示例：给 <code>Host</code> 组件添加启动监听器，在 Host 启动后打印日志：</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 自定义监听器</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HostStartListener</span> <span class="keyword">implements</span> <span class="title class_">LifecycleListener</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">lifecycleEvent</span><span class="params">(LifecycleEvent event)</span> &#123;</span><br><span class="line">        <span class="comment">// 当事件类型为“已启动”时触发</span></span><br><span class="line">        <span class="keyword">if</span> (Lifecycle.START_EVENT.equals(event.getType())) &#123;</span><br><span class="line">            <span class="type">Host</span> <span class="variable">host</span> <span class="operator">=</span> (Host) event.getSource();</span><br><span class="line">            System.out.println(<span class="string">&quot;Host &quot;</span> + host.getName() + <span class="string">&quot; 已启动，准备处理请求&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 在 Host 组件中注册监听器（通常在 server.xml 或代码中配置）</span></span><br><span class="line"><span class="type">Host</span> <span class="variable">host</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">StandardHost</span>();</span><br><span class="line">host.addLifecycleListener(<span class="keyword">new</span> <span class="title class_">HostStartListener</span>());</span><br></pre></td></tr></table></figure>
 
+]]></content>
+  </entry>
+  <entry>
+    <title></title>
+    <url>/2025/10/10/Tomcat%E7%9A%84IO%E6%A8%A1%E5%9E%8B/</url>
+    <content><![CDATA[<h1 id="Tomcat的IO模型"><a href="#Tomcat的IO模型" class="headerlink" title="Tomcat的IO模型"></a>Tomcat的IO模型</h1><h1 id="1-Tomcat的I-O模型"><a href="#1-Tomcat的I-O模型" class="headerlink" title="1. Tomcat的I&#x2F;O模型"></a>1. Tomcat的I&#x2F;O模型</h1><h2 id="1-1-Linux-I-O模型"><a href="#1-1-Linux-I-O模型" class="headerlink" title="1.1 Linux I&#x2F;O模型"></a>1.1 Linux I&#x2F;O模型</h2><h3 id="I-O要解决什么问题？"><a href="#I-O要解决什么问题？" class="headerlink" title="I&#x2F;O要解决什么问题？"></a>I&#x2F;O要解决什么问题？</h3><p>I&#x2F;O本质上是在解决在计算机内存与外部设备之间拷贝数据的过程</p>
+<p>程序通过CPU向外部设备发出读指令，数据从外部设备拷贝至内存需要一段时间，这段时间CPU就没事情做了，程序此时有两种选择：</p>
+<ol>
+<li><p>让出CPU资源，CPU执行其他任务</p>
+</li>
+<li><p>继续使用CPU轮询数据是否拷贝完成</p>
+</li>
+</ol>
+<p>采取的具体策略就是不同I&#x2F;O模型要解决的问题</p>
+<p>以网络数据读取为例分析，会涉及两个对象，一个是调用I&#x2F;O操作的用户线程，另一个是操作系统内核。一个进程的地址空间分为用户空间和内核空间，基于安全上的考虑，用户程序只能访问用户空间，内核程序可以访问整个进程空间，只有内核可以直接访问各种硬件资源，比如磁盘和网卡。</p>
+<img width="1101" height="613" alt="image" src="https://github.com/user-attachments/assets/28b24729-5077-45e1-98c4-7145582e439f" />
+
+
+<p>当用户线程发起I&#x2F;O调用后，网络数据读取操作会经历两个步骤：</p>
+<ul>
+<li><p>数据准备阶段：用户线程等待内核将数据从网卡拷贝到内核空间</p>
+</li>
+<li><p>数据拷贝阶段：内核将数据从内核空间拷贝到用户空间（用户进程的缓冲区）</p>
+</li>
+</ul>
+<img width="1080" height="574" alt="image" src="https://github.com/user-attachments/assets/4b6fcf47-be70-46ef-bdef-9a9d32236d3c" />
+
+
+<h3 id="Linux的I-O模型分类"><a href="#Linux的I-O模型分类" class="headerlink" title="Linux的I&#x2F;O模型分类"></a>Linux的I&#x2F;O模型分类</h3><ul>
+<li><p>同步阻塞I&#x2F;O(bloking I&#x2F;O)</p>
+</li>
+<li><p>同步非阻塞I&#x2F;O(non-bloking I&#x2F;O)</p>
+</li>
+<li><p>I&#x2F;O多路复用（multiplexing I&#x2F;O）</p>
+</li>
+<li><p>信号驱动式I&#x2F;O（signal-driven I&#x2F;O）</p>
+</li>
+<li><p>异步I&#x2F;O(asynchronous I&#x2F;O)</p>
+</li>
+</ul>
+<p>其中信号驱动式I&#x2F;O在实际中并不常用:</p>
+<img width="1232" height="906" alt="image" src="https://github.com/user-attachments/assets/8ec4c31e-38ac-4b5f-97c8-e267edf7e5b2" />
+
+
+<ul>
+<li><p>阻塞或非阻塞I&#x2F;O是指应用程序在发起I&#x2F;O操作时，是立即返回还是等待</p>
+</li>
+<li><p>同步或异步是指应用程序在与内核通信时，数据从内核空间到应用空间的拷贝，是由内核主动发起还是应用程序来触发。</p>
+</li>
+</ul>
+<p>BIO的缺点：每个线程只能建立一个连接，所以必须使用线程池来管理多个客户端连接，客户端连接能力有限</p>
+<p>NIO的缺点：每次都需要轮询所有的客户连接，确认是否有读取事件，造成CPU的空转，浪费CPU资源</p>
+<p>多路复用I&#x2F;O:事件驱动模型的I&#x2F;O，每当有读取事件，或者写入事件发布时，会获取事件对应的连接，执行对应的事件，极大利用了CPU资源</p>
+<table>
+<thead>
+<tr>
+<th>BIO(JioEndpoint)</th>
+<th>同步阻塞式I&#x2F;O，即Tomcat使用传统java.io进行操作。该模式下每个请求都会创建一个线程，对性能开销大，不适合高并发场景。优点是稳定，适合连接数小且固定架构。Tomcat8.5.x开始移除BIO</th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NIO(NioEndPoint)</td>
+<td>同步非阻塞式I&#x2F;O，jdk1.4之后实现的新IO。该模式基于多路复用选择器监测连接状态再同步通知线程处理，从而达到非阻塞的目的。比传统BIO能更好的支持并发性能。Tomcat8.0之后默认采用该模式。NIO模式使用连接数目多且连接比较短（轻操作）的架构，比如聊天服务器，弹幕系统，服务器间通讯，编程比较复杂</td>
+<td></td>
+</tr>
+<tr>
+<td>AIO（Nio2EndPoint）</td>
+<td>异步非阻塞式IO，jdk1.7后支持，与NIO不同在于不需要多路复用选择器，而是请求处理线程执行完成之后进行回调通知，继续执行后续操作。Tomcat8之后支持。一般适用于连接数较多且连接时间较长的应用。</td>
+<td></td>
+</tr>
+<tr>
+<td>APR（APrEndPoint）</td>
+<td>（全称是Apache Portable Runtime&#x2F;Apache可移植运行库），是ApacheHTTP服务器的支持库。APrEndPoint是通过JNI调用APR本地库而实现非阻塞I&#x2F;O的。使用需要编译安装APR库</td>
+<td></td>
+</tr>
+</tbody></table>
+<h2 id="1-2-Tomcat-I-O模型如何选型"><a href="#1-2-Tomcat-I-O模型如何选型" class="headerlink" title="1.2 Tomcat I&#x2F;O模型如何选型"></a>1.2 Tomcat I&#x2F;O模型如何选型</h2><p>I&#x2F;O调优实际上是连接器类型的选择，一般情况下默认都是NIO，在绝大多数情况下都是够用的，除非你的WEB应用用到了TLS加密传输，而且对性能要求极高，这个时候可以考虑APR，因为APR通过OoenSSL来处理TLS握手和加解密。OpenSSL本身用C语言实现，它还对TLS通信做了优化，所以性能比Java要高。如果你的Tomcat跑在Windows上，并且HTTP请求的数据量比较大，可以考虑NIO2,这是因为Windows从操作系统层面实现了真正意义的异步I&#x2F;O，如果传输的数据量比较大，异步I&#x2F;O的效果就能显现出来。如果你的Tomcat跑在Linux平台上，建议使用NIO。因为在Linux上，JavaNIO和JavaNIO2底层都是通过epoll来实现的，但是JavaNIO更加简单高效。指定IO模型只需要修改server.xml的protocol配置</p>
+<h2 id="1-3-网络编程模型Reactor线程模型"><a href="#1-3-网络编程模型Reactor线程模型" class="headerlink" title="1.3 网络编程模型Reactor线程模型"></a>1.3 网络编程模型Reactor线程模型</h2><p>Reactor模型是网络服务器端用来处理高并发网络IO请求的一种编程模型。</p>
+<p>该模型主要有三类处理事件：即连接事件、写事件、读事件；</p>
+<p>三个关键角色：即reactor、acceptor、handler。</p>
+<p>accpetor负责连接事件，handler负责读写事件，reactor负责事件监听和事件分发</p>
+<h3 id="单Reactor单线程（redis用的就是这个）："><a href="#单Reactor单线程（redis用的就是这个）：" class="headerlink" title="单Reactor单线程（redis用的就是这个）："></a>单Reactor单线程（redis用的就是这个）：</h3><img width="955" height="630" alt="image" src="https://github.com/user-attachments/assets/dfa466fd-53dc-47ad-85d8-fc34e73d5df0" />
+
+
+<h3 id="单Reactor多线程模型"><a href="#单Reactor多线程模型" class="headerlink" title="单Reactor多线程模型"></a>单Reactor多线程模型</h3><img width="904" height="869" alt="image" src="https://github.com/user-attachments/assets/4b9e3e71-ff29-4191-a895-cee39c158cfb" />
+
+
+<h3 id="主从Reactor多线程"><a href="#主从Reactor多线程" class="headerlink" title="主从Reactor多线程"></a>主从Reactor多线程</h3><img width="935" height="970" alt="image" src="https://github.com/user-attachments/assets/e104c179-2062-4457-895e-e795a298d189" />
+
+
+<h2 id="1-4-Tomcat-NIO实现"><a href="#1-4-Tomcat-NIO实现" class="headerlink" title="1.4 Tomcat NIO实现"></a>1.4 Tomcat NIO实现</h2><p>在Tomcat中，Endpoint组件的主要工作就是处理IO，而NIOEndpoint利用Java NIO API实现了多路复用I&#x2F;O模型。Tomcat的NioEndPoint是基于主从Reactor多线程模型设计的</p>
+<p>有一个额外的线程单独处理连接事件，线程池负责处理事件</p>
+<p>学习主从Reactor多线程模型这种实现可以去看下thrift实现</p>
+<h1 id="2-Tomcat调优"><a href="#2-Tomcat调优" class="headerlink" title="2. Tomcat调优"></a>2. Tomcat调优</h1><h2 id="2-1-如何监控Tomcat的性能"><a href="#2-1-如何监控Tomcat的性能" class="headerlink" title="2.1 如何监控Tomcat的性能"></a>2.1 如何监控Tomcat的性能</h2><p>tomcat的关键指标有吞吐量、响应时间、错误数、线程池、CPU以及JVM内存。前三个指标是我们最关心的业务指标，Tomcat作为服务器，就是要能够又快又好地处理请求，因此吞吐量要大、响应时间要短，并且错误数要少。后面三个指标都是跟系统资源有关的，当某个资源出现瓶颈就会影响前面的业务指标，比如线程池种的线程数量不足会影响吞吐量和响应时间；但是线程数太多会耗费大量CPU，也会影响吞吐量，当内存不足时，会频繁触发GC,耗费CPU资源，最后也会反映在业务指标上来</p>
+<h4 id="通过JConsole监控Tomcat"><a href="#通过JConsole监控Tomcat" class="headerlink" title="通过JConsole监控Tomcat"></a>通过JConsole监控Tomcat</h4><p>1）开启JMX的远程监听端口</p>
+<p>我们可以在Tomcat的bin目录下新建一个名为setenv.sh的文件，然后输入下面内容</p>
+<p>2)重启Tomcat,这样JMX的监听端口8011就开启了，可以通过JConsole来连接这个端口</p>
+<p>这样就可以监控这些核心业务参数了</p>
+<h2 id="2-2-常用调优参数"><a href="#2-2-常用调优参数" class="headerlink" title="2.2 常用调优参数"></a>2.2 常用调优参数</h2><h3 id="线程池参数"><a href="#线程池参数" class="headerlink" title="线程池参数"></a>线程池参数</h3><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Executor</span> <span class="attr">name</span>=<span class="string">&quot;tomcatThreadPool&quot;</span> </span></span><br><span class="line"><span class="tag">          <span class="attr">namePrefix</span>=<span class="string">&quot;catalina-exec-&quot;</span>  &lt;!<span class="attr">--</span> <span class="attr">线程名前缀</span> <span class="attr">--</span>&gt;</span></span><br><span class="line">          maxThreads=&quot;500&quot;            <span class="comment">&lt;!-- 最大线程数 --&gt;</span></span><br><span class="line">          minSpareThreads=&quot;50&quot;        <span class="comment">&lt;!-- 最小空闲线程 --&gt;</span></span><br><span class="line">          maxIdleTime=&quot;60000&quot;         <span class="comment">&lt;!-- 线程空闲超时时间（毫秒） --&gt;</span></span><br><span class="line">          maxQueueSize=&quot;100&quot;          <span class="comment">&lt;!-- 任务队列大小 --&gt;</span></span><br><span class="line">          prestartminSpareThreads=&quot;true&quot;/&gt; <span class="comment">&lt;!-- 启动时初始化最小空闲线程 --&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 连接器引用线程池 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">Connector</span> <span class="attr">executor</span>=<span class="string">&quot;tomcatThreadPool&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">port</span>=<span class="string">&quot;8080&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">protocol</span>=<span class="string">&quot;org.apache.coyote.http11.Http11Nio2Protocol&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">...</span>/&gt;</span></span><br></pre></td></tr></table></figure>
 ]]></content>
   </entry>
   <entry>
