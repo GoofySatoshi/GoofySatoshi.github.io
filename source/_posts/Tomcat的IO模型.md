@@ -1,4 +1,20 @@
-# Tomcat的IO模型
+---
+title: Tomcat的IO模型与性能调优
+date: 2025-10-13 23:30:00 +08:00
+categories:
+  - Java Web
+  - 中间件
+  - Tomcat
+tags:
+  - Tomcat IO模型
+  - Linux IO模型
+  - Reactor线程模型
+  - Tomcat性能调优
+  - NIO
+  - APR
+  - Tomcat线程池参数
+  - JConsole监控
+---
 
 # 1. Tomcat的I/O模型
 
