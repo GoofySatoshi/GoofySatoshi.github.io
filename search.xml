@@ -1767,9 +1767,9 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title></title>
-    <url>/2025/10/12/Tomcat%E7%9A%84IO%E6%A8%A1%E5%9E%8B/</url>
-    <content><![CDATA[<h1 id="Tomcat的IO模型"><a href="#Tomcat的IO模型" class="headerlink" title="Tomcat的IO模型"></a>Tomcat的IO模型</h1><h1 id="1-Tomcat的I-O模型"><a href="#1-Tomcat的I-O模型" class="headerlink" title="1. Tomcat的I&#x2F;O模型"></a>1. Tomcat的I&#x2F;O模型</h1><h2 id="1-1-Linux-I-O模型"><a href="#1-1-Linux-I-O模型" class="headerlink" title="1.1 Linux I&#x2F;O模型"></a>1.1 Linux I&#x2F;O模型</h2><h3 id="I-O要解决什么问题？"><a href="#I-O要解决什么问题？" class="headerlink" title="I&#x2F;O要解决什么问题？"></a>I&#x2F;O要解决什么问题？</h3><p>I&#x2F;O本质上是在解决在计算机内存与外部设备之间拷贝数据的过程</p>
+    <title>Tomcat的IO模型与性能调优</title>
+    <url>/2025/10/13/Tomcat%E7%9A%84IO%E6%A8%A1%E5%9E%8B/</url>
+    <content><![CDATA[<h1 id="1-Tomcat的I-O模型"><a href="#1-Tomcat的I-O模型" class="headerlink" title="1. Tomcat的I&#x2F;O模型"></a>1. Tomcat的I&#x2F;O模型</h1><h2 id="1-1-Linux-I-O模型"><a href="#1-1-Linux-I-O模型" class="headerlink" title="1.1 Linux I&#x2F;O模型"></a>1.1 Linux I&#x2F;O模型</h2><h3 id="I-O要解决什么问题？"><a href="#I-O要解决什么问题？" class="headerlink" title="I&#x2F;O要解决什么问题？"></a>I&#x2F;O要解决什么问题？</h3><p>I&#x2F;O本质上是在解决在计算机内存与外部设备之间拷贝数据的过程</p>
 <p>程序通过CPU向外部设备发出读指令，数据从外部设备拷贝至内存需要一段时间，这段时间CPU就没事情做了，程序此时有两种选择：</p>
 <ol>
 <li><p>让出CPU资源，CPU执行其他任务</p>
@@ -1865,6 +1865,21 @@ LoadBalancer 3.2.0+ 2023.0.3+
 <p>这样就可以监控这些核心业务参数了</p>
 <h2 id="2-2-常用调优参数"><a href="#2-2-常用调优参数" class="headerlink" title="2.2 常用调优参数"></a>2.2 常用调优参数</h2><h3 id="线程池参数"><a href="#线程池参数" class="headerlink" title="线程池参数"></a>线程池参数</h3><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Executor</span> <span class="attr">name</span>=<span class="string">&quot;tomcatThreadPool&quot;</span> </span></span><br><span class="line"><span class="tag">          <span class="attr">namePrefix</span>=<span class="string">&quot;catalina-exec-&quot;</span>  &lt;!<span class="attr">--</span> <span class="attr">线程名前缀</span> <span class="attr">--</span>&gt;</span></span><br><span class="line">          maxThreads=&quot;500&quot;            <span class="comment">&lt;!-- 最大线程数 --&gt;</span></span><br><span class="line">          minSpareThreads=&quot;50&quot;        <span class="comment">&lt;!-- 最小空闲线程 --&gt;</span></span><br><span class="line">          maxIdleTime=&quot;60000&quot;         <span class="comment">&lt;!-- 线程空闲超时时间（毫秒） --&gt;</span></span><br><span class="line">          maxQueueSize=&quot;100&quot;          <span class="comment">&lt;!-- 任务队列大小 --&gt;</span></span><br><span class="line">          prestartminSpareThreads=&quot;true&quot;/&gt; <span class="comment">&lt;!-- 启动时初始化最小空闲线程 --&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 连接器引用线程池 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">Connector</span> <span class="attr">executor</span>=<span class="string">&quot;tomcatThreadPool&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">port</span>=<span class="string">&quot;8080&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">protocol</span>=<span class="string">&quot;org.apache.coyote.http11.Http11Nio2Protocol&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">...</span>/&gt;</span></span><br></pre></td></tr></table></figure>
 ]]></content>
+      <categories>
+        <category>Java Web</category>
+        <category>中间件</category>
+        <category>Tomcat</category>
+      </categories>
+      <tags>
+        <tag>Tomcat IO模型</tag>
+        <tag>Linux IO模型</tag>
+        <tag>Reactor线程模型</tag>
+        <tag>Tomcat性能调优</tag>
+        <tag>NIO</tag>
+        <tag>APR</tag>
+        <tag>Tomcat线程池参数</tag>
+        <tag>JConsole监控</tag>
+      </tags>
   </entry>
   <entry>
     <title>Tomcat类加载机制与热部署原理详解</title>
