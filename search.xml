@@ -209,6 +209,109 @@
       </tags>
   </entry>
   <entry>
+    <title>Spring Cloud Nacos Config 配置中心源码学习</title>
+    <url>/2025/08/30/Spring-Cloud-Nacos%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0/</url>
+    <content><![CDATA[<h2 id="一、引言：Nacos-Config-的核心定位"><a href="#一、引言：Nacos-Config-的核心定位" class="headerlink" title="一、引言：Nacos Config 的核心定位"></a>一、引言：Nacos Config 的核心定位</h2><p>在 Spring Cloud 微服务架构中，配置管理是保障服务弹性与可维护性的关键环节。Nacos Config 作为官方推荐的配置中心，不仅实现了配置的集中存储与动态推送，还通过<strong>SPI 机制适配 Spring Boot 自动配置</strong>，解决了传统本地配置“修改需重启”“环境配置混乱”等问题。</p>
+<p>本文基于源码视角，从<strong>配置加载优先级</strong>、<strong>事件驱动的变更流程</strong>两大核心维度展开，同时补充一致性保障、多环境管理、安全加密等生产级关键特性，形成完整的 Nacos Config 知识体系。</p>
+<h2 id="二、配置文件加载逻辑与优先级排序"><a href="#二、配置文件加载逻辑与优先级排序" class="headerlink" title="二、配置文件加载逻辑与优先级排序"></a>二、配置文件加载逻辑与优先级排序</h2><p>Nacos Config 本质是 Spring Boot 自动配置的扩展，其配置加载依赖 <strong>Bootstrap 上下文</strong>与 <strong>Spring 环境（Environment）</strong> 的初始化顺序，最终形成明确的优先级规则（优先级从高到低）：</p>
+<table>
+<thead>
+<tr>
+<th>优先级排序</th>
+<th>配置文件类型</th>
+<th>核心作用与场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1（最高）</td>
+<td>服务名-环境名.yaml</td>
+<td>如 <code>order-service-dev.yaml</code>，针对<strong>特定服务+特定环境</strong>的精准配置（如开发环境的数据库地址），优先级最高，覆盖所有其他配置。</td>
+</tr>
+<tr>
+<td>2</td>
+<td>服务名.yaml</td>
+<td>如 <code>order-service.yaml</code>，该服务的<strong>通用基础配置</strong>（如服务端口、注册中心地址），无环境配置时作为默认值。</td>
+</tr>
+<tr>
+<td>3</td>
+<td>共享配置（shared-configs）</td>
+<td>多服务共享的通用配置（如日志输出格式、公共 API 密钥），通过 Nacos 控制台配置“共享数据集”，避免重复配置。</td>
+</tr>
+<tr>
+<td>4</td>
+<td>本地 application.yaml&#x2F;props</td>
+<td>应用级通用配置（如 Spring 全局参数），优先级低于 Nacos 远程配置，仅在远程配置缺失时生效。</td>
+</tr>
+<tr>
+<td>5（最低）</td>
+<td>本地 bootstrap.yaml&#x2F;props</td>
+<td>启动级基础配置（如 Nacos Server 地址 <code>spring.cloud.nacos.config.server-addr</code>），仅用于初始化 Nacos 连接，不参与业务配置。</td>
+</tr>
+</tbody></table>
+<h3 id="关键源码关联"><a href="#关键源码关联" class="headerlink" title="关键源码关联"></a>关键源码关联</h3><ul>
+<li><strong>Bootstrap 上下文初始化</strong>：通过 <code>BootstrapApplicationListener</code> 触发，优先加载 <code>bootstrap.yaml</code>，确保 Nacos 地址等启动配置先于业务配置加载。</li>
+<li><strong>配置优先级注入</strong>：<code>NacosConfigEnvironmentProcessor</code> 实现 <code>EnvironmentPostProcessor</code> 接口，将 Nacos 远程配置（按上述优先级）注入 Spring 环境，覆盖本地配置。</li>
+</ul>
+<h2 id="三、事件驱动模型：配置变更的全链路处理"><a href="#三、事件驱动模型：配置变更的全链路处理" class="headerlink" title="三、事件驱动模型：配置变更的全链路处理"></a>三、事件驱动模型：配置变更的全链路处理</h2><p>Nacos Config 的动态配置能力依赖<strong>事件驱动模型</strong>，核心是“变更触发→事件发布→监听器处理→客户端同步”的闭环流程，具体分为服务端与客户端两部分：</p>
+<h3 id="3-1-服务端：配置变更的触发与持久化"><a href="#3-1-服务端：配置变更的触发与持久化" class="headerlink" title="3.1 服务端：配置变更的触发与持久化"></a>3.1 服务端：配置变更的触发与持久化</h3><p>当通过 Nacos 控制台&#x2F;API 修改配置后，服务端执行以下步骤：</p>
+<ol>
+<li><p><strong>配置校验与持久化</strong></p>
+<ul>
+<li>先将变更后的配置写入<strong>本地磁盘</strong>（路径：<code>nacos/data/config-data</code>），确保单机故障时配置不丢失；</li>
+<li>同步写入 <strong>MySQL 数据库</strong>（表 <code>config_info</code>），通过数据库实现多节点（集群）间的配置一致性（Nacos 集群默认基于 MySQL 实现数据同步）。</li>
+</ul>
+</li>
+<li><p><strong>事件发布与任务调度</strong></p>
+<ul>
+<li>持久化完成后，发布 <code>ConfigDataChangedEvent</code> 事件，触发内部监听器（如 <code>ConfigChangeNotifier</code>）；</li>
+<li>监听器向客户端发送<strong>定时拉取任务</strong>（默认客户端每 30 秒拉取一次，可通过 <code>spring.cloud.nacos.config.refreshInterval</code> 调整），或通过 <strong>UDP 推送</strong>（需开启 <code>nacos.config.push.enabled=true</code>）主动通知客户端。</li>
+</ul>
+</li>
+</ol>
+<h3 id="3-2-客户端：配置变更的接收与应用"><a href="#3-2-客户端：配置变更的接收与应用" class="headerlink" title="3.2 客户端：配置变更的接收与应用"></a>3.2 客户端：配置变更的接收与应用</h3><p>客户端（微服务）通过 <code>NacosConfigManager</code> 与服务端交互，核心是<strong>阻塞队列+循环拉取</strong>的任务处理机制：</p>
+<ol>
+<li><strong>任务队列初始化</strong>：客户端启动时创建 <code>BlockingQueue</code>，用于存储服务端下发的“配置拉取任务”。</li>
+<li><strong>任务消费逻辑</strong>：通过 <code>ConfigPullTaskRunner</code> 线程，以 <code>while(true)</code> 循环从队列中获取任务，避免线程频繁创建销毁。</li>
+<li><strong>配置对比与更新</strong>：<ul>
+<li>拉取服务端最新配置后，与本地缓存（内存+本地文件 <code>nacos/config</code>）对比；</li>
+<li>若配置有变更，发布 <code>EnvironmentChangeEvent</code> 事件，触发 <code>@RefreshScope</code> 注解的 Bean 重新初始化，实现“零重启更新配置”。</li>
+</ul>
+</li>
+</ol>
+<h3 id="关键源码关联-1"><a href="#关键源码关联-1" class="headerlink" title="关键源码关联"></a>关键源码关联</h3><ul>
+<li><strong>服务端事件机制</strong>：<code>EventDispatcher</code> 作为事件调度核心，管理 <code>ConfigDataChangedEvent</code> 等事件的监听器注册与触发。</li>
+<li><strong>客户端缓存与刷新</strong>：<code>NacosConfigService</code> 负责缓存管理，<code>RefreshEventListener</code> 监听配置变更事件，触发 Bean 刷新。</li>
+</ul>
+<h2 id="四、生产级关键特性补充"><a href="#四、生产级关键特性补充" class="headerlink" title="四、生产级关键特性补充"></a>四、生产级关键特性补充</h2><h3 id="4-1-配置动态更新的一致性保障"><a href="#4-1-配置动态更新的一致性保障" class="headerlink" title="4.1 配置动态更新的一致性保障"></a>4.1 配置动态更新的一致性保障</h3><p>Nacos 通过“三重机制”确保服务端与客户端配置一致：</p>
+<ul>
+<li><strong>版本号校验</strong>：每个配置有唯一 <code>dataId</code> 和 <code>version</code>，客户端拉取时对比版本号，仅更新版本不同的配置；</li>
+<li><strong>本地缓存兜底</strong>：客户端将远程配置缓存到本地文件，网络中断时优先使用缓存配置，避免服务不可用；</li>
+<li><strong>集群数据同步</strong>：Nacos 集群通过 MySQL 主从同步或 Raft 协议（1.4.0+ 支持），确保多节点配置一致。</li>
+</ul>
+<h3 id="4-2-多环境与多版本管理"><a href="#4-2-多环境与多版本管理" class="headerlink" title="4.2 多环境与多版本管理"></a>4.2 多环境与多版本管理</h3><ul>
+<li><strong>多环境隔离</strong>：通过 <code>namespace</code>（命名空间）区分环境（如 <code>dev</code>&#x2F;<code>test</code>&#x2F;<code>prod</code>），每个命名空间下的配置完全隔离，避免环境混淆；</li>
+<li><strong>多版本回溯</strong>：Nacos 保留配置的历史版本（默认 30 天），支持一键回滚到历史版本，应对配置修改错误的场景。</li>
+</ul>
+<h3 id="4-3-配置安全：敏感信息加密"><a href="#4-3-配置安全：敏感信息加密" class="headerlink" title="4.3 配置安全：敏感信息加密"></a>4.3 配置安全：敏感信息加密</h3><p>针对数据库密码、AccessKey 等敏感配置，Nacos 提供两种加密方案：</p>
+<ul>
+<li><strong>传输加密</strong>：服务端与客户端通过 HTTPS 通信，避免配置在传输过程中被窃取；</li>
+<li><strong>存储加密</strong>：使用 AES-128 或 RSA 算法对敏感配置加密后存储到 MySQL，客户端通过配置 <code>secretKey</code> 解密后使用（需在 <code>bootstrap.yaml</code> 中配置加密密钥）。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>技术学习</category>
+        <category>Spring Cloud</category>
+      </categories>
+      <tags>
+        <tag>Spring Cloud</tag>
+        <tag>Nacos</tag>
+        <tag>配置中心</tag>
+        <tag>源码解析</tag>
+        <tag>事件驱动</tag>
+        <tag>动态配置</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>G1 垃圾收集器学习笔记</title>
     <url>/2025/09/22/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/</url>
     <content><![CDATA[<h1 id="G1垃圾收集器学习笔记"><a href="#G1垃圾收集器学习笔记" class="headerlink" title="G1垃圾收集器学习笔记"></a>G1垃圾收集器学习笔记</h1><h2 id="2025-09-23"><a href="#2025-09-23" class="headerlink" title="2025-09-23"></a>2025-09-23</h2><h2 id="一、G1垃圾收集器概述"><a href="#一、G1垃圾收集器概述" class="headerlink" title="一、G1垃圾收集器概述"></a>一、G1垃圾收集器概述</h2><p>G1（Garbage-First）是Java 9默认的垃圾收集器，核心特性如下：  </p>
@@ -357,109 +460,6 @@
         <tag>JVM</tag>
         <tag>Java 虚拟机</tag>
         <tag>垃圾回收机制</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring Cloud Nacos Config 配置中心源码学习</title>
-    <url>/2025/08/30/Spring-Cloud-Nacos%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0/</url>
-    <content><![CDATA[<h2 id="一、引言：Nacos-Config-的核心定位"><a href="#一、引言：Nacos-Config-的核心定位" class="headerlink" title="一、引言：Nacos Config 的核心定位"></a>一、引言：Nacos Config 的核心定位</h2><p>在 Spring Cloud 微服务架构中，配置管理是保障服务弹性与可维护性的关键环节。Nacos Config 作为官方推荐的配置中心，不仅实现了配置的集中存储与动态推送，还通过<strong>SPI 机制适配 Spring Boot 自动配置</strong>，解决了传统本地配置“修改需重启”“环境配置混乱”等问题。</p>
-<p>本文基于源码视角，从<strong>配置加载优先级</strong>、<strong>事件驱动的变更流程</strong>两大核心维度展开，同时补充一致性保障、多环境管理、安全加密等生产级关键特性，形成完整的 Nacos Config 知识体系。</p>
-<h2 id="二、配置文件加载逻辑与优先级排序"><a href="#二、配置文件加载逻辑与优先级排序" class="headerlink" title="二、配置文件加载逻辑与优先级排序"></a>二、配置文件加载逻辑与优先级排序</h2><p>Nacos Config 本质是 Spring Boot 自动配置的扩展，其配置加载依赖 <strong>Bootstrap 上下文</strong>与 <strong>Spring 环境（Environment）</strong> 的初始化顺序，最终形成明确的优先级规则（优先级从高到低）：</p>
-<table>
-<thead>
-<tr>
-<th>优先级排序</th>
-<th>配置文件类型</th>
-<th>核心作用与场景</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>1（最高）</td>
-<td>服务名-环境名.yaml</td>
-<td>如 <code>order-service-dev.yaml</code>，针对<strong>特定服务+特定环境</strong>的精准配置（如开发环境的数据库地址），优先级最高，覆盖所有其他配置。</td>
-</tr>
-<tr>
-<td>2</td>
-<td>服务名.yaml</td>
-<td>如 <code>order-service.yaml</code>，该服务的<strong>通用基础配置</strong>（如服务端口、注册中心地址），无环境配置时作为默认值。</td>
-</tr>
-<tr>
-<td>3</td>
-<td>共享配置（shared-configs）</td>
-<td>多服务共享的通用配置（如日志输出格式、公共 API 密钥），通过 Nacos 控制台配置“共享数据集”，避免重复配置。</td>
-</tr>
-<tr>
-<td>4</td>
-<td>本地 application.yaml&#x2F;props</td>
-<td>应用级通用配置（如 Spring 全局参数），优先级低于 Nacos 远程配置，仅在远程配置缺失时生效。</td>
-</tr>
-<tr>
-<td>5（最低）</td>
-<td>本地 bootstrap.yaml&#x2F;props</td>
-<td>启动级基础配置（如 Nacos Server 地址 <code>spring.cloud.nacos.config.server-addr</code>），仅用于初始化 Nacos 连接，不参与业务配置。</td>
-</tr>
-</tbody></table>
-<h3 id="关键源码关联"><a href="#关键源码关联" class="headerlink" title="关键源码关联"></a>关键源码关联</h3><ul>
-<li><strong>Bootstrap 上下文初始化</strong>：通过 <code>BootstrapApplicationListener</code> 触发，优先加载 <code>bootstrap.yaml</code>，确保 Nacos 地址等启动配置先于业务配置加载。</li>
-<li><strong>配置优先级注入</strong>：<code>NacosConfigEnvironmentProcessor</code> 实现 <code>EnvironmentPostProcessor</code> 接口，将 Nacos 远程配置（按上述优先级）注入 Spring 环境，覆盖本地配置。</li>
-</ul>
-<h2 id="三、事件驱动模型：配置变更的全链路处理"><a href="#三、事件驱动模型：配置变更的全链路处理" class="headerlink" title="三、事件驱动模型：配置变更的全链路处理"></a>三、事件驱动模型：配置变更的全链路处理</h2><p>Nacos Config 的动态配置能力依赖<strong>事件驱动模型</strong>，核心是“变更触发→事件发布→监听器处理→客户端同步”的闭环流程，具体分为服务端与客户端两部分：</p>
-<h3 id="3-1-服务端：配置变更的触发与持久化"><a href="#3-1-服务端：配置变更的触发与持久化" class="headerlink" title="3.1 服务端：配置变更的触发与持久化"></a>3.1 服务端：配置变更的触发与持久化</h3><p>当通过 Nacos 控制台&#x2F;API 修改配置后，服务端执行以下步骤：</p>
-<ol>
-<li><p><strong>配置校验与持久化</strong></p>
-<ul>
-<li>先将变更后的配置写入<strong>本地磁盘</strong>（路径：<code>nacos/data/config-data</code>），确保单机故障时配置不丢失；</li>
-<li>同步写入 <strong>MySQL 数据库</strong>（表 <code>config_info</code>），通过数据库实现多节点（集群）间的配置一致性（Nacos 集群默认基于 MySQL 实现数据同步）。</li>
-</ul>
-</li>
-<li><p><strong>事件发布与任务调度</strong></p>
-<ul>
-<li>持久化完成后，发布 <code>ConfigDataChangedEvent</code> 事件，触发内部监听器（如 <code>ConfigChangeNotifier</code>）；</li>
-<li>监听器向客户端发送<strong>定时拉取任务</strong>（默认客户端每 30 秒拉取一次，可通过 <code>spring.cloud.nacos.config.refreshInterval</code> 调整），或通过 <strong>UDP 推送</strong>（需开启 <code>nacos.config.push.enabled=true</code>）主动通知客户端。</li>
-</ul>
-</li>
-</ol>
-<h3 id="3-2-客户端：配置变更的接收与应用"><a href="#3-2-客户端：配置变更的接收与应用" class="headerlink" title="3.2 客户端：配置变更的接收与应用"></a>3.2 客户端：配置变更的接收与应用</h3><p>客户端（微服务）通过 <code>NacosConfigManager</code> 与服务端交互，核心是<strong>阻塞队列+循环拉取</strong>的任务处理机制：</p>
-<ol>
-<li><strong>任务队列初始化</strong>：客户端启动时创建 <code>BlockingQueue</code>，用于存储服务端下发的“配置拉取任务”。</li>
-<li><strong>任务消费逻辑</strong>：通过 <code>ConfigPullTaskRunner</code> 线程，以 <code>while(true)</code> 循环从队列中获取任务，避免线程频繁创建销毁。</li>
-<li><strong>配置对比与更新</strong>：<ul>
-<li>拉取服务端最新配置后，与本地缓存（内存+本地文件 <code>nacos/config</code>）对比；</li>
-<li>若配置有变更，发布 <code>EnvironmentChangeEvent</code> 事件，触发 <code>@RefreshScope</code> 注解的 Bean 重新初始化，实现“零重启更新配置”。</li>
-</ul>
-</li>
-</ol>
-<h3 id="关键源码关联-1"><a href="#关键源码关联-1" class="headerlink" title="关键源码关联"></a>关键源码关联</h3><ul>
-<li><strong>服务端事件机制</strong>：<code>EventDispatcher</code> 作为事件调度核心，管理 <code>ConfigDataChangedEvent</code> 等事件的监听器注册与触发。</li>
-<li><strong>客户端缓存与刷新</strong>：<code>NacosConfigService</code> 负责缓存管理，<code>RefreshEventListener</code> 监听配置变更事件，触发 Bean 刷新。</li>
-</ul>
-<h2 id="四、生产级关键特性补充"><a href="#四、生产级关键特性补充" class="headerlink" title="四、生产级关键特性补充"></a>四、生产级关键特性补充</h2><h3 id="4-1-配置动态更新的一致性保障"><a href="#4-1-配置动态更新的一致性保障" class="headerlink" title="4.1 配置动态更新的一致性保障"></a>4.1 配置动态更新的一致性保障</h3><p>Nacos 通过“三重机制”确保服务端与客户端配置一致：</p>
-<ul>
-<li><strong>版本号校验</strong>：每个配置有唯一 <code>dataId</code> 和 <code>version</code>，客户端拉取时对比版本号，仅更新版本不同的配置；</li>
-<li><strong>本地缓存兜底</strong>：客户端将远程配置缓存到本地文件，网络中断时优先使用缓存配置，避免服务不可用；</li>
-<li><strong>集群数据同步</strong>：Nacos 集群通过 MySQL 主从同步或 Raft 协议（1.4.0+ 支持），确保多节点配置一致。</li>
-</ul>
-<h3 id="4-2-多环境与多版本管理"><a href="#4-2-多环境与多版本管理" class="headerlink" title="4.2 多环境与多版本管理"></a>4.2 多环境与多版本管理</h3><ul>
-<li><strong>多环境隔离</strong>：通过 <code>namespace</code>（命名空间）区分环境（如 <code>dev</code>&#x2F;<code>test</code>&#x2F;<code>prod</code>），每个命名空间下的配置完全隔离，避免环境混淆；</li>
-<li><strong>多版本回溯</strong>：Nacos 保留配置的历史版本（默认 30 天），支持一键回滚到历史版本，应对配置修改错误的场景。</li>
-</ul>
-<h3 id="4-3-配置安全：敏感信息加密"><a href="#4-3-配置安全：敏感信息加密" class="headerlink" title="4.3 配置安全：敏感信息加密"></a>4.3 配置安全：敏感信息加密</h3><p>针对数据库密码、AccessKey 等敏感配置，Nacos 提供两种加密方案：</p>
-<ul>
-<li><strong>传输加密</strong>：服务端与客户端通过 HTTPS 通信，避免配置在传输过程中被窃取；</li>
-<li><strong>存储加密</strong>：使用 AES-128 或 RSA 算法对敏感配置加密后存储到 MySQL，客户端通过配置 <code>secretKey</code> 解密后使用（需在 <code>bootstrap.yaml</code> 中配置加密密钥）。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>技术学习</category>
-        <category>Spring Cloud</category>
-      </categories>
-      <tags>
-        <tag>Spring Cloud</tag>
-        <tag>Nacos</tag>
-        <tag>配置中心</tag>
-        <tag>源码解析</tag>
-        <tag>事件驱动</tag>
-        <tag>动态配置</tag>
       </tags>
   </entry>
   <entry>
@@ -1477,9 +1477,9 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title></title>
-    <url>/2025/10/12/TomCat%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E4%BB%A5%E5%8F%8A%E8%AE%BE%E8%AE%A1%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</url>
-    <content><![CDATA[<h1 id="TomCat整体结构以及设计源码分析"><a href="#TomCat整体结构以及设计源码分析" class="headerlink" title="TomCat整体结构以及设计源码分析"></a>TomCat整体结构以及设计源码分析</h1><h1 id="1-Tomcat是什么？"><a href="#1-Tomcat是什么？" class="headerlink" title="1. Tomcat是什么？"></a>1. Tomcat是什么？</h1><p>Tomcat 是一款<strong>开源的 Java Web 服务器 + Servlet 容器</strong>，由 Apache 软件基金会开发维护，主要用于部署和运行 Java Web 应用程序（如基于 Servlet、JSP、Spring MVC 等技术的应用）。它是 Java 生态中最流行的 Web 容器之一，兼具轻量性、稳定性和易扩展性，广泛用于开发和生产环境。</p>
+    <title>Tomcat 整体结构以及设计源码分析</title>
+    <url>/2025/10/10/TomCat%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E4%BB%A5%E5%8F%8A%E8%AE%BE%E8%AE%A1%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</url>
+    <content><![CDATA[<h1 id="1-Tomcat是什么？"><a href="#1-Tomcat是什么？" class="headerlink" title="1. Tomcat是什么？"></a>1. Tomcat是什么？</h1><p>Tomcat 是一款<strong>开源的 Java Web 服务器 + Servlet 容器</strong>，由 Apache 软件基金会开发维护，主要用于部署和运行 Java Web 应用程序（如基于 Servlet、JSP、Spring MVC 等技术的应用）。它是 Java 生态中最流行的 Web 容器之一，兼具轻量性、稳定性和易扩展性，广泛用于开发和生产环境。</p>
 <figure class="highlight python"><table><tr><td class="code"><pre><span class="line">apache-tomcat-<span class="number">10.0</span><span class="number">.0</span>/</span><br><span class="line">├── <span class="built_in">bin</span>/                <span class="comment"># 脚本与可执行文件目录</span></span><br><span class="line">├── conf/               <span class="comment"># 配置文件目录</span></span><br><span class="line">├── lib/                <span class="comment"># 核心依赖库目录</span></span><br><span class="line">├── webapps/            <span class="comment"># Web 应用部署目录</span></span><br><span class="line">├── logs/               <span class="comment"># 日志文件目录</span></span><br><span class="line">├── temp/               <span class="comment"># 临时文件目录</span></span><br><span class="line">├── work/               <span class="comment"># JSP 编译缓存目录</span></span><br><span class="line">└── LICENSE、NOTICE 等  <span class="comment"># 许可证和说明文件</span></span><br></pre></td></tr></table></figure>
 <img width="3182" height="870" alt="image" src="https://github.com/user-attachments/assets/d66e17b1-c5e5-4c58-b54e-464dc92b3c83" />
 
@@ -1751,6 +1751,20 @@ LoadBalancer 3.2.0+ 2023.0.3+
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 自定义监听器</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HostStartListener</span> <span class="keyword">implements</span> <span class="title class_">LifecycleListener</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">lifecycleEvent</span><span class="params">(LifecycleEvent event)</span> &#123;</span><br><span class="line">        <span class="comment">// 当事件类型为“已启动”时触发</span></span><br><span class="line">        <span class="keyword">if</span> (Lifecycle.START_EVENT.equals(event.getType())) &#123;</span><br><span class="line">            <span class="type">Host</span> <span class="variable">host</span> <span class="operator">=</span> (Host) event.getSource();</span><br><span class="line">            System.out.println(<span class="string">&quot;Host &quot;</span> + host.getName() + <span class="string">&quot; 已启动，准备处理请求&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 在 Host 组件中注册监听器（通常在 server.xml 或代码中配置）</span></span><br><span class="line"><span class="type">Host</span> <span class="variable">host</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">StandardHost</span>();</span><br><span class="line">host.addLifecycleListener(<span class="keyword">new</span> <span class="title class_">HostStartListener</span>());</span><br></pre></td></tr></table></figure>
 
 ]]></content>
+      <categories>
+        <category>Java Web</category>
+        <category>中间件</category>
+        <category>Tomcat</category>
+      </categories>
+      <tags>
+        <tag>Tomcat</tag>
+        <tag>Tomcat 架构</tag>
+        <tag>Servlet 容器</tag>
+        <tag>Pipeline-Valve 模式</tag>
+        <tag>LifeCycle 接口</tag>
+        <tag>Tomcat 源码分析</tag>
+        <tag>Web 应用部署</tag>
+      </tags>
   </entry>
   <entry>
     <title></title>
