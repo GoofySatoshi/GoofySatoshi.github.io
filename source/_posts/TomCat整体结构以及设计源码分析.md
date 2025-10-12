@@ -1,4 +1,19 @@
-# TomCat整体结构以及设计源码分析
+---
+title: Tomcat 整体结构以及设计源码分析
+date: 2025-10-10 16:00:00 +08:00
+categories:
+  - Java Web
+  - 中间件
+  - Tomcat
+tags:
+  - Tomcat
+  - Tomcat 架构
+  - Servlet 容器
+  - Pipeline-Valve 模式
+  - LifeCycle 接口
+  - Tomcat 源码分析
+  - Web 应用部署
+---
 
 # 1. Tomcat是什么？
 
