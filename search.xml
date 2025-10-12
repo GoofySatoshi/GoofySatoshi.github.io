@@ -312,7 +312,7 @@
       </tags>
   </entry>
   <entry>
-    <title></title>
+    <title>G1 垃圾收集器学习笔记</title>
     <url>/2025/09/22/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/</url>
     <content><![CDATA[<h1 id="G1垃圾收集器学习笔记"><a href="#G1垃圾收集器学习笔记" class="headerlink" title="G1垃圾收集器学习笔记"></a>G1垃圾收集器学习笔记</h1><h2 id="2025-09-23"><a href="#2025-09-23" class="headerlink" title="2025-09-23"></a>2025-09-23</h2><h2 id="一、G1垃圾收集器概述"><a href="#一、G1垃圾收集器概述" class="headerlink" title="一、G1垃圾收集器概述"></a>一、G1垃圾收集器概述</h2><p>G1（Garbage-First）是Java 9默认的垃圾收集器，核心特性如下：  </p>
 <ul>
@@ -450,6 +450,124 @@
 <li>《深入理解Java虚拟机》第三版（周志明）</li>
 </ul>
 ]]></content>
+      <categories>
+        <category>Java</category>
+        <category>JVM</category>
+        <category>垃圾收集器</category>
+      </categories>
+      <tags>
+        <tag>G1 垃圾收集器</tag>
+        <tag>JVM</tag>
+        <tag>Java 虚拟机</tag>
+        <tag>垃圾回收机制</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Hexo + GitHub Actions 实现自动化部署完整指南</title>
+    <url>/2025/08/29/Hexo-GitHub-Actions-%E5%AE%9E%E7%8E%B0%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2%E5%AE%8C%E6%95%B4%E6%8C%87%E5%8D%97/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在使用 Hexo 搭建个人博客时，当我们终于把hexo生成的页面挂载到github页面后，每次提交博客都需要使用<code>hexo clean &amp;&amp; hexo g &amp;&amp; hexo d</code>来部署很麻烦，可以借助github actions来实现流水线布置，我们每次提交源代码到github存放源码的分支上，一旦监听到源代码的push事件，流水线就会就会自动拉取环境自动部署，所以我们需要一个存放源代码的分支，以及我们的发布分支，可以使用git命令创建这两个分支，自动CI&#x2F;CD,github需要密钥用来保证项目拉取和部署的权限，需要在本地生成ssh的密钥，公钥用来拉取项目，私钥用来部署推送更新页面，而且github对于npm安装有频率限制，我们可以通过配置国内镜像源+缓存配置，避免每次全量拉取，提高依赖安装以及部署的速度</p>
+<h2 id="一-分支规划与准备工作"><a href="#一-分支规划与准备工作" class="headerlink" title="一.分支规划与准备工作"></a>一.分支规划与准备工作</h2><p>为了清晰分离源代码和部署文件，我们需要创建两个分支：</p>
+<ul>
+<li><code>source</code> 分支：存放 Hexo 源代码（包括 Markdown 文章、配置文件、主题文件等）</li>
+<li><code>main</code> 分支：存放 Hexo 生成的静态网页文件，用于 GitHub Pages 展示</li>
+</ul>
+<h3 id="创建分支的具体操作"><a href="#创建分支的具体操作" class="headerlink" title="创建分支的具体操作"></a>创建分支的具体操作</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 从当前分支创建并切换到 source 分支（源代码分支）</span></span><br><span class="line">git checkout -b <span class="built_in">source</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 推送 source 分支到远程仓库</span></span><br><span class="line">git push -u origin <span class="built_in">source</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 切换到 main 分支（部署分支）</span></span><br><span class="line">git checkout main</span><br><span class="line">git push -u origin main</span><br></pre></td></tr></table></figure>
+
+<h2 id="二-SSH-密钥配置（核心权限控制）"><a href="#二-SSH-密钥配置（核心权限控制）" class="headerlink" title="二.SSH 密钥配置（核心权限控制）"></a>二.SSH 密钥配置（核心权限控制）</h2><p>要实现 GitHub Actions 的自动部署，必须配置 SSH 密钥对来授权 Actions 操作仓库的权限：</p>
+<h3 id="1-生成专用-SSH-密钥对"><a href="#1-生成专用-SSH-密钥对" class="headerlink" title="1. 生成专用 SSH 密钥对"></a>1. 生成专用 SSH 密钥对</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 生成专用密钥对，替换为你的邮箱地址</span></span><br><span class="line">ssh-keygen -t ed25519 -C <span class="string">&quot;your_email@example.com&quot;</span> -f ~/.ssh/hexo-deploy</span><br></pre></td></tr></table></figure>
+
+<p>执行后会在 <code>~/.ssh/</code> 目录下生成两个文件：</p>
+<ul>
+<li><code>hexo-deploy</code>：私钥文件（用于部署时推送代码）</li>
+<li><code>hexo-deploy.pub</code>：公钥文件（用于拉取仓库代码）</li>
+</ul>
+<h3 id="2-配置公钥（Deploy-keys）"><a href="#2-配置公钥（Deploy-keys）" class="headerlink" title="2. 配置公钥（Deploy keys）"></a>2. 配置公钥（Deploy keys）</h3><p>公钥需要配置到你的 GitHub Pages 仓库（通常是 <code>username.github.io</code>）：</p>
+<ol>
+<li>打开 <code>hexo-deploy.pub</code> 文件，复制其中的全部内容</li>
+<li>进入你的 GitHub Pages 仓库 → Settings → Deploy keys</li>
+<li>点击 “Add deploy key”，粘贴公钥内容</li>
+<li>务必勾选 “Allow write access” 选项（允许推送权限）</li>
+<li>点击 “Add key” 完成配置<img width="902" height="479" alt="屏幕截图 2025-08-29 190446" src="https://github.com/user-attachments/assets/9befac08-b11e-4cdb-9086-5c36af4d5eb0" /></li>
+</ol>
+<h3 id="3-配置私钥（Repository-secrets）"><a href="#3-配置私钥（Repository-secrets）" class="headerlink" title="3. 配置私钥（Repository secrets）"></a>3. 配置私钥（Repository secrets）</h3><p>私钥需要配置到存放 Hexo 源代码的仓库：</p>
+<ol>
+<li>打开 <code>hexo-deploy</code> 文件，复制其中的全部内容</li>
+<li>进入你的源代码仓库 → Settings → Secrets and variables → Actions</li>
+<li>点击 “New repository secret”</li>
+<li>名称填写 <code>HEXO_DEPLOY_PRI</code>（必须与后续配置文件中一致）</li>
+<li>粘贴私钥内容，点击 “Add secret” 完成配置<img width="1829" height="847" alt="image" src="https://github.com/user-attachments/assets/f5798732-4256-4222-9a5d-020afe645f53" /></li>
+</ol>
+<img width="1213" height="678" alt="image" src="https://github.com/user-attachments/assets/d75ce0f6-41da-402c-9682-6d9384c9f3bb" />
+
+<h2 id="配置-GitHub-Actions-工作流"><a href="#配置-GitHub-Actions-工作流" class="headerlink" title="配置 GitHub Actions 工作流"></a>配置 GitHub Actions 工作流</h2><p>在源代码仓库中创建工作流配置文件，实现自动部署的核心逻辑：</p>
+<h3 id="创建工作流文件"><a href="#创建工作流文件" class="headerlink" title="创建工作流文件"></a>创建工作流文件</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 在 Hexo 项目根目录执行以下命令</span></span><br><span class="line"><span class="built_in">mkdir</span> -p .github/workflows</span><br><span class="line"><span class="built_in">touch</span> .github/workflows/deploy.yml</span><br></pre></td></tr></table></figure>
+
+<h3 id="完整配置内容"><a href="#完整配置内容" class="headerlink" title="完整配置内容"></a>完整配置内容</h3><p>编辑 <code>.github/workflows/deploy.yml</code> 文件，添加以下内容(没有这个目录需要自己手动创建)：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">name:</span> <span class="string">Deploy</span> <span class="string">Hexo</span> <span class="string">Blog</span></span><br><span class="line"></span><br><span class="line"><span class="attr">on:</span></span><br><span class="line">  <span class="attr">push:</span></span><br><span class="line">    <span class="attr">branches:</span> [ <span class="string">source</span> ] <span class="comment"># 方括号内填入拉取代码分支 当监听到push事件就会开启自动部署deploy</span></span><br><span class="line"></span><br><span class="line"><span class="attr">jobs:</span></span><br><span class="line">  <span class="attr">build-and-deploy:</span></span><br><span class="line">    <span class="attr">runs-on:</span> <span class="string">ubuntu-latest</span></span><br><span class="line">    <span class="attr">steps:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Checkout</span> <span class="string">source</span> <span class="string">code</span></span><br><span class="line">      <span class="attr">uses:</span> <span class="string">actions/checkout@v4</span></span><br><span class="line"></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Setup</span> <span class="string">Node.js</span></span><br><span class="line">      <span class="attr">uses:</span> <span class="string">actions/setup-node@v4</span></span><br><span class="line">      <span class="attr">with:</span></span><br><span class="line">        <span class="attr">node-version:</span> <span class="string">&#x27;18&#x27;</span></span><br><span class="line">        <span class="attr">cache:</span> <span class="string">&#x27;npm&#x27;</span>  <span class="comment"># 启用 npm 缓存，减少重复下载</span></span><br><span class="line"></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Install</span> <span class="string">dependencies</span> <span class="string">and</span> <span class="string">build</span></span><br><span class="line">      <span class="attr">run:</span> <span class="string">|</span></span><br><span class="line"><span class="string">        # 关键：切换为国内淘宝镜像，彻底解决 github 频率限制报错 429 限制</span></span><br><span class="line"><span class="string">        npm config set registry https://registry.npmmirror.com/</span></span><br><span class="line"><span class="string">        # 清除缓存，避免镜像切换不生效</span></span><br><span class="line"><span class="string">        npm cache clean --force</span></span><br><span class="line"><span class="string">        # 安装依赖（全局和项目依赖都用国内镜像）</span></span><br><span class="line"><span class="string">        npm install -g hexo-cli --registry=https://registry.npmmirror.com/</span></span><br><span class="line"><span class="string">        npm install --registry=https://registry.npmmirror.com/</span></span><br><span class="line"><span class="string">        # 构建静态文件</span></span><br><span class="line"><span class="string">        hexo clean</span></span><br><span class="line"><span class="string">        hexo generate</span></span><br><span class="line"><span class="string"></span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Deploy</span> <span class="string">to</span> <span class="string">GitHub</span> <span class="string">Pages</span></span><br><span class="line">      <span class="attr">uses:</span> <span class="string">peaceiris/actions-gh-pages@v3</span></span><br><span class="line">      <span class="attr">with:</span></span><br><span class="line">        <span class="attr">deploy_key:</span> <span class="string">$&#123;&#123;</span> <span class="string">secrets.HEXO_DEPLOY_PRI</span> <span class="string">&#125;&#125;</span></span><br><span class="line">        <span class="attr">publish_dir:</span> <span class="string">./public</span></span><br><span class="line">        <span class="attr">publish_branch:</span> <span class="string">main</span>  <span class="comment"># 与 _config.yml 中的 deploy.branch 一致</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="配置优化说明"><a href="#配置优化说明" class="headerlink" title="配置优化说明"></a>配置优化说明</h2><h3 id="1-国内镜像源优化"><a href="#1-国内镜像源优化" class="headerlink" title="1. 国内镜像源优化"></a>1. 国内镜像源优化</h3><p>通过配置淘宝 npm 镜像源（<code>https://registry.npmmirror.com/</code>），解决了 GitHub 服务器上安装依赖的两大问题：</p>
+<ul>
+<li>访问速度慢（国内镜像加速）</li>
+<li>访问频率限制（避免 npm 官方源的限流）</li>
+</ul>
+<h3 id="2-缓存机制优化"><a href="#2-缓存机制优化" class="headerlink" title="2. 缓存机制优化"></a>2. 缓存机制优化</h3><ul>
+<li>缓存 <code>node_modules</code> 目录，避免每次部署重复安装依赖</li>
+<li>基于 <code>package-lock.json</code> 的哈希值生成缓存键，只有依赖变更时才重新安装</li>
+<li>使用 <code>npm ci</code> 替代 <code>npm install</code>，利用锁文件实现更快、更一致的依赖安装</li>
+</ul>
+<h3 id="3-安全权限控制"><a href="#3-安全权限控制" class="headerlink" title="3. 安全权限控制"></a>3. 安全权限控制</h3><ul>
+<li>采用 SSH 密钥对进行身份验证，比传统 token 更安全</li>
+<li>私钥通过 GitHub Secrets 加密存储，不会暴露在代码中</li>
+<li>细粒度权限控制：Deploy keys 仅对目标仓库有效，避免全局权限风险</li>
+</ul>
+<h2 id="使用方法"><a href="#使用方法" class="headerlink" title="使用方法"></a>使用方法</h2><h3 id="1-初始配置提交"><a href="#1-初始配置提交" class="headerlink" title="1. 初始配置提交"></a>1. 初始配置提交</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 提交工作流配置文件</span></span><br><span class="line">git add .github/workflows/deploy.yml</span><br><span class="line"><span class="comment"># 提交其他源代码文件</span></span><br><span class="line">git add .</span><br><span class="line">git commit -m <span class="string">&quot;配置 GitHub Actions 自动部署&quot;</span></span><br><span class="line">git push origin <span class="built_in">source</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-查看部署状态"><a href="#2-查看部署状态" class="headerlink" title="2. 查看部署状态"></a>2. 查看部署状态</h3><ol>
+<li>进入源代码仓库的 GitHub 页面</li>
+<li>点击顶部的 “Actions” 标签</li>
+<li>查看名为 “Hexo Auto Deploy” 的工作流运行状态</li>
+<li>点击具体运行记录可查看详细日志（便于排查错误）</li>
+</ol>
+<h3 id="3-发布新文章流程"><a href="#3-发布新文章流程" class="headerlink" title="3. 发布新文章流程"></a>3. 发布新文章流程</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 创建新文章</span></span><br><span class="line">hexo new <span class="string">&quot;我的新文章&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 编辑文章（在 source/_posts 目录下）</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 提交到源代码仓库</span></span><br><span class="line">git add .</span><br><span class="line">git commit -m <span class="string">&quot;发布新文章：我的新文章&quot;</span></span><br><span class="line">git push origin <span class="built_in">source</span></span><br></pre></td></tr></table></figure>
+
+<p>提交后，GitHub Actions 会自动触发部署流程，无需再执行手动部署命令，整个过程约 1-3 分钟。</p>
+<h2 id="常见问题排查"><a href="#常见问题排查" class="headerlink" title="常见问题排查"></a>常见问题排查</h2><ol>
+<li><p><strong>部署失败提示权限错误</strong></p>
+<ul>
+<li>检查 SSH 密钥对是否匹配</li>
+<li>确认公钥是否勾选了 “Allow write access”</li>
+<li>检查私钥在 Secrets 中的名称是否为 <code>HEXO_DEPLOY_KEY</code></li>
+</ul>
+</li>
+<li><p><strong>主题样式丢失</strong></p>
+<ul>
+<li>确保配置文件中 <code>submodules: true</code> 已设置（拉取主题子模块）</li>
+<li>检查主题是否正确添加到源代码仓库</li>
+</ul>
+</li>
+<li><p><strong>依赖安装失败</strong></p>
+<ul>
+<li>查看日志确认是否为网络问题</li>
+<li>尝试删除缓存后重新部署（可在 GitHub 仓库的 Actions 缓存设置中操作）</li>
+</ul>
+</li>
+<li><p><strong>部署成功但页面未更新</strong></p>
+<ul>
+<li>检查 GitHub Pages 配置的分支是否为 <code>main</code></li>
+<li>浏览器强制刷新（Ctrl+Shift+R 或 Cmd+Shift+R）清除缓存</li>
+</ul>
+</li>
+</ol>
+<p>Hexo 博客的全自动部署流程，就可以只在source&#x2F;_post目录下只提交md文件（必须是md后缀文件）到github项目的分支上就可以自动部署了</p>
+]]></content>
+      <categories>
+        <category>博客搭建</category>
+      </categories>
+      <tags>
+        <tag>Hexo</tag>
+        <tag>GitHub</tag>
+        <tag>CI/CD</tag>
+      </tags>
   </entry>
   <entry>
     <title>Spring Cloud Gateway 学习总结（优化版）</title>
@@ -749,113 +867,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>Spring Cloud</tag>
         <tag>微服务网关</tag>
         <tag>Gateway</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Hexo + GitHub Actions 实现自动化部署完整指南</title>
-    <url>/2025/08/29/Hexo-GitHub-Actions-%E5%AE%9E%E7%8E%B0%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2%E5%AE%8C%E6%95%B4%E6%8C%87%E5%8D%97/</url>
-    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在使用 Hexo 搭建个人博客时，当我们终于把hexo生成的页面挂载到github页面后，每次提交博客都需要使用<code>hexo clean &amp;&amp; hexo g &amp;&amp; hexo d</code>来部署很麻烦，可以借助github actions来实现流水线布置，我们每次提交源代码到github存放源码的分支上，一旦监听到源代码的push事件，流水线就会就会自动拉取环境自动部署，所以我们需要一个存放源代码的分支，以及我们的发布分支，可以使用git命令创建这两个分支，自动CI&#x2F;CD,github需要密钥用来保证项目拉取和部署的权限，需要在本地生成ssh的密钥，公钥用来拉取项目，私钥用来部署推送更新页面，而且github对于npm安装有频率限制，我们可以通过配置国内镜像源+缓存配置，避免每次全量拉取，提高依赖安装以及部署的速度</p>
-<h2 id="一-分支规划与准备工作"><a href="#一-分支规划与准备工作" class="headerlink" title="一.分支规划与准备工作"></a>一.分支规划与准备工作</h2><p>为了清晰分离源代码和部署文件，我们需要创建两个分支：</p>
-<ul>
-<li><code>source</code> 分支：存放 Hexo 源代码（包括 Markdown 文章、配置文件、主题文件等）</li>
-<li><code>main</code> 分支：存放 Hexo 生成的静态网页文件，用于 GitHub Pages 展示</li>
-</ul>
-<h3 id="创建分支的具体操作"><a href="#创建分支的具体操作" class="headerlink" title="创建分支的具体操作"></a>创建分支的具体操作</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 从当前分支创建并切换到 source 分支（源代码分支）</span></span><br><span class="line">git checkout -b <span class="built_in">source</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 推送 source 分支到远程仓库</span></span><br><span class="line">git push -u origin <span class="built_in">source</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 切换到 main 分支（部署分支）</span></span><br><span class="line">git checkout main</span><br><span class="line">git push -u origin main</span><br></pre></td></tr></table></figure>
-
-<h2 id="二-SSH-密钥配置（核心权限控制）"><a href="#二-SSH-密钥配置（核心权限控制）" class="headerlink" title="二.SSH 密钥配置（核心权限控制）"></a>二.SSH 密钥配置（核心权限控制）</h2><p>要实现 GitHub Actions 的自动部署，必须配置 SSH 密钥对来授权 Actions 操作仓库的权限：</p>
-<h3 id="1-生成专用-SSH-密钥对"><a href="#1-生成专用-SSH-密钥对" class="headerlink" title="1. 生成专用 SSH 密钥对"></a>1. 生成专用 SSH 密钥对</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 生成专用密钥对，替换为你的邮箱地址</span></span><br><span class="line">ssh-keygen -t ed25519 -C <span class="string">&quot;your_email@example.com&quot;</span> -f ~/.ssh/hexo-deploy</span><br></pre></td></tr></table></figure>
-
-<p>执行后会在 <code>~/.ssh/</code> 目录下生成两个文件：</p>
-<ul>
-<li><code>hexo-deploy</code>：私钥文件（用于部署时推送代码）</li>
-<li><code>hexo-deploy.pub</code>：公钥文件（用于拉取仓库代码）</li>
-</ul>
-<h3 id="2-配置公钥（Deploy-keys）"><a href="#2-配置公钥（Deploy-keys）" class="headerlink" title="2. 配置公钥（Deploy keys）"></a>2. 配置公钥（Deploy keys）</h3><p>公钥需要配置到你的 GitHub Pages 仓库（通常是 <code>username.github.io</code>）：</p>
-<ol>
-<li>打开 <code>hexo-deploy.pub</code> 文件，复制其中的全部内容</li>
-<li>进入你的 GitHub Pages 仓库 → Settings → Deploy keys</li>
-<li>点击 “Add deploy key”，粘贴公钥内容</li>
-<li>务必勾选 “Allow write access” 选项（允许推送权限）</li>
-<li>点击 “Add key” 完成配置<img width="902" height="479" alt="屏幕截图 2025-08-29 190446" src="https://github.com/user-attachments/assets/9befac08-b11e-4cdb-9086-5c36af4d5eb0" /></li>
-</ol>
-<h3 id="3-配置私钥（Repository-secrets）"><a href="#3-配置私钥（Repository-secrets）" class="headerlink" title="3. 配置私钥（Repository secrets）"></a>3. 配置私钥（Repository secrets）</h3><p>私钥需要配置到存放 Hexo 源代码的仓库：</p>
-<ol>
-<li>打开 <code>hexo-deploy</code> 文件，复制其中的全部内容</li>
-<li>进入你的源代码仓库 → Settings → Secrets and variables → Actions</li>
-<li>点击 “New repository secret”</li>
-<li>名称填写 <code>HEXO_DEPLOY_PRI</code>（必须与后续配置文件中一致）</li>
-<li>粘贴私钥内容，点击 “Add secret” 完成配置<img width="1829" height="847" alt="image" src="https://github.com/user-attachments/assets/f5798732-4256-4222-9a5d-020afe645f53" /></li>
-</ol>
-<img width="1213" height="678" alt="image" src="https://github.com/user-attachments/assets/d75ce0f6-41da-402c-9682-6d9384c9f3bb" />
-
-<h2 id="配置-GitHub-Actions-工作流"><a href="#配置-GitHub-Actions-工作流" class="headerlink" title="配置 GitHub Actions 工作流"></a>配置 GitHub Actions 工作流</h2><p>在源代码仓库中创建工作流配置文件，实现自动部署的核心逻辑：</p>
-<h3 id="创建工作流文件"><a href="#创建工作流文件" class="headerlink" title="创建工作流文件"></a>创建工作流文件</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 在 Hexo 项目根目录执行以下命令</span></span><br><span class="line"><span class="built_in">mkdir</span> -p .github/workflows</span><br><span class="line"><span class="built_in">touch</span> .github/workflows/deploy.yml</span><br></pre></td></tr></table></figure>
-
-<h3 id="完整配置内容"><a href="#完整配置内容" class="headerlink" title="完整配置内容"></a>完整配置内容</h3><p>编辑 <code>.github/workflows/deploy.yml</code> 文件，添加以下内容(没有这个目录需要自己手动创建)：</p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">name:</span> <span class="string">Deploy</span> <span class="string">Hexo</span> <span class="string">Blog</span></span><br><span class="line"></span><br><span class="line"><span class="attr">on:</span></span><br><span class="line">  <span class="attr">push:</span></span><br><span class="line">    <span class="attr">branches:</span> [ <span class="string">source</span> ] <span class="comment"># 方括号内填入拉取代码分支 当监听到push事件就会开启自动部署deploy</span></span><br><span class="line"></span><br><span class="line"><span class="attr">jobs:</span></span><br><span class="line">  <span class="attr">build-and-deploy:</span></span><br><span class="line">    <span class="attr">runs-on:</span> <span class="string">ubuntu-latest</span></span><br><span class="line">    <span class="attr">steps:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Checkout</span> <span class="string">source</span> <span class="string">code</span></span><br><span class="line">      <span class="attr">uses:</span> <span class="string">actions/checkout@v4</span></span><br><span class="line"></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Setup</span> <span class="string">Node.js</span></span><br><span class="line">      <span class="attr">uses:</span> <span class="string">actions/setup-node@v4</span></span><br><span class="line">      <span class="attr">with:</span></span><br><span class="line">        <span class="attr">node-version:</span> <span class="string">&#x27;18&#x27;</span></span><br><span class="line">        <span class="attr">cache:</span> <span class="string">&#x27;npm&#x27;</span>  <span class="comment"># 启用 npm 缓存，减少重复下载</span></span><br><span class="line"></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Install</span> <span class="string">dependencies</span> <span class="string">and</span> <span class="string">build</span></span><br><span class="line">      <span class="attr">run:</span> <span class="string">|</span></span><br><span class="line"><span class="string">        # 关键：切换为国内淘宝镜像，彻底解决 github 频率限制报错 429 限制</span></span><br><span class="line"><span class="string">        npm config set registry https://registry.npmmirror.com/</span></span><br><span class="line"><span class="string">        # 清除缓存，避免镜像切换不生效</span></span><br><span class="line"><span class="string">        npm cache clean --force</span></span><br><span class="line"><span class="string">        # 安装依赖（全局和项目依赖都用国内镜像）</span></span><br><span class="line"><span class="string">        npm install -g hexo-cli --registry=https://registry.npmmirror.com/</span></span><br><span class="line"><span class="string">        npm install --registry=https://registry.npmmirror.com/</span></span><br><span class="line"><span class="string">        # 构建静态文件</span></span><br><span class="line"><span class="string">        hexo clean</span></span><br><span class="line"><span class="string">        hexo generate</span></span><br><span class="line"><span class="string"></span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Deploy</span> <span class="string">to</span> <span class="string">GitHub</span> <span class="string">Pages</span></span><br><span class="line">      <span class="attr">uses:</span> <span class="string">peaceiris/actions-gh-pages@v3</span></span><br><span class="line">      <span class="attr">with:</span></span><br><span class="line">        <span class="attr">deploy_key:</span> <span class="string">$&#123;&#123;</span> <span class="string">secrets.HEXO_DEPLOY_PRI</span> <span class="string">&#125;&#125;</span></span><br><span class="line">        <span class="attr">publish_dir:</span> <span class="string">./public</span></span><br><span class="line">        <span class="attr">publish_branch:</span> <span class="string">main</span>  <span class="comment"># 与 _config.yml 中的 deploy.branch 一致</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="配置优化说明"><a href="#配置优化说明" class="headerlink" title="配置优化说明"></a>配置优化说明</h2><h3 id="1-国内镜像源优化"><a href="#1-国内镜像源优化" class="headerlink" title="1. 国内镜像源优化"></a>1. 国内镜像源优化</h3><p>通过配置淘宝 npm 镜像源（<code>https://registry.npmmirror.com/</code>），解决了 GitHub 服务器上安装依赖的两大问题：</p>
-<ul>
-<li>访问速度慢（国内镜像加速）</li>
-<li>访问频率限制（避免 npm 官方源的限流）</li>
-</ul>
-<h3 id="2-缓存机制优化"><a href="#2-缓存机制优化" class="headerlink" title="2. 缓存机制优化"></a>2. 缓存机制优化</h3><ul>
-<li>缓存 <code>node_modules</code> 目录，避免每次部署重复安装依赖</li>
-<li>基于 <code>package-lock.json</code> 的哈希值生成缓存键，只有依赖变更时才重新安装</li>
-<li>使用 <code>npm ci</code> 替代 <code>npm install</code>，利用锁文件实现更快、更一致的依赖安装</li>
-</ul>
-<h3 id="3-安全权限控制"><a href="#3-安全权限控制" class="headerlink" title="3. 安全权限控制"></a>3. 安全权限控制</h3><ul>
-<li>采用 SSH 密钥对进行身份验证，比传统 token 更安全</li>
-<li>私钥通过 GitHub Secrets 加密存储，不会暴露在代码中</li>
-<li>细粒度权限控制：Deploy keys 仅对目标仓库有效，避免全局权限风险</li>
-</ul>
-<h2 id="使用方法"><a href="#使用方法" class="headerlink" title="使用方法"></a>使用方法</h2><h3 id="1-初始配置提交"><a href="#1-初始配置提交" class="headerlink" title="1. 初始配置提交"></a>1. 初始配置提交</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 提交工作流配置文件</span></span><br><span class="line">git add .github/workflows/deploy.yml</span><br><span class="line"><span class="comment"># 提交其他源代码文件</span></span><br><span class="line">git add .</span><br><span class="line">git commit -m <span class="string">&quot;配置 GitHub Actions 自动部署&quot;</span></span><br><span class="line">git push origin <span class="built_in">source</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="2-查看部署状态"><a href="#2-查看部署状态" class="headerlink" title="2. 查看部署状态"></a>2. 查看部署状态</h3><ol>
-<li>进入源代码仓库的 GitHub 页面</li>
-<li>点击顶部的 “Actions” 标签</li>
-<li>查看名为 “Hexo Auto Deploy” 的工作流运行状态</li>
-<li>点击具体运行记录可查看详细日志（便于排查错误）</li>
-</ol>
-<h3 id="3-发布新文章流程"><a href="#3-发布新文章流程" class="headerlink" title="3. 发布新文章流程"></a>3. 发布新文章流程</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 创建新文章</span></span><br><span class="line">hexo new <span class="string">&quot;我的新文章&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 编辑文章（在 source/_posts 目录下）</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 提交到源代码仓库</span></span><br><span class="line">git add .</span><br><span class="line">git commit -m <span class="string">&quot;发布新文章：我的新文章&quot;</span></span><br><span class="line">git push origin <span class="built_in">source</span></span><br></pre></td></tr></table></figure>
-
-<p>提交后，GitHub Actions 会自动触发部署流程，无需再执行手动部署命令，整个过程约 1-3 分钟。</p>
-<h2 id="常见问题排查"><a href="#常见问题排查" class="headerlink" title="常见问题排查"></a>常见问题排查</h2><ol>
-<li><p><strong>部署失败提示权限错误</strong></p>
-<ul>
-<li>检查 SSH 密钥对是否匹配</li>
-<li>确认公钥是否勾选了 “Allow write access”</li>
-<li>检查私钥在 Secrets 中的名称是否为 <code>HEXO_DEPLOY_KEY</code></li>
-</ul>
-</li>
-<li><p><strong>主题样式丢失</strong></p>
-<ul>
-<li>确保配置文件中 <code>submodules: true</code> 已设置（拉取主题子模块）</li>
-<li>检查主题是否正确添加到源代码仓库</li>
-</ul>
-</li>
-<li><p><strong>依赖安装失败</strong></p>
-<ul>
-<li>查看日志确认是否为网络问题</li>
-<li>尝试删除缓存后重新部署（可在 GitHub 仓库的 Actions 缓存设置中操作）</li>
-</ul>
-</li>
-<li><p><strong>部署成功但页面未更新</strong></p>
-<ul>
-<li>检查 GitHub Pages 配置的分支是否为 <code>main</code></li>
-<li>浏览器强制刷新（Ctrl+Shift+R 或 Cmd+Shift+R）清除缓存</li>
-</ul>
-</li>
-</ol>
-<p>Hexo 博客的全自动部署流程，就可以只在source&#x2F;_post目录下只提交md文件（必须是md后缀文件）到github项目的分支上就可以自动部署了</p>
-]]></content>
-      <categories>
-        <category>博客搭建</category>
-      </categories>
-      <tags>
-        <tag>Hexo</tag>
-        <tag>GitHub</tag>
-        <tag>CI/CD</tag>
       </tags>
   </entry>
   <entry>
