@@ -1,5 +1,19 @@
-# Seata AT 模式与 XA 模式的区别
-
+---
+title: Seata AT 模式与 XA 模式的区别
+date: 2025-9-19 23:00:00 +08:00
+categories:
+  - 分布式系统
+  - 中间件
+  - Seata
+tags:
+  - Seata
+  - AT模式
+  - XA模式
+  - 分布式事务
+  - 全局事务ID
+  - Undo Log
+  - 事务协调器
+---
 ## 1. 模式区别
 
 - **AT 模式**：生成的是数据源代理（DataSource Proxy），通过代理拦截 SQL 执行，无需额外配置默认模式（Seata 默认支持 AT 模式），而非“数据库动态代理”（表述更精准）。
