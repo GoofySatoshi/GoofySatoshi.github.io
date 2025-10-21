@@ -1,0 +1,418 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>GoofySatoshi's Blog | GoofySatoshi's Blog</title><meta name="author" content="GoofySatoshi"><meta name="copyright" content="GoofySatoshi"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="1. 基础概念进程进程 &#x3D; 程序 + 执行 进程是系统分配资源的基本单位（内存、CPU时间片）进程是用来实现多进程并发执行的一个实体，实现对CPU的虚拟化，让每个进程感觉都拥有一个CPU，核心技术就是上下文切换和进程调度。进程是正在运行的程序的实例。进程是一个具有一定独立功能的程序关于某个数据集合的一次运行活动。它是操作系统动态执行的基本单元，在传统的操作系统中，进程既是基本的分配单元，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GoofySatoshi&#39;s Blog">
+<meta property="og:url" content="https://icarus-blog.top/2025/10/21/%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E3%80%81%E7%AD%89%E5%BE%85%E9%80%9A%E7%9F%A5%E6%9C%BA%E5%88%B6/index.html">
+<meta property="og:site_name" content="GoofySatoshi&#39;s Blog">
+<meta property="og:description" content="1. 基础概念进程进程 &#x3D; 程序 + 执行 进程是系统分配资源的基本单位（内存、CPU时间片）进程是用来实现多进程并发执行的一个实体，实现对CPU的虚拟化，让每个进程感觉都拥有一个CPU，核心技术就是上下文切换和进程调度。进程是正在运行的程序的实例。进程是一个具有一定独立功能的程序关于某个数据集合的一次运行活动。它是操作系统动态执行的基本单元，在传统的操作系统中，进程既是基本的分配单元，">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://icarus-blog.top/img/avatar.jpg">
+<meta property="article:published_time" content="2025-10-21T15:16:32.629Z">
+<meta property="article:modified_time" content="2025-10-21T15:16:32.629Z">
+<meta property="article:author" content="GoofySatoshi">
+<meta property="article:tag" content="技术博客,读书笔记,生活分享,摄影,视频">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://icarus-blog.top/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "",
+  "url": "https://icarus-blog.top/2025/10/21/%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E3%80%81%E7%AD%89%E5%BE%85%E9%80%9A%E7%9F%A5%E6%9C%BA%E5%88%B6/",
+  "image": "https://icarus-blog.top/img/avatar.jpg",
+  "datePublished": "2025-10-21T15:16:32.629Z",
+  "dateModified": "2025-10-21T15:16:32.629Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "GoofySatoshi",
+      "url": "https://icarus-blog.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/avatar.jpg"><link rel="canonical" href="https://icarus-blog.top/2025/10/21/%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E3%80%81%E7%AD%89%E5%BE%85%E9%80%9A%E7%9F%A5%E6%9C%BA%E5%88%B6/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'GoofySatoshi\'s Blog',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>
+  /* 1. 禁用侧边栏头像旋转（核心） */
+  .sidebar-card .card-author .author-avatar img,
+  .sidebar-card .card-author .author-avatar img:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* 2. 兼容移动端/其他头像容器 */
+  .author-avatar img,
+  .author-avatar img:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* 3. 避免主题其他样式干扰 */
+  [class*="avatar"] img,
+  [class*="avatar"] img:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* 针对id="page-header"的头部区域设置透明 */
+  #page-header {
+    background-color: transparent !important; /* 强制透明背景 */
+    background-image: none !important; /* 清除可能的背景图 */
+    box-shadow: none !important; /* 去除阴影（若有） */
+  }
+
+  /* 修复头部内部元素的背景（如导航栏） */
+  #page-header .header-inner {
+    background-color: transparent !important;
+  }
+
+  /* 调整头部文字颜色（根据你的背景图明暗度修改） */
+  #page-header .nav-item a,
+  #page-header .site-title,
+  #page-header .site-subtitle {
+    color: #333 !important; /* 深色文字，背景浅时用；反之用#fff */
+  }
+    /* 确保背景图显示样式正确 */
+  body {
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+  background-size: cover !important;
+  background-position: center !important;
+  }
+</style>
+<meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="GoofySatoshi's Blog" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src= "/img/loading.png" data-lazy-src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">20</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">57</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">29</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">GoofySatoshi's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">GoofySatoshi's Blog</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">无标题</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-10-21T15:16:32.629Z" title="发表于 2025-10-21 23:16:32">2025-10-21</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-10-21T15:16:32.629Z" title="更新于 2025-10-21 23:16:32">2025-10-21</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">9.1k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>29分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="1-基础概念"><a href="#1-基础概念" class="headerlink" title="1. 基础概念"></a>1. 基础概念</h1><h3 id="进程"><a href="#进程" class="headerlink" title="进程"></a>进程</h3><p>进程 &#x3D; 程序 + 执行</p>
+<p>进程是系统分配资源的基本单位（内存、CPU时间片）<br>进程是用来实现多进程并发执行的一个实体，实现对CPU的虚拟化，让每个进程感觉都拥有一个CPU，核心技术就是上下文切换和进程调度。<br>进程是正在运行的程序的实例。进程是一个具有一定独立功能的程序关于某个数据集合的一次运行活动。它是操作系统动态执行的基本单元，在传统的操作系统中，进程既是基本的分配单元，也是基本的执行单元。<br>进程是执行中的程序，除了可执行代码外还包含进程的活动信息和数据，比如用来存放函数变量、局部变量、返回值的用户栈，存放进程相关数据的数据段，内核中进程间切换的内核栈，动态分配的堆。</p>
+<p>早期操作系统程序都是单个运行的，CPU利用率低下，为了提高CPU的利用率，加载多个程序到内存并发运行，在单核CPU中这种属于伪并发。其实在同一时间只运行一个程序</p>
+<img width="504" height="336" alt="image" src= "/img/loading.png" data-lazy-src="https://github.com/user-attachments/assets/28eb9528-c6b1-4ec1-8d43-01861e49b0fe" />
+
+<h3 id="线程"><a href="#线程" class="headerlink" title="线程"></a>线程</h3><p>通常在一个进程中可以包含若干个线程，它们可以利用进程所拥有的资源，在引入线程的操作系统中，通常都是把进程作为分配资源的基本单位，而把线程作为独立运行和独立调度的基本单位，由于线程比进程更小，基本上不拥有系统资源，故对它的调度所付出的开销就会小得多，能更高效的提高系统内多个程序间并发执行的程度。</p>
+<p>线程是独立调度和分派的基本单位。线程可以为操作系统内核调度的内核线程，如Win32线程；由用户进程自行调度的用户线程，如Linux平台的POSIX Thread；或者由内核与用户进程，如Windows 7的线程，进行混合调度。</p>
+<p>同一进程中的多条线程将共享该进程中的全部系统资源，如虚拟地址空间，文件描述符和信号处理等等。但同一进程中的多个线程有各自的调用栈（call stack），自己的寄存器环境（register context），自己的线程本地存储（thread-local storage）。</p>
+<p>一个进程可以有很多线程，每条线程并行执行不同的任务。</p>
+<p>在多核或多CPU，或支持Hyper-threading的CPU上使用多线程程序设计的好处是显而易见，即提高了程序的执行吞吐率。在单CPU单核的计算机上，使用多线程技术，也可以把进程中负责I&#x2F;O处理、人机交互而常被阻塞的部分与密集计算的部分分开来执行，编写专门的workhorse线程执行密集计算，从而提高了程序的执行效率。</p>
+<h3 id="进程间的通信"><a href="#进程间的通信" class="headerlink" title="进程间的通信"></a>进程间的通信</h3><p>同一台计算机的进程通信称为IPC(Inter-process-conmumunication),不同计算机之间的通信被称为RPC(Remote-process-conmumunication)，需要通过网络，并遵守共同的协议，比如Dubbo就是一个RPC框架，而Http协议也经常用在RPC上，比如SpringCloud微服务</p>
+<p><strong>进程间有几种通信方式？</strong></p>
+<ul>
+<li>管道：分为匿名管道(pipe)及命名管道(named pipe)<ul>
+<li>匿名管道可用具有亲缘关系的父子进程间的通信</li>
+<li>命名管道除了具有管道所具有的功能外，它还允许无亲缘关系进程间进行通信</li>
+</ul>
+</li>
+<li>信号（sign）:信号是在软件层次上对中断机制的一种模拟，它是比较复杂的通信方式，用于通知进程有某事件发生，一个进程收到一个信号与处理器收到一个中断请求效果上可以说是一致的。</li>
+<li>消息队列（message queue）：消息队列是消息的链接表，它克服了上两种通信方式中信号量有限的缺点，具有写权限的进程可以按照一定规则向消息队列中添加新信息；对消息队列有读权限的进程可以从消息队列中读取消息</li>
+<li>共享内存（shared memory）:可以说这是最有用的进程间通信方式。它使得多个进程可以访问同一块内存空间，不同进程可以及时看到对方进程中对共享内存中数据的更新。这种方式需要依赖某种同步操作，入互斥锁和信号量等。</li>
+<li>信号量（semaphore）:主要作为进程间及同一种进程的不同线程之间的同步和互斥手段。</li>
+<li>套接字（socket）：这是一种更为一般的进程间通信机制。可用于网络中不同机器之间的进程间通信，应用非常广泛。同一机器中的进程还可以使用Unix domain socket(比如同一机器中的MySQL中的控制台mysql shell 和MuSQL服务程序的连接)，这种方式不需要经过网络协议栈，不需要打包拆包、计算校验、维护序号和应答等，比纯粹基于网络的进程间通信肯定效率更高。</li>
+</ul>
+<h3 id="CPU核心数和线程数的关系"><a href="#CPU核心数和线程数的关系" class="headerlink" title="CPU核心数和线程数的关系"></a>CPU核心数和线程数的关系</h3><p>目前，主流的CPU都是多核的，线程是CPU调度的最小单位。同一CPU核心只能运行一个线程，也就是说CPU内核和同时运行的线程数是1:1的关系，也就是说8核CPU同时可以执行8个线程的代码。但Intel引入超线程技术后，产生了逻辑处理器的概念，使得核心数与线程数形成1:2的关系。在我们前面的Windows任务管理器贴图就能看出来，内核数是6,而逻辑处理器数是12个</p>
+<h3 id="上下文切换（Context-switch）"><a href="#上下文切换（Context-switch）" class="headerlink" title="上下文切换（Context switch）"></a>上下文切换（Context switch）</h3><p>既然操作系统要在多个进程（线程）之间进行调度，而每个线程在使用CPU时总是要使用CPU中的资源，比如CPU寄存器和程序计数器。这就意味着，操作系统要保证线程在调度前后的正常执行，所以，操作系统中就有上下文切换的概念，它是指CPU从一个进程或线程到另一个进程或线程的切换。<br>上下文是CPU寄存器和程序计数器在任何时间点的内容。<br>寄存器是CPU内部的一小部分非常快的内存（相对于CPU内部的缓存和CPU外部较慢的RAM主内存），它通过提供对常用值的快速访问来加快计算机程序的执行。<br>程序计数器是一种专门的寄存器，它指示CPU在其指令序列中的位置，并保存着正在执行的指令的地址或下一条要执行的指令的地址，这取决于具体的系统。<br>上下文切换可以更详细地描述为内核（即操作系统的核心）对CPU上的进程（包括线程）执行以下活动：<br>1.暂停一个进程的处理，并将该进程的CPU状态（即上下文）存储在内存中的某个地方<br>2.从内存中获取下一个进程的上下文，并在CPU的寄存器中恢复它<br>3.返回到程序计数器指示的位置（即返回到进程被中断的代码行）以恢复进程。</p>
+<ul>
+<li>从数据角度来看，以程序员的角度来看，是方法调用过程中的各种局部变量与资源</li>
+<li>从线程角度来看，是方法的调用栈中存储的各类信息。<br>引发上下文切换的原因一般包括：线程、进程切换、系统调用等等。上下文切换通常是计算密集型的，因为涉及一系列数据在各种寄存器、缓存中的来回拷贝。就CPU时间而言，一次上下文切换大概需要5000~20000个时钟周期，相对一个简单指令几个乃至十几个左右的执行时钟周期，可以看出这个成本的巨大。</li>
+</ul>
+<h3 id="并行和并发"><a href="#并行和并发" class="headerlink" title="并行和并发"></a>并行和并发</h3><p>举个例子，如果有条高速公路A上面有8条车道，那么最大的并行车辆就是8辆。一个CPU就相当于一个高速公路，核心数或线程数就相当于车道数量。<br>当我们谈论并发时，一定要加个单位时间，也就是说单位时间内并发量是多少？离开了单位时间讨论并发是没有意义的<br>综合来说：<br>    并发Concurrent:指应用能够交替执行不同的任务，比如单CPU核心下执行多线程并非是同时执行多个任务，如果你开两个线程执行，就是在你几乎不可能察觉到的速度不断去切换这两个任务，来达到“同时执行效果”<br>    并行Parallel:指应用能够同时执行不同的任务数量能力<br>两者的区别：并发是交替执行、并行是同时执行。</p>
+<h1 id="2-Java中的线程"><a href="#2-Java中的线程" class="headerlink" title="2. Java中的线程"></a>2. Java中的线程</h1><h3 id="Java程序天生就是多线程的"><a href="#Java程序天生就是多线程的" class="headerlink" title="Java程序天生就是多线程的"></a>Java程序天生就是多线程的</h3><p>一个Java程序从Main方法开始执行，然后按照既定的代码逻辑执行，看似没有其他线程参与，但是实际上Java程序天生就是多线程程序，因为执行main()方法的是一个名称为main()的线程。<br>而一个Java程序的运行就算是没有用户自己开启的线程，实际上也有很多JVM自行启动的线程，一般来说有：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">OnlyMain</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="type">ThreadMXBean</span> <span class="variable">threadMXBean</span> <span class="operator">=</span> ManagementFactory.getThreadMXBean();</span><br><span class="line">        ThreadInfo[] threadInfos = threadMXBean.getThreadInfo(threadMXBean.getAllThreadIds());</span><br><span class="line">        <span class="keyword">for</span> (ThreadInfo threadInfo : threadInfos) &#123;</span><br><span class="line">            System.out.printf(<span class="string">&quot;[%s] %s\n&quot;</span>,threadInfo.getThreadId(), threadInfo.getThreadName());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[1] main //main线程，用户程序入口</span><br><span class="line">[2] Reference Handler // 清除Reference的线程</span><br><span class="line">[3] Finalizer //调用对象的finalize方法的线程</span><br><span class="line">[4] Signal Dispatcher // 分发处理发送给JVM信号的线程</span><br><span class="line">[5] Attach Listener // 内存dump,线程dump,类信息统计,获取系统属性等</span><br><span class="line">[13] Common-Cleaner // 执行对象的清理操作，尤其是针对那些需要显式释放的非 Java 堆资源（native 内存、文件句柄、网络连接等）</span><br><span class="line">[14] Monitor Ctrl-Break //监控Ctrl-Break中断信号的</span><br><span class="line">[15] Notification Thread // MBean（管理 Bean）可以通过发送 “通知”（Notification）来告知外部其状态变化（如属性修改、事件触发等）。</span><br></pre></td></tr></table></figure>
+<p>不同JDK版本可能会有所差异，但是Java的特性决定了Java程序天生就是多线程的</p>
+<h3 id="线程的启动和中止"><a href="#线程的启动和中止" class="headerlink" title="线程的启动和中止"></a>线程的启动和中止</h3><h4 id="面试题：线程的启动方式有几种？"><a href="#面试题：线程的启动方式有几种？" class="headerlink" title="面试题：线程的启动方式有几种？"></a>面试题：线程的启动方式有几种？</h4><p>官方说法是两种，一种是创建派生Thread类用以执行，另一种是实现Runnable接口。<br>本质上无论是线程池还是其他方式，都是这两种方式实现的</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">CallableTest</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">class</span> <span class="title class_">UseCallable</span> <span class="keyword">implements</span> <span class="title class_">Callable</span>&lt;String&gt; &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="keyword">public</span> String <span class="title function_">call</span><span class="params">()</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="string">&quot;hello world&quot;</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> ExecutionException, InterruptedException &#123;</span><br><span class="line">        <span class="comment">// 无返回值的线程启动方式</span></span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">Thread</span>(</span><br><span class="line">            ()-&#123;</span><br><span class="line">                System.out.println(<span class="string">&quot;无返回值&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        ).start();</span><br><span class="line">        <span class="comment">// 有返回值的线程启动方式</span></span><br><span class="line">        <span class="type">UseCallable</span> <span class="variable">useCallable</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">UseCallable</span>();</span><br><span class="line">        FutureTask&lt;String&gt; futureTask = <span class="keyword">new</span> <span class="title class_">FutureTask</span>&lt;&gt;(useCallable);</span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">Thread</span>(futureTask).start();</span><br><span class="line">        System.out.println(futureTask.get());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="线程中止"><a href="#线程中止" class="headerlink" title="线程中止"></a>线程中止</h4><p>1.线程自然终止<br>    线程的run方法执行完成，或者是抛出了未处理的异常导致线程提前结束</p>
+<p>2.线程手动终止<br>    暂停、恢复和停止操作对应在线程Thread的API就是suspend()、resume()和stop().但是这些API是过期的，不建议使用。以suspend()方法为例,在调用后,线程不会释放已经占有的资源(比如锁),而是占用着资源进入睡眠状态,这样容易引发死锁问题。同样，stop()方法在终结一个线程的不会保证线程的资源正常释放,通常是没有给与线程完成资源释放工作的机会,因此会导致程序可能工作在不确定状态下。正因为suspend()、resume()和stop()方法带来的副作用,这些方法才被标注为不建议使用的过期方法</p>
+<h4 id="线程中断"><a href="#线程中断" class="headerlink" title="线程中断"></a>线程中断</h4><pre><code>安全的中止则是其他线程通过调用某个线程A的interrupt()方法对其进行中断操作,中断好比其他线程对该线程打了个招呼,不代表线程A会立即停止自己的工作,同样的A线程完全可以不理会这种中断请求。线程通过检测自身的中断标志位是否被置为True来进行响应。
+
+线程会通过方法isInterrupted()来进行判断是否被中断,也可以调用静态方法Thread.interrupted()来进行判断当前线程是否被中断,不过Thread.interrupted()会同时将中断标识位改写为false。
+
+如果一个线程处于阻塞状态(如线程调用了thread.sleep、thread.join、thread.wait等),则在线程在检查中断标识时如果发现中断标识为True,则会在这些阻塞方法调用处抛出InterruptedException异常,并且在抛出异常后会立即将线程的中断标识位清除,即立即设置为false。
+
+不建议自定义一个取消标志位（例：public static boolean flag）来中止线程的运行。因为run方法里有阻塞调用时会无法很快检测到取消标志,线程必须从阻塞调用返回后,才会检查这个取消标志。这种情况下,使用中断会更好。
+</code></pre>
+<p><strong>处于死锁状态下的线程无法被中断</strong></p>
+<h4 id="run和start区别"><a href="#run和start区别" class="headerlink" title="run和start区别"></a>run和start区别</h4><p>单独调用run方法，执行的是普通方法，并不会创建线程，start方法是创建线程后，在新建线程中执行run方法</p>
+<h3 id="线程的状态-生命周期"><a href="#线程的状态-生命周期" class="headerlink" title="线程的状态&#x2F;生命周期"></a>线程的状态&#x2F;生命周期</h3><p>Java中的线程状态分为以下6种：</p>
+<ul>
+<li>1.初始(New):新创建了一个线程对象，还没有调用start()方法。</li>
+<li>2.运行(Runnable):Java线程中将就绪(ready)和运行中(running)两种状态笼统称为”运行”。</li>
+<li>3.阻塞(Blocked):阻塞态,表示线程阻塞于锁</li>
+<li>4.等待(Waiting):进入该状态的线程需要等待其他线程做出一些特定动作(通知或者中断)。</li>
+<li>5.超时等待(Timed_Waiting):该状态不同于Waiting,它可以在指定时间后自行返回。</li>
+<li>6.终止(Terminated):表示该线程已经执行完毕。</li>
+</ul>
+<h3 id="其他线程相关方法"><a href="#其他线程相关方法" class="headerlink" title="其他线程相关方法"></a>其他线程相关方法</h3><p>yield()方法主动让出CPU资源,但让出的时间不可控且资源不会释放</p>
+<h3 id="线程的优先级"><a href="#线程的优先级" class="headerlink" title="线程的优先级"></a>线程的优先级</h3><p>在Java线程中，通过priority这个整形成员变量来控制优先级，优先级的范围为1~10，可以在线程构建的时候通过setPriority(int)方法来修改优先级，默认优先级是5，优先级高的线程分配时间片的数量要多于优先级低的线程。</p>
+<h3 id="线程的调度"><a href="#线程的调度" class="headerlink" title="线程的调度"></a>线程的调度</h3><p>线程调度指系统为线程分配CPU使用权的过程，主要调度方式分为两种：</p>
+<ul>
+<li>协同式线程调度</li>
+<li>抢占式线程调度</li>
+</ul>
+<p>使用协程式线程调度的多线程系统，线程执行的时间由线程本身来控制，线程把自己的工作执行完成后，主动通知系统切换到另一个线程上。使用协同式线程调度的最大好处是实现简单，由于线程要把自己的事情做完之后通知系统进行线程切换，所以就没有线程同步的问题，但是坏处也很明显，如果一个线程出了问题，程序就会阻塞。</p>
+<p>使用抢占式线程调度的多线程系统，每个线程执行的时间以及是否切换都由系统决定。这种情况下，线程的执行时间不可控，所以不会有【一个线程导致整个进程阻塞】这种问题的出现。</p>
+<p>Java线程调度使用了抢占式调度的方式，在Java中，Thread.yield()可以让出CPU执行时间，但是对于获取执行时间，线程本身是没有办法的。对于获取CPU执行时间，线程唯一可以使用的手段是设置线程优先级，Java程序设置了10个级别的程序优先级，当两个线程同时处于Ready状态时，优先级越高的线程越容易被系统选择执行。</p>
+<h3 id="线程和协程"><a href="#线程和协程" class="headerlink" title="线程和协程"></a>线程和协程</h3><p>线程其实是操作系统层面的实体，Java中的线程是怎么和操作系统层面对应起来的呢？<br>其实任何语言实现线程主要有三种方式：使用内核线程实现（1：1）,使用用户线程实现（1：N），使用用户线程+轻量级进程混合实现（N:M）</p>
+<h4 id="内核线程实现"><a href="#内核线程实现" class="headerlink" title="内核线程实现"></a>内核线程实现</h4><p>使用内核线程的实现方式也被称为1：1实现。将内核线程（操作系统内核支持的线程），由于内核线程的支持，每个线程都成为了一个独立的调度单元，即使某个线程在系统调用中被阻塞了，也不会影响整个进程继续工作，相关的调度工作也不需要额外考虑，由操作系统处理。<br>局限性：由于基于内核线程实现，所以各种线程的操作：创建、析构以及同步，都需要涉及到系统调用。系统调用的代价是十分昂贵的，需要在用户态和内核态进行来回切换。其次，每个语言层面的线程都需要有一个内核线程的支持，需要消耗一定的内核资源（如内核线程的栈空间），因此一个系统支持的线程数量是有限的。</p>
+<h4 id="用户线程实现"><a href="#用户线程实现" class="headerlink" title="用户线程实现"></a>用户线程实现</h4><p>用户线程属于完全建立在用户空间的线程库上，内核不能感知到，用户线程的建立、同步、销毁和调度完成完全在用户态完成，不需要内核的帮助。程序如果实现得当，不需要进行用户态-内核态的切换，操作非常快速且低消耗，能够支持规模更大的线程数量，部分高性能数据库中的多线程就是由用户线程实现的。</p>
+<p>用户线程的优势在于不需要操作系统内核支援，缺陷同样也在于没有内核线程的支援上，所有的线程操作都需要用户程序自己去处理。线程的创建、销毁、切换和调度都是用户必须考虑的问题，而且由于操作系统只把处理器资源分配给到进程，那诸如“阻塞如何处理”，“多处理器系统如何将线程映射到其他处理器上”这类问题解决起来非常困难，甚至有些在语言层面是不可能实现的。因为使用用户线程实现的程序往往比较复杂，所以一般的应用程序都不倾向使用用户线程。Jav语言曾经使用过用户线程，最终又放弃了。但是近年来以高并发为卖点的Golang等语言又普遍支持了用户线程。</p>
+<h4 id="混合实现"><a href="#混合实现" class="headerlink" title="混合实现"></a>混合实现</h4><p>线程除了依赖内核线程实现和完全由用户程序自己实现之外，还有一种将内核线程与用户线程一起使用的实现方式，被称为N:M实现。这种混合实现下，即存在用户线程，又存在内核线程。</p>
+<p>用户线程还是完全建立在用户空间中，因此用户线程的创建、切换、析构等操作依然可以保持低开销、快速，并且可以支持大规模的用户线程并发。<br>同样又可以使用内核提供的线程调度功能以及处理器映射，并且用户线程的系统调用要通过内核线程来完成。在这种混合模式中，用户线程与轻量级进程的数量比是不定的。是N:M的关系</p>
+<h4 id="Java线程的实现"><a href="#Java线程的实现" class="headerlink" title="Java线程的实现"></a>Java线程的实现</h4><p>Java线程在早期的CLassic虚拟机上（1.2之前），是用户线程实现的，但是JDK1.3起，主流商用的Java虚拟机的线程模型普遍被替换为基于操作系统原生线程模型来实现（1：1线程模型）。<br>以Hotspot为例，它的每一个Java线程都是直接映射到一个操作系统原生线程来实现的，而且中间没有额外的间接结构，所以Hotspot自己是不回去干涉线程调度的，全权交给底层的操作系统进行处理。<br>Java的线程调度最终取决于操作系统，映射到操作系统的原生线程，所以操作系统的优先级有时候并不能和Java一一对应，所以Java优先级并不是特别靠谱。</p>
+<h4 id="协程"><a href="#协程" class="headerlink" title="协程"></a>协程</h4><p>随着互联网行业的发展，目前内核线程实现在很多场景已经有点不适宜了。互联网架构在处理一次对外部业务请求的响应，往往需要分布在不同机器上的大量服务共同协作来实现，也就是我们常说的微服务，这种服务细分的架构在减少了单个服务复杂度、增加复用性的同时，也不可避免地增加了服务的数量，缩短了留给每个服务的响应时间。这要求每一个服务都必须在极短的时间内完成计算，这样组合多个服务的总耗时才不会太长；也要求每一服务提供者都要同时处理更庞大的请求，这样才不会出现请求由于某个服务被阻塞而出现等待。<br>Java目前并发编程机制与上述互联网的架构演进趋势产生了一些矛盾，1:1的内核线程模型依然是如今Java虚拟机线程实现的主流选择，但是这种线程模型的天生缺陷切换、调度成本高昂，系统能容纳的线程数量也很有限。以前处理一个请求可以允许花费很长时间在单体应用中，具有这种线程切换的成本也是无伤大雅的，但现在在每个请求本身的执行时间变得很短、数量变得很多的前提下，用户本身的业务线程切换的开销甚至可能会接近用于计算本身的开销，这就会造成严重的资源浪费。<br>另外我们常见的JavaWeb服务器，比如Tomcat的线程池的容量通常在几十个到两百之间，当把数以百万计的请求往线程池里面灌的时候，系统即使能处理过来，其中的切换损耗也是相当可观的。<br>这样的话对于Java语言来说，用户线程的引入成为了解决上述问题一个非常可行的方案。其次，Go语言等支持用户线程的新型编程语言给Java带来了巨大的压力，也使得Java在面对是否引入用户线程这个问题面前避无可避。<br>用户线程又被称为协程，内核线程的切换开销来自于保护和恢复线程的成本，如果改用用户线程，这部分开销依然不能够省略掉，但是，把保护、恢复现场以及调度的工作从操作系统交到程序员手上，则可以通过很多手段来缩减这些开销。<br>由于最初多数用户线程是被设计为协同式调度，所以用户线程有了一个别名-协程，完整地做调用栈的保护、恢复工作，所以今天也被称为“有栈协程”</p>
+<h4 id="纤程-Java中的协程"><a href="#纤程-Java中的协程" class="headerlink" title="纤程-Java中的协程"></a>纤程-Java中的协程</h4><p>在JVM的实现上，以Hotspot为例,协程的实现会有些额外的限制，Java调用栈跟本地调用栈是做在一起的。如果在协程中调用了本地方法，还能否正常切换协程而不影响整个线程？另外，如果协程中遇传统的线程同步措施会怎么样？譬如Kotlin提供的协程实现，一旦遭遇synchronize关键字，那挂起来的仍将是整个线程。<br>所以Java开发组就Java中协程的实现也做了很多努力，OpenJDK在2018年创建了Loom项目，这是Java的官方解决方案，并用了“纤程（Fiber）”这个名字。<br>Loom项目的意图是重新提供对用户线程的支持，但这些新功能不是为了取代当前基于操作系统的线程实现，而是会有两个并发编程模型在Java虚拟机并存，可以在程序中同时使用。新模型有意地保持了与目前线程模型相似的API设计，它们甚至可以拥有一个共同的基类，这样现有的代码就不需要为了使用纤程而进行过多改动，甚至不需要知道背后采用了哪个并发编程模型。<br>Loom团队在2018年公布的他们对于Jetty基于纤程改造后的测试结果，同样在5000QPS压力下，以容量为400的线程池的传统模式和每个请求配以一个纤程的新并发处理模式进行对比，前者的请求响应延迟在10000至20000毫秒之间，而后者的延迟普遍在200毫秒以下，目前Java中比较出名的协程库是Quasar,Quasar的实现原理是字节码注入，在字节码层面对当前被调用函数中的所有局部变量进行保存和恢复。这种不依赖Java虚拟机的线程保护虽然能够工作，但是影响性能。</p>
+<h4 id="Java使用纤程"><a href="#Java使用纤程" class="headerlink" title="Java使用纤程"></a>Java使用纤程</h4><ol>
+<li>引入依赖<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependemcy</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>co.paralleluniverse<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>quasar-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>0.7.9<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependemcy</span>&gt;</span></span><br></pre></td></tr></table></figure></li>
+<li>使用纤程<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ThreadTest</span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception&#123;</span><br><span class="line">        <span class="type">CountDownLatch</span> <span class="variable">count</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CountDownLatch</span>(<span class="number">10000</span>);</span><br><span class="line">        <span class="type">StopWatch</span> <span class="variable">stopWatch</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">StopWatch</span>();</span><br><span class="line">        stopWatch.start();</span><br><span class="line">        <span class="comment">// 线程工作池</span></span><br><span class="line">        <span class="type">ExecutorService</span> <span class="variable">executorService</span> <span class="operator">=</span> Executors.newCachedThreadPool(<span class="number">2000</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 协程工作池</span></span><br><span class="line">        <span class="comment">// ExecutorService executorService = Executors.newFixedThreadPool(2000);</span></span><br><span class="line"></span><br><span class="line">        IntStream.range(<span class="number">0</span>,<span class="number">10000</span>).forEach(i-&gt;executorService.submit(()-&gt;&#123;</span><br><span class="line">            <span class="keyword">try</span>&#123;</span><br><span class="line">                TimeUnit.SECONDS.sleep(<span class="number">1</span>);</span><br><span class="line">            &#125; <span class="keyword">catch</span>(InterruptedException ex)&#123;&#125;</span><br><span class="line">            count.countDown();</span><br><span class="line">        &#125;)) ;</span><br><span class="line">        count.await();</span><br><span class="line">        stopWatch.stop();</span><br><span class="line">        System.out.print(stopWatch.prettyPrint());</span><br><span class="line">        executorService.shutdownNow();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h3 id="守护线程"><a href="#守护线程" class="headerlink" title="守护线程"></a>守护线程</h3><p>Daemon（守护）线程是一种支持型线程，因为它主要被用作程序中后台调度以及支持性工作。这意味着，当一个Java虚拟机中不存在非Daemon线程的时候，Java虚拟机将会退出。可以通过调用Thread.setDaemon(true)将线程设置为Daemon线程。但是我们一般用不上，比如垃圾回收线程就是守护线程。<br>Daemon线程被用作完成支持性工作，但是在Java虚拟机退出时Daemon线程中的finally块并不一定会执行。在构建Daemon线程时，不能依靠finally块中的内容来确保执行关闭或清理资源的逻辑。<br>这段代码打印的线程除了main线程外，其余线程均为守护线程。当JVM中线程均为守护线程时，JVM虚拟机就会退出。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">OnlyMain</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="type">ThreadMXBean</span> <span class="variable">threadMXBean</span> <span class="operator">=</span> ManagementFactory.getThreadMXBean();</span><br><span class="line">        ThreadInfo[] threadInfos = threadMXBean.getThreadInfo(threadMXBean.getAllThreadIds());</span><br><span class="line">        <span class="keyword">for</span> (ThreadInfo threadInfo : threadInfos) &#123;</span><br><span class="line">            System.out.printf(<span class="string">&quot;[%s] %s\n&quot;</span>,threadInfo.getThreadId(), threadInfo.getThreadName());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="线程间的通信和协调、协作"><a href="#线程间的通信和协调、协作" class="headerlink" title="线程间的通信和协调、协作"></a>线程间的通信和协调、协作</h3><p>很多的时候，孤零零的一个线程工作并没有什么太多的用处，更多的时候，我们是很多的线程一起工作，而且是这些线程间进行通信，或者配合着完成某项工作，这就离不开线程间的通信和协调、协作。</p>
+<h3 id="管道输入输出流"><a href="#管道输入输出流" class="headerlink" title="管道输入输出流"></a>管道输入输出流</h3><p>进程间有好几种通信机制，其中包括了管道，其实Java的线程里也有类似的管道机制，用于线程间的数据传输，而传输的媒介为内存。<br>Java中的管道输入输出流主要包括了如下4种具体实现：<br>PipedOutputStream、PipedInputStream、PipedReader和PipedWriter,前面两种面向字节，而后面两种面向字符。</p>
+<h3 id="Join方法"><a href="#Join方法" class="headerlink" title="Join方法"></a>Join方法</h3><h4 id="面试题"><a href="#面试题" class="headerlink" title="面试题"></a>面试题</h4><p>现在有T1、T2、T3三个线程，你怎么保证T2在T1执行完后执行，T3在T2执行完后执行？</p>
+<h4 id="join"><a href="#join" class="headerlink" title="join()"></a>join()</h4><p>把指定线程加入到当前线程，可以将两个交替执行的线程合并为顺序执行。比如在线程B种调用了线程A的Join方法，直到线程A执行完毕后，才会继续执行线程B剩下的代码。</p>
+<h3 id="synchronized-内置锁"><a href="#synchronized-内置锁" class="headerlink" title="synchronized 内置锁"></a>synchronized 内置锁</h3><p>线程开始运行，拥有自己的栈空间，就如同一个脚本一样，按照既定的代码一步一步地执行，直到终止。但是，每个运行中的线程，如果仅仅是孤立地运行，那么没有一点儿价值，或者说价值很少，如果多个线程能够相互配合完成工作，包括数据之间的共享，协同处理事情。这将会带来巨大的价值。<br>Java支持多个线程同时访问一个对象或者对象的成员变量，但是多个线程同时访问同一个变量，会导致不可预料的结果。关键字synchronized可以修饰方法或者以同步块的形式来进行使用，它主要确保多个线程在同一个时刻，只能有一个线程处于方法或者同步块中，它保证了线程对变量访问的可见性和排他性，使多个线程访问同一个变量的结果正确，它又被称为内置锁机制。</p>
+<h3 id="对象锁和类锁"><a href="#对象锁和类锁" class="headerlink" title="对象锁和类锁"></a>对象锁和类锁</h3><p>对象锁是用于对象实例方法，或者一个对象实例上的，类锁是用于类的静态方法或者一个类的class对象上的。</p>
+<h3 id="volatile-最轻量的通信同步机制"><a href="#volatile-最轻量的通信同步机制" class="headerlink" title="volatile 最轻量的通信同步机制"></a>volatile 最轻量的通信同步机制</h3><p>volatile保证了不同线程对这个变量进行操作时的可见性，即一个线程修改了某个变量的值，新值对于其他线程来说是立即可见的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">VolatileCase</span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">static</span> <span class="type">boolean</span> ready;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>不加volatile时，子线程无法感知主线程修改了ready的值，加了volatile后，子线程可以感知主线程修改了ready的值，但是volatile只能保证可见性，并不能保证多线程状态下操作的原子性。</p>
+<h3 id="等待-通知机制"><a href="#等待-通知机制" class="headerlink" title="等待&#x2F;通知机制"></a>等待&#x2F;通知机制</h3><p>线程之间相互配合，完成某项工作，比如：一个线程修改了一个对象的值，而另一个线程感知到了变化，然后进行相应的操作，整个过程开始于一个线程，而最终执行又是另一个线程。前者是生产者，后者是消费者，这种模式隔离了“做什么”和“怎么做”，简单的方法是让消费者线程不断地循环检查变量是否符合预期在while循环中设置不满足的条件，如果条件满足则退出循环，从而完成消费者的工作。但是却存在下面的问题：</p>
+<ol>
+<li>难以确保及时性</li>
+<li>难以降低开销。如果降低睡眠的时间，比如休眠1毫秒，这样消费者能更加迅速地发现条件变化，但是却可能消耗更多的处理器资源，造成了无端的浪费。</li>
+</ol>
+<p>等待&#x2F;通知机制则可以很好的避免，这种机制是指一个线程A调用了对象O的wait()方法进入等待状态，而另一个线程B调用了对象O的notify()方法或者notifyAll()方法，线程A收到通知后从对象O的wait()方法返回，进而执行后续操作。上述两个线程通过对象O来完成交互，而对象上的wait()和notify()&#x2F;notifyAll()的关系就如同开关信号一样，用来完成等待方和通知方的交互工作。</p>
+<p>notify():<br>通知一个在对象上等待的线程，使其从wait方法返回，而返回的前提是该线程获取到了对象的锁，没有获得锁的线程重新进入WAITING状态。</p>
+<h4 id="等待和通知的标准范式"><a href="#等待和通知的标准范式" class="headerlink" title="等待和通知的标准范式"></a>等待和通知的标准范式</h4><p>等待方遵循如下原则：</p>
+<ol>
+<li>获取对象的锁</li>
+<li>如果条件不满足，则调用对象的wait方法，被通知后仍要检查条件</li>
+<li>条件满足则执行对应的逻辑。</li>
+</ol>
+<p>通知方遵循如下原则：</p>
+<ol>
+<li>获取对象的锁</li>
+<li>如果获取到对象锁，执行业务逻辑操作，然后调用对象的notify方法（通知方法）</li>
+</ol>
+<h3 id="方法和锁"><a href="#方法和锁" class="headerlink" title="方法和锁"></a>方法和锁</h3><p>调用yield()、sleep()、wait()、notify()等方法对锁有何影响？<br>yield()、sleep()被调用后，都不会释放当前线程所持有的锁。<br>调用wait()方法后,会释放当前线程持有的锁,而且当前被唤醒后,会重新去竞争锁，锁竞争到后才会执行wait方法后面的代码。<br>调用notify()系列方法后,对锁无影响,线程只有在syn同步代码执行完后才会自然而然的释放锁,所以notify()系列方法一般都是syn同步代码的最后一行。</p>
+<h3 id="wait-和-notify"><a href="#wait-和-notify" class="headerlink" title="wait 和 notify"></a>wait 和 notify</h3><p>为什么wait和notify方法要在同步块中调用？</p>
+<p>原因：<br>主要是因为Java API强制要求这样做，如果你不这么做，你的代码会抛出IIIegalMonitorStateException异常。其实真实原因是：<br>这个问题并不是说只在Java语言中会出现，而是会在所有的多线程环境下出现。</p>
+<p>生产者-消费者简单示例<br>下面是一个简单的生产者-消费者例子，展示为什么wait()和notify()必须在同步块中调用：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ProducerConsumerExample</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> String message;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">boolean</span> <span class="variable">hasMessage</span> <span class="operator">=</span> <span class="literal">false</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 生产者方法</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">produce</span><span class="params">(String msg)</span> &#123;</span><br><span class="line">        <span class="comment">// ❌ 错误：不在同步块中调用wait/notify</span></span><br><span class="line">        <span class="comment">// if (hasMessage) &#123;</span></span><br><span class="line">        <span class="comment">//     wait(); // 会抛出IllegalMonitorStateException</span></span><br><span class="line">        <span class="comment">// &#125;</span></span><br><span class="line">        </span><br><span class="line">        <span class="comment">// ✅ 正确：在同步块中</span></span><br><span class="line">        <span class="keyword">synchronized</span>(<span class="built_in">this</span>) &#123;</span><br><span class="line">            <span class="comment">// 如果还有消息没被消费，就等待</span></span><br><span class="line">            <span class="keyword">while</span> (hasMessage) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    System.out.println(<span class="string">&quot;生产者：还有消息未消费，等待中...&quot;</span>);</span><br><span class="line">                    wait(); <span class="comment">// 释放锁，等待消费者消费</span></span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                    Thread.currentThread().interrupt();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">            <span class="comment">// 生产消息</span></span><br><span class="line">            <span class="built_in">this</span>.message = msg;</span><br><span class="line">            hasMessage = <span class="literal">true</span>;</span><br><span class="line">            System.out.println(<span class="string">&quot;生产者：生产了消息 - &quot;</span> + msg);</span><br><span class="line">            </span><br><span class="line">            <span class="comment">// 通知消费者</span></span><br><span class="line">            notify(); <span class="comment">// 唤醒等待的消费者线程</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 消费者方法</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">consume</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="comment">// ✅ 正确：在同步块中</span></span><br><span class="line">        <span class="keyword">synchronized</span>(<span class="built_in">this</span>) &#123;</span><br><span class="line">            <span class="comment">// 如果没有消息，就等待</span></span><br><span class="line">            <span class="keyword">while</span> (!hasMessage) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    System.out.println(<span class="string">&quot;消费者：没有消息，等待中...&quot;</span>);</span><br><span class="line">                    wait(); <span class="comment">// 释放锁，等待生产者生产</span></span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                    Thread.currentThread().interrupt();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">            <span class="comment">// 消费消息</span></span><br><span class="line">            <span class="type">String</span> <span class="variable">consumedMsg</span> <span class="operator">=</span> <span class="built_in">this</span>.message;</span><br><span class="line">            hasMessage = <span class="literal">false</span>;</span><br><span class="line">            System.out.println(<span class="string">&quot;消费者：消费了消息 - &quot;</span> + consumedMsg);</span><br><span class="line">            </span><br><span class="line">            <span class="comment">// 通知生产者</span></span><br><span class="line">            notify(); <span class="comment">// 唤醒等待的生产者线程</span></span><br><span class="line">            </span><br><span class="line">            <span class="keyword">return</span> consumedMsg;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 测试代码</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="type">ProducerConsumerExample</span> <span class="variable">example</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ProducerConsumerExample</span>();</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 生产者线程</span></span><br><span class="line">        <span class="type">Thread</span> <span class="variable">producer</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Thread</span>(() -&gt; &#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">1</span>; i &lt;= <span class="number">3</span>; i++) &#123;</span><br><span class="line">                example.produce(<span class="string">&quot;消息-&quot;</span> + i);</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Thread.sleep(<span class="number">1000</span>); <span class="comment">// 模拟生产时间</span></span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                    Thread.currentThread().interrupt();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 消费者线程</span></span><br><span class="line">        <span class="type">Thread</span> <span class="variable">consumer</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Thread</span>(() -&gt; &#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">1</span>; i &lt;= <span class="number">3</span>; i++) &#123;</span><br><span class="line">                example.consume();</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Thread.sleep(<span class="number">1500</span>); <span class="comment">// 模拟消费时间</span></span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                    Thread.currentThread().interrupt();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">        </span><br><span class="line">        producer.start();</span><br><span class="line">        consumer.start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行结果可能输出：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">生产者：生产了消息 - 消息-1</span><br><span class="line">消费者：消费了消息 - 消息-1</span><br><span class="line">生产者：生产了消息 - 消息-2</span><br><span class="line">消费者：消费了消息 - 消息-2</span><br><span class="line">生产者：生产了消息 - 消息-3</span><br><span class="line">消费者：消费了消息 - 消息-3</span><br></pre></td></tr></table></figure>
+<p>如果不使用同步块会发生什么？</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ❌ 错误示例 - 竞态条件</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">wrongProduce</span><span class="params">(String msg)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (hasMessage) &#123;           <span class="comment">// 步骤1：检查条件</span></span><br><span class="line">        <span class="comment">// 在这里，消费者线程可能消费了消息，hasMessage变为false</span></span><br><span class="line">        <span class="comment">// 但生产者不知道这个变化，仍然会调用wait()</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            wait();            <span class="comment">// 步骤2：等待 - 但可能错过notify()</span></span><br><span class="line">        &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="built_in">this</span>.message = msg;        <span class="comment">// 步骤3：可能重复生产，覆盖未消费的消息</span></span><br><span class="line">    hasMessage = <span class="literal">true</span>;</span><br><span class="line">    notify();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://icarus-blog.top">GoofySatoshi</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://icarus-blog.top/2025/10/21/%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E3%80%81%E7%AD%89%E5%BE%85%E9%80%9A%E7%9F%A5%E6%9C%BA%E5%88%B6/">https://icarus-blog.top/2025/10/21/%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E3%80%81%E7%AD%89%E5%BE%85%E9%80%9A%E7%9F%A5%E6%9C%BA%E5%88%B6/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://icarus-blog.top" target="_blank">GoofySatoshi's Blog</a>！</span></div></div><div class="tag_share"><div class="post-share"><div class="social-share" data-image="/img/avatar.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2025/10/15/sentinel%E6%8E%A8%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/" title="深入理解 Sentinel 限流组件推模式实现"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">深入理解 Sentinel 限流组件推模式实现</div></div><div class="info-2"><div class="info-item-1">在微服务架构中，流量控制是保障系统稳定性的核心手段，Sentinel 作为主流限流组件，其规则同步模式直接影响分布式环境下的可用性。本文将聚焦 Sentinel 推模式的实现细节，对比拉模式的局限性，并补充多种主流实现方案，为线上分布式场景提供实践参考。 一、Sentinel 规则同步的两种核心模式在正式讲解推模式前，需先明确 Sentinel 规则同步的两种基础模式：拉模式（Pull Mode） 与 推模式（Push Mode），二者的核心差异在于规则的主动方与持久化方式。 1.1 拉模式：本地文件驱动的“被动同步”拉模式是 Sentinel 最基础的规则同步方式，核心依赖本地文件存储，实现逻辑如下：  客户端通过定时任务（默认间隔 3 秒）主动读取本地配置文件（如 JSON 格式）； 若文件内容变更，客户端更新本地规则缓存，生效限流逻辑； 服务端（或运维人员）需手动向每个客户端节点推送文件，才能实现规则更新。  局限性：  无法实现“一策多节点”：规则仅对单个节点生效，若微服务部署 10 个实例，需手动更新 10 次配置文件； 无持久化保障：本地文件易丢失，且无法追溯规则变更...</div></div></div></a></nav><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="utterances-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src= "/img/loading.png" data-lazy-src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">GoofySatoshi</div><div class="author-info-description">分享技术、读书笔记和生活点滴</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">20</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">57</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">29</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/GoofySatoshi"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/GoofySatoshi" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">连雨不知春归去，一晴方觉夏已深</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#1-%E5%9F%BA%E7%A1%80%E6%A6%82%E5%BF%B5"><span class="toc-number">1.</span> <span class="toc-text">1. 基础概念</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BF%9B%E7%A8%8B"><span class="toc-number">1.0.1.</span> <span class="toc-text">进程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BA%BF%E7%A8%8B"><span class="toc-number">1.0.2.</span> <span class="toc-text">线程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E9%80%9A%E4%BF%A1"><span class="toc-number">1.0.3.</span> <span class="toc-text">进程间的通信</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#CPU%E6%A0%B8%E5%BF%83%E6%95%B0%E5%92%8C%E7%BA%BF%E7%A8%8B%E6%95%B0%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="toc-number">1.0.4.</span> <span class="toc-text">CPU核心数和线程数的关系</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%87%E6%8D%A2%EF%BC%88Context-switch%EF%BC%89"><span class="toc-number">1.0.5.</span> <span class="toc-text">上下文切换（Context switch）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B9%B6%E8%A1%8C%E5%92%8C%E5%B9%B6%E5%8F%91"><span class="toc-number">1.0.6.</span> <span class="toc-text">并行和并发</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#2-Java%E4%B8%AD%E7%9A%84%E7%BA%BF%E7%A8%8B"><span class="toc-number">2.</span> <span class="toc-text">2. Java中的线程</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Java%E7%A8%8B%E5%BA%8F%E5%A4%A9%E7%94%9F%E5%B0%B1%E6%98%AF%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9A%84"><span class="toc-number">2.0.1.</span> <span class="toc-text">Java程序天生就是多线程的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%90%AF%E5%8A%A8%E5%92%8C%E4%B8%AD%E6%AD%A2"><span class="toc-number">2.0.2.</span> <span class="toc-text">线程的启动和中止</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E9%9D%A2%E8%AF%95%E9%A2%98%EF%BC%9A%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%90%AF%E5%8A%A8%E6%96%B9%E5%BC%8F%E6%9C%89%E5%87%A0%E7%A7%8D%EF%BC%9F"><span class="toc-number">2.0.2.1.</span> <span class="toc-text">面试题：线程的启动方式有几种？</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%BA%BF%E7%A8%8B%E4%B8%AD%E6%AD%A2"><span class="toc-number">2.0.2.2.</span> <span class="toc-text">线程中止</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%BA%BF%E7%A8%8B%E4%B8%AD%E6%96%AD"><span class="toc-number">2.0.2.3.</span> <span class="toc-text">线程中断</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#run%E5%92%8Cstart%E5%8C%BA%E5%88%AB"><span class="toc-number">2.0.2.4.</span> <span class="toc-text">run和start区别</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BA%BF%E7%A8%8B%E7%9A%84%E7%8A%B6%E6%80%81-%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F"><span class="toc-number">2.0.3.</span> <span class="toc-text">线程的状态&#x2F;生命周期</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%B6%E4%BB%96%E7%BA%BF%E7%A8%8B%E7%9B%B8%E5%85%B3%E6%96%B9%E6%B3%95"><span class="toc-number">2.0.4.</span> <span class="toc-text">其他线程相关方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BA%BF%E7%A8%8B%E7%9A%84%E4%BC%98%E5%85%88%E7%BA%A7"><span class="toc-number">2.0.5.</span> <span class="toc-text">线程的优先级</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BA%BF%E7%A8%8B%E7%9A%84%E8%B0%83%E5%BA%A6"><span class="toc-number">2.0.6.</span> <span class="toc-text">线程的调度</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BA%BF%E7%A8%8B%E5%92%8C%E5%8D%8F%E7%A8%8B"><span class="toc-number">2.0.7.</span> <span class="toc-text">线程和协程</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%86%85%E6%A0%B8%E7%BA%BF%E7%A8%8B%E5%AE%9E%E7%8E%B0"><span class="toc-number">2.0.7.1.</span> <span class="toc-text">内核线程实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%94%A8%E6%88%B7%E7%BA%BF%E7%A8%8B%E5%AE%9E%E7%8E%B0"><span class="toc-number">2.0.7.2.</span> <span class="toc-text">用户线程实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B7%B7%E5%90%88%E5%AE%9E%E7%8E%B0"><span class="toc-number">2.0.7.3.</span> <span class="toc-text">混合实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Java%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-number">2.0.7.4.</span> <span class="toc-text">Java线程的实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8D%8F%E7%A8%8B"><span class="toc-number">2.0.7.5.</span> <span class="toc-text">协程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%BA%A4%E7%A8%8B-Java%E4%B8%AD%E7%9A%84%E5%8D%8F%E7%A8%8B"><span class="toc-number">2.0.7.6.</span> <span class="toc-text">纤程-Java中的协程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Java%E4%BD%BF%E7%94%A8%E7%BA%A4%E7%A8%8B"><span class="toc-number">2.0.7.7.</span> <span class="toc-text">Java使用纤程</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%88%E6%8A%A4%E7%BA%BF%E7%A8%8B"><span class="toc-number">2.0.8.</span> <span class="toc-text">守护线程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BA%BF%E7%A8%8B%E9%97%B4%E7%9A%84%E9%80%9A%E4%BF%A1%E5%92%8C%E5%8D%8F%E8%B0%83%E3%80%81%E5%8D%8F%E4%BD%9C"><span class="toc-number">2.0.9.</span> <span class="toc-text">线程间的通信和协调、协作</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%A1%E9%81%93%E8%BE%93%E5%85%A5%E8%BE%93%E5%87%BA%E6%B5%81"><span class="toc-number">2.0.10.</span> <span class="toc-text">管道输入输出流</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Join%E6%96%B9%E6%B3%95"><span class="toc-number">2.0.11.</span> <span class="toc-text">Join方法</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E9%9D%A2%E8%AF%95%E9%A2%98"><span class="toc-number">2.0.11.1.</span> <span class="toc-text">面试题</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#join"><span class="toc-number">2.0.11.2.</span> <span class="toc-text">join()</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#synchronized-%E5%86%85%E7%BD%AE%E9%94%81"><span class="toc-number">2.0.12.</span> <span class="toc-text">synchronized 内置锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AF%B9%E8%B1%A1%E9%94%81%E5%92%8C%E7%B1%BB%E9%94%81"><span class="toc-number">2.0.13.</span> <span class="toc-text">对象锁和类锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#volatile-%E6%9C%80%E8%BD%BB%E9%87%8F%E7%9A%84%E9%80%9A%E4%BF%A1%E5%90%8C%E6%AD%A5%E6%9C%BA%E5%88%B6"><span class="toc-number">2.0.14.</span> <span class="toc-text">volatile 最轻量的通信同步机制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AD%89%E5%BE%85-%E9%80%9A%E7%9F%A5%E6%9C%BA%E5%88%B6"><span class="toc-number">2.0.15.</span> <span class="toc-text">等待&#x2F;通知机制</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%AD%89%E5%BE%85%E5%92%8C%E9%80%9A%E7%9F%A5%E7%9A%84%E6%A0%87%E5%87%86%E8%8C%83%E5%BC%8F"><span class="toc-number">2.0.15.1.</span> <span class="toc-text">等待和通知的标准范式</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%96%B9%E6%B3%95%E5%92%8C%E9%94%81"><span class="toc-number">2.0.16.</span> <span class="toc-text">方法和锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#wait-%E5%92%8C-notify"><span class="toc-number">2.0.17.</span> <span class="toc-text">wait 和 notify</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/10/21/%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E3%80%81%E7%AD%89%E5%BE%85%E9%80%9A%E7%9F%A5%E6%9C%BA%E5%88%B6/" title="无标题">无标题</a><time datetime="2025-10-21T15:16:32.629Z" title="发表于 2025-10-21 23:16:32">2025-10-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/10/15/sentinel%E6%8E%A8%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/" title="深入理解 Sentinel 限流组件推模式实现">深入理解 Sentinel 限流组件推模式实现</a><time datetime="2025-10-15T23:30:00.000Z" title="发表于 2025-10-16 07:30:00">2025-10-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/10/13/Tomcat%E7%9A%84IO%E6%A8%A1%E5%9E%8B/" title="Tomcat的IO模型与性能调优">Tomcat的IO模型与性能调优</a><time datetime="2025-10-13T07:30:00.000Z" title="发表于 2025-10-13 15:30:00">2025-10-13</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/10/12/Tomcat%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6%E8%AF%A6%E8%A7%A3/" title="Tomcat类加载机制与热部署原理详解">Tomcat类加载机制与热部署原理详解</a><time datetime="2025-10-12T17:07:00.000Z" title="发表于 2025-10-13 01:07:00">2025-10-13</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/10/10/TomCat%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E4%BB%A5%E5%8F%8A%E8%AE%BE%E8%AE%A1%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" title="Tomcat 整体结构以及设计源码分析">Tomcat 整体结构以及设计源码分析</a><time datetime="2025-10-10T00:00:00.000Z" title="发表于 2025-10-10 08:00:00">2025-10-10</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2019 - 2025 By GoofySatoshi</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/utils.min.js"></script><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/main.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+  const getUtterancesTheme = theme => theme === 'dark' ? 'github-dark' : 'github-light'
+
+  const loadUtterances = (el = document, key) => {
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyUtterances = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+
+    const config = {
+      src: 'https://utteranc.es/client.js',
+      repo: 'GoofySatoshi/GoofySatoshi.github.io',
+      theme: getUtterancesTheme(document.documentElement.getAttribute('data-theme')),
+      crossorigin: 'anonymous',
+      async: true,
+      ...option,
+      'issue-term': isShuoshuo ? key : (option && option['issue-term']) || 'pathname'
+    }
+
+    const ele = document.createElement('script')
+    Object.entries(config).forEach(([key, value]) => ele.setAttribute(key, value))
+    el.querySelector('#utterances-wrap').appendChild(ele)
+  }
+
+  const changeUtterancesTheme = theme => {
+    const iframe = document.querySelector('#utterances-wrap iframe')
+    if (iframe) {
+      const message = {
+        type: 'set-theme',
+        theme: getUtterancesTheme(theme)
+      };
+      iframe.contentWindow.postMessage(message, 'https://utteranc.es')
+    }
+  }
+
+  btf.addGlobalFn('themeChange', changeUtterancesTheme, 'utterances')
+
+  if (isShuoshuo) {
+    'Utterances' === 'Utterances'
+      ? window.shuoshuoComment = { loadComment: loadUtterances }
+      : window.loadOtherComment = loadUtterances
+    return
+  }
+  
+  if ('Utterances' === 'Utterances' || !false) {
+    if (false) btf.loadComment(document.getElementById('utterances-wrap'), loadUtterances)
+    else loadUtterances()
+  } else {
+    window.loadOtherComment = loadUtterances
+  }
+})()</script></div><script>
+  // 背景图片列表（替换为你的图片路径）
+  const backgroundImages = [
+    '/img/background1.jpg',
+    '/img/background2.png',
+    '/img/background3.jpg',
+    '/img/background4.jpg',
+    '/img/background5.jpg',
+    '/img/background6.jpg',
+    '/img/background7.jpg',
+    '/img/background8.jpg',
+    '/img/background9.jpg',
+    '/img/background10.jpg',
+    '/img/background11.jpg',
+    '/img/background12.jpg',
+    '/img/background13.jpg',
+    '/img/background14.jpg',
+    '/img/background15.jpg',
+    '/img/background16.jpg',
+    '/img/background17.jpg',
+    '/img/background18.jpg',
+    '/img/background19.jpg',
+    '/img/background20.jpg'
+  ];
+  // 随机选择一张图片
+  const randomImg = backgroundImages[Math.floor(Math.random() * backgroundImages.length)];
+  // 设置为背景
+  document.body.style.backgroundImage = `url(${randomImg})`;
+</script>
+<script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+POWERMODE.mobile = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章..." type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/search/local-search.min.js"></script></div></div></body></html>
