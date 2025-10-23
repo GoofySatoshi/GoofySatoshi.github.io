@@ -1,0 +1,367 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>ThreadLocal、CAS、Atomic及并发安全 | GoofySatoshi's Blog</title><meta name="author" content="GoofySatoshi"><meta name="copyright" content="GoofySatoshi"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="一、ThreadLocal1. 为什么要有ThreadLocal ?ThreadLocal的核心作用是：让变量成为“线程私有”的副本，每个线程操作自己的那份，互不干扰，以此避免多线程共享变量的安全问题；同时，线程内的变量能在任意方法里直接获取，不用一层层传参数，简化代码。 2. ThreadLocal的使用ThreadLocal的使用非常简单，只有下面四个方法：为了性能上的优化，Thread内部设">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ThreadLocal、CAS、Atomic及并发安全">
+<meta property="og:url" content="https://icarus-blog.top/2025/10/23/ThreadLocal%E3%80%81CAS%E3%80%81Atomic%E5%8F%8A%E5%B9%B6%E5%8F%91%E5%AE%89%E5%85%A8/index.html">
+<meta property="og:site_name" content="GoofySatoshi&#39;s Blog">
+<meta property="og:description" content="一、ThreadLocal1. 为什么要有ThreadLocal ?ThreadLocal的核心作用是：让变量成为“线程私有”的副本，每个线程操作自己的那份，互不干扰，以此避免多线程共享变量的安全问题；同时，线程内的变量能在任意方法里直接获取，不用一层层传参数，简化代码。 2. ThreadLocal的使用ThreadLocal的使用非常简单，只有下面四个方法：为了性能上的优化，Thread内部设">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://icarus-blog.top/img/avatar.jpg">
+<meta property="article:published_time" content="2025-10-23T14:00:00.000Z">
+<meta property="article:modified_time" content="2025-10-23T14:42:27.542Z">
+<meta property="article:author" content="GoofySatoshi">
+<meta property="article:tag" content="Java">
+<meta property="article:tag" content="并发">
+<meta property="article:tag" content="ThreadLocal">
+<meta property="article:tag" content="CAS">
+<meta property="article:tag" content="Atomic">
+<meta property="article:tag" content="线程安全">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://icarus-blog.top/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "ThreadLocal、CAS、Atomic及并发安全",
+  "url": "https://icarus-blog.top/2025/10/23/ThreadLocal%E3%80%81CAS%E3%80%81Atomic%E5%8F%8A%E5%B9%B6%E5%8F%91%E5%AE%89%E5%85%A8/",
+  "image": "https://icarus-blog.top/img/avatar.jpg",
+  "datePublished": "2025-10-23T14:00:00.000Z",
+  "dateModified": "2025-10-23T14:42:27.542Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "GoofySatoshi",
+      "url": "https://icarus-blog.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/avatar.jpg"><link rel="canonical" href="https://icarus-blog.top/2025/10/23/ThreadLocal%E3%80%81CAS%E3%80%81Atomic%E5%8F%8A%E5%B9%B6%E5%8F%91%E5%AE%89%E5%85%A8/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'ThreadLocal、CAS、Atomic及并发安全',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>
+  /* 1. 禁用侧边栏头像旋转（核心） */
+  .sidebar-card .card-author .author-avatar img,
+  .sidebar-card .card-author .author-avatar img:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* 2. 兼容移动端/其他头像容器 */
+  .author-avatar img,
+  .author-avatar img:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* 3. 避免主题其他样式干扰 */
+  [class*="avatar"] img,
+  [class*="avatar"] img:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* 针对id="page-header"的头部区域设置透明 */
+  #page-header {
+    background-color: transparent !important; /* 强制透明背景 */
+    background-image: none !important; /* 清除可能的背景图 */
+    box-shadow: none !important; /* 去除阴影（若有） */
+  }
+
+  /* 修复头部内部元素的背景（如导航栏） */
+  #page-header .header-inner {
+    background-color: transparent !important;
+  }
+
+  /* 调整头部文字颜色（根据你的背景图明暗度修改） */
+  #page-header .nav-item a,
+  #page-header .site-title,
+  #page-header .site-subtitle {
+    color: #333 !important; /* 深色文字，背景浅时用；反之用#fff */
+  }
+    /* 确保背景图显示样式正确 */
+  body {
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+  background-size: cover !important;
+  background-position: center !important;
+  }
+</style>
+<meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="GoofySatoshi's Blog" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src= "/img/loading.png" data-lazy-src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">21</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">66</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">31</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">GoofySatoshi's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">ThreadLocal、CAS、Atomic及并发安全</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">ThreadLocal、CAS、Atomic及并发安全</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-10-23T14:00:00.000Z" title="发表于 2025-10-23 22:00:00">2025-10-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-10-23T14:42:27.542Z" title="更新于 2025-10-23 22:42:27">2025-10-23</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/">并发编程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">3.2k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>9分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="一、ThreadLocal"><a href="#一、ThreadLocal" class="headerlink" title="一、ThreadLocal"></a>一、ThreadLocal</h1><h2 id="1-为什么要有ThreadLocal"><a href="#1-为什么要有ThreadLocal" class="headerlink" title="1. 为什么要有ThreadLocal ?"></a>1. 为什么要有ThreadLocal ?</h2><p>ThreadLocal的核心作用是：让变量成为“线程私有”的副本，每个线程操作自己的那份，互不干扰，以此避免多线程共享变量的安全问题；同时，线程内的变量能在任意方法里直接获取，不用一层层传参数，简化代码。</p>
+<h2 id="2-ThreadLocal的使用"><a href="#2-ThreadLocal的使用" class="headerlink" title="2. ThreadLocal的使用"></a>2. ThreadLocal的使用</h2><p>ThreadLocal的使用非常简单，只有下面四个方法：<br>为了性能上的优化，Thread内部设置了一个ThreadLocal.ThreadLocalMap的成员变量。这样每个线程访问自己内部的变量可以无需传参即可跨方法传递使用。</p>
+<ul>
+<li>void set(Object value)</li>
+<li>public Object get()</li>
+<li>public void remove()</li>
+<li>protected Object initialValue()</li>
+</ul>
+<h2 id="3-ThreadLocal的实现"><a href="#3-ThreadLocal的实现" class="headerlink" title="3. ThreadLocal的实现"></a>3. ThreadLocal的实现</h2><h3 id="1-结构设计"><a href="#1-结构设计" class="headerlink" title="1.结构设计"></a>1.结构设计</h3><p>ThreadLocal的内部实现非常有意思，每个Thread内部设置了一个ThreadLocal.ThreadLocalMap的成员变量。ThreadLocalMap内部用来存储值是一个Entry数组，可以看作是一个基于数组结构实现的哈希表,Key值为ThreadLocal,Value值为具体存储的值，下标值的计算是根据计算出的哈希值对数组长度取余</p>
+<h3 id="2-哈希冲突"><a href="#2-哈希冲突" class="headerlink" title="2.哈希冲突"></a>2.哈希冲突</h3><p>HashMap在面对哈希冲突时，使用链表+红黑树的方式来解决哈希冲突。但是ThreadLcoal在面对哈希冲突时,使用开放线性寻址法来解决哈希冲突（其实源码是加一个固定的偏移量）,哈希冲突比较频繁的时候，会进行扩容来减少哈希冲突，并且重新根据哈希值计算每个元素的坐标。初始容量为16，扩容的阈值为内部存储元素占据Entry数组的2&#x2F;3，每次扩容后数组长度都会翻倍</p>
+<h3 id="3-内存泄漏"><a href="#3-内存泄漏" class="headerlink" title="3.内存泄漏"></a>3.内存泄漏</h3><p>内存泄漏是指程序运行过程中，由于程序代码的bug出现了无法被回收的内存区域,由于无法回收这部分内存空间。这种情况被称为内存泄漏。<br>使用ThreadLocal的时候,必须要提防一个内存泄漏的问题,实际上正常使用ThreadLocal（将ThreadLocal作为类中静态常量使用的时候）的时候,是不会产生内存泄漏的问题的。只有将ThreadLocal作为局部变量使用时,会出现无法回收内存空间的内存泄漏现象。这还和JVM的垃圾回收机制有关系。<br>在局部变量的使用场景下，每个value都会被设置到Entry,放到Entry数组中,虽然key是弱引用指向,每次垃圾回收都会回收掉Key值(弱引用特质，每次gc会回收内存空间),由于Java项目中都会使用线程池(天生多线程),线程对象会一直存活,JVM在进行垃圾回收时,由于有强引用指向ThreadLocalMap的value值(key回收掉了,value还在)<br>那value可以每次gc都回收掉吗？这样不就不会产生内存泄漏了么？我们需要站在设计者的角度进行考虑.如果把value值也设计成弱引用,java程序中发生gc是非常高频的,如果业务执行中,发生gc后使这个存储的value值失效,就会出现空指针异常。<br>为什么Key值设置成弱引用呢？<br>ThreadLocal的正确使用方式是调用完成后在可靠的代码区域进行remove回收内存，但肯定会存在有部分程序在编写时，不正常调用remove或者在安全代码区域外调用remove,进而导致remove代码失效，如果Key值设置为强引用,会导致key和value的双重泄漏，所以设置成弱引用本质上是一种防御性编程（xswl,想的太深了）</p>
+<blockquote>
+<p>弱引用使用场景一般是用来做本地的缓存实现（GC后自动回收）</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ThreadLocal</span>&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">class</span> <span class="title class_">Entry</span> <span class="keyword">extends</span> <span class="title class_">WeakReference</span>&lt;ThreadLocal&lt;?&gt;&gt; &#123;</span><br><span class="line">        <span class="comment">// 存储当前ThreadLocal对应的值（线程私有副本）</span></span><br><span class="line">        Object value;</span><br><span class="line">        <span class="comment">// 构造方法：key是ThreadLocal实例，用弱引用存储；value是具体值</span></span><br><span class="line">        Entry(ThreadLocal&lt;?&gt; k, Object v) &#123;</span><br><span class="line">            <span class="built_in">super</span>(k); <span class="comment">// 调用WeakReference的构造方法，将k包装为弱引用</span></span><br><span class="line">            value = v;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="二、CAS-Atomic原子操作详解"><a href="#二、CAS-Atomic原子操作详解" class="headerlink" title="二、CAS &amp; Atomic原子操作详解"></a>二、CAS &amp; Atomic原子操作详解</h1><h2 id="什么是原子操作？如何实现原子操作？"><a href="#什么是原子操作？如何实现原子操作？" class="headerlink" title="什么是原子操作？如何实现原子操作？"></a>什么是原子操作？如何实现原子操作？</h2><blockquote>
+<p>原子性：实际上是事务的概念，指的是多个操作不可分割的特性，要么全部执行，要么全部不执行，这种特性叫做原子性。</p>
+</blockquote>
+<blockquote>
+<p>CAS机制(Compare and swap)：CAS基本思想是比较并替换</p>
+</blockquote>
+<p>内存地址V,预期值A,新值B,具体执行逻辑只有两步：</p>
+<ul>
+<li>1.比较：判断内存地址V中存储值是否为预期值A </li>
+<li>2.替换：<ul>
+<li>若相等，将V中的值更新为B</li>
+<li>若不等，不做任何操作或重试</li>
+</ul>
+</li>
+</ul>
+<p>一般实现原子操作都会使用锁机制,虽然锁机制可以满足简单基本的业务需求,但是有的时候我们需要更有效、灵活的机制。sychronized这种基于阻塞的锁机制，持有锁的时候，其他线程会被全部阻塞，直到持有锁的线程释放锁。为了解决这个问题，Java提供了Atomic的原子工具类。</p>
+<p>Aotmic内部机制一般均为循环CAS重试来实现的,CAS这种无锁无阻塞循环尝试更新的操作，在性能上通常比sychronized锁机制更良好。<br>虽然CAS在锁竞争弱的情况下性能上比阻塞锁机制要优秀，但是这是有代价的。CAS有下面三个缺陷</p>
+<h3 id="ABA问题"><a href="#ABA问题" class="headerlink" title="ABA问题"></a>ABA问题</h3><p>ABA问题是CAS操作的弊病之一，在多线程并发的条件下，虽然期望值是A,但可能已经被其他线程修改成A了,如果此时进行更新操作，就会因为这种ABA问题发生并发条件下的数据脏写。ABA问题的解决方案一般是使用版本号进行记录数据版本,来根据版本号+期望值 双期望值来决定要不要更新数据。</p>
+<h3 id="循环开销问题"><a href="#循环开销问题" class="headerlink" title="循环开销问题"></a>循环开销问题</h3><p>虽然CAS是无锁不阻塞的方式进行尝试更新数据，但是高并发环境下大量线程竞争，循环导致的额外开销会非常大，导致CPU的空转开销，造成性能上的浪费，这种情况下更适合使用sychronized阻塞锁来保证数据的原子性、安全性。</p>
+<h3 id="只能保证一个共享变量的原子操作"><a href="#只能保证一个共享变量的原子操作" class="headerlink" title="只能保证一个共享变量的原子操作"></a>只能保证一个共享变量的原子操作</h3><p>CAS的机制决定了只能保证对一个共享变量进行原子操作。但并不是绝对的，我们可以把多个共享变量合并成一个共享变量的对象进行操作（但是这种情况下又会导致锁竞争加剧，性能下降严重）</p>
+<h2 id="AtomicInteger"><a href="#AtomicInteger" class="headerlink" title="AtomicInteger"></a>AtomicInteger</h2><ul>
+<li>int addAndGet()：CAS原子加操作，并返回结果</li>
+<li>boolean compareAndSet(int expect,int update)：如果输入的数值等于预期值，则以原子方式设置该值</li>
+<li>int getAndIncrement()：原子方式加1</li>
+<li>int getAndSet(int newValue)：原子方式设置新值</li>
+</ul>
+<h2 id="解决ABA问题的Atomic原子类"><a href="#解决ABA问题的Atomic原子类" class="headerlink" title="解决ABA问题的Atomic原子类"></a>解决ABA问题的Atomic原子类</h2><p>AtomicMarkableReference和AtomicStampedReference<br>为了解决ABA问题,Java提供了两个原子类，这两者的区别是前者只关心有没有被修改过，不关心具体被修改过几次。后者会记录修改次数<br>由于原子类对高并发的写入性能开销比较大,所以jdk1.8之后引入了LongAdder类来解决写热点的问题，其内部用一个base的long类型，和一个Cell[]数组，使用数组来分散写热点事件。</p>
+<h1 id="三、线程安全问题"><a href="#三、线程安全问题" class="headerlink" title="三、线程安全问题"></a>三、线程安全问题</h1><h2 id="线程安全性"><a href="#线程安全性" class="headerlink" title="线程安全性"></a>线程安全性</h2><p>所谓线程安全，即所写代码在并发情况下使用时，总是能表现出正确的行为。反之，未实现线程安全的代码，表现的行为是不可预知的。</p>
+<h2 id="线程封闭"><a href="#线程封闭" class="headerlink" title="线程封闭"></a>线程封闭</h2><p>实现好的并发是一件非常困难的事情，所以很多时候我们都想躲避并发。避免并发最简单的方法就是线程封闭。就是把对象封装到一个线程里，只有这一个线程能看到这个对象。这个对象就算不是线程安全的也不会出现任何安全问题。</p>
+<h3 id="栈封闭"><a href="#栈封闭" class="headerlink" title="栈封闭"></a>栈封闭</h3><p>栈封闭是我们编程中遇到的最多的线程封闭。最常见的就是局部变量，由于局部变量不是被多个线程共享，所以不会出现并发问题。所以使用局部变量不使用全局变量，能在一定程度上避免并发带来的安全问题，比如ThreadLocal就是一个实现线程封闭的很好的数据结构。</p>
+<h3 id="无状态的对象"><a href="#无状态的对象" class="headerlink" title="无状态的对象"></a>无状态的对象</h3><p>没有任何成员变量的类，就叫做无状态的类，这种类一定是线程安全的。但其内部对于其他对象进行操作并不一定是线程安全的（类本身线程安全，但是内部行为不一定对操作对象是线程安全的）。</p>
+<h2 id="加锁和CAS"><a href="#加锁和CAS" class="headerlink" title="加锁和CAS"></a>加锁和CAS</h2><p>我们最常用保证线程安全的手段，是使用synchronized关键字，使用显式锁以及各种原子变量，修改数据时使用CAS机制等</p>
+<h2 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h2><p>死锁是指两个或两个以上的进程在执行过程中，互相持有其他线程所需要的锁资源，并且等待其他线程释放锁资源，又不会释放自己已经持有的锁资源，而造成的一种阻塞现象，若无外力作用，它们都将无法推进下去。此时系统就处于死锁状态。<br>学术上死锁发生死锁必须具备四个条件:</p>
+<ul>
+<li>互斥条件:资源具有独占性，同一时间只能被一个进程占用。例如，打印机同一时间只能处理一个打印任务。</li>
+<li>请求与保持条件:进程已持有至少一个资源，同时又向其他进程请求新的资源，且该资源正被其他进程占用。例如，进程 A 持有打印机，又请求进程 B 正在使用的扫描仪。</li>
+<li>不可剥夺条件:进程已获得的资源，在未主动释放前，不能被其他进程强制剥夺。例如，进程 B 正在使用的扫描仪，不能被系统强制收回分配给进程 A。</li>
+<li>循环等待条件:多个进程之间形成闭环的资源等待链，每个进程都在等待下一个进程所持有的资源。例如，进程 A 等待进程 B 的资源，进程 B 等待进程 C 的资源，进程 C 等待进程 A 的资源。</li>
+</ul>
+<h3 id="死锁的预防核心"><a href="#死锁的预防核心" class="headerlink" title="死锁的预防核心"></a>死锁的预防核心</h3><p>预防死锁的本质的就是破坏四个条件中的任意一个，即可从根本上避免死锁发生。常见思路包括：采用资源预先分配策略（破坏请求与保持条件）、允许资源强制回收（破坏不可剥夺条件）、终止死锁中的线程（破坏循环等待）等。一般情况下互斥性是无法避免的。避免死锁还有一些常见算法：有序资源分配法和银行家算法等。</p>
+<h2 id="线程安全的单例模式"><a href="#线程安全的单例模式" class="headerlink" title="线程安全的单例模式"></a>线程安全的单例模式</h2><p>单例模式是一种比较常见的设计模式，最常见的是DCL(double check lock)单例实现，下面是说明和代码实现：</p>
+<ol>
+<li>volatile 关键字：防止instance &#x3D; new Singleton()这句代码的指令重排序（分配内存→初始化对象→引用指向内存）。如果没有 volatile，可能导致其他线程获取到 “未完全初始化” 的实例（引用已指向内存，但对象还没初始化完）。</li>
+<li>双重检查：<ul>
+<li>第一次检查（同步块外）：避免每次调用getInstance()都进入同步块，减少性能损耗（多数情况下实例已初始化，直接返回）。</li>
+<li>第二次检查（同步块内）：防止多线程同时通过第一次检查后，在同步块内重复创建实例。</li>
+</ul>
+</li>
+<li>私有构造方法：禁止外部通过new Singleton()创建实例，确保唯一实例由getInstance()控制。<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Singleton</span> &#123;</span><br><span class="line">    <span class="comment">// 1. 私有静态实例变量，用volatile修饰（关键！防止指令重排序）</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">volatile</span> Singleton instance;</span><br><span class="line">    <span class="comment">// 2. 私有构造方法，禁止外部通过new创建实例</span></span><br><span class="line">    <span class="keyword">private</span> <span class="title function_">Singleton</span><span class="params">()</span> &#123;&#125;</span><br><span class="line">    <span class="comment">// 3. 公共静态方法，提供全局访问点</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title function_">getInstance</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="comment">// 第一次检查：未初始化时才进入同步块（减少同步开销）</span></span><br><span class="line">        <span class="keyword">if</span> (instance == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="comment">// 同步块：保证多线程下的原子性</span></span><br><span class="line">            <span class="keyword">synchronized</span> (Singleton.class) &#123;</span><br><span class="line">                <span class="comment">// 第二次检查：防止多个线程同时通过第一次检查后重复创建实例</span></span><br><span class="line">                <span class="keyword">if</span> (instance == <span class="literal">null</span>) &#123;</span><br><span class="line">                    instance = <span class="keyword">new</span> <span class="title class_">Singleton</span>();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://icarus-blog.top">GoofySatoshi</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://icarus-blog.top/2025/10/23/ThreadLocal%E3%80%81CAS%E3%80%81Atomic%E5%8F%8A%E5%B9%B6%E5%8F%91%E5%AE%89%E5%85%A8/">https://icarus-blog.top/2025/10/23/ThreadLocal%E3%80%81CAS%E3%80%81Atomic%E5%8F%8A%E5%B9%B6%E5%8F%91%E5%AE%89%E5%85%A8/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://icarus-blog.top" target="_blank">GoofySatoshi's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Java/">Java</a><a class="post-meta__tags" href="/tags/%E5%B9%B6%E5%8F%91/">并发</a><a class="post-meta__tags" href="/tags/ThreadLocal/">ThreadLocal</a><a class="post-meta__tags" href="/tags/CAS/">CAS</a><a class="post-meta__tags" href="/tags/Atomic/">Atomic</a><a class="post-meta__tags" href="/tags/%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8/">线程安全</a></div><div class="post-share"><div class="social-share" data-image="/img/avatar.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2025/10/21/%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E3%80%81%E7%AD%89%E5%BE%85%E9%80%9A%E7%9F%A5%E6%9C%BA%E5%88%B6/" title="多线程并发、等待及通知机制"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">多线程并发、等待及通知机制</div></div><div class="info-2"><div class="info-item-1">1. 基础概念进程进程 &#x3D; 程序 + 执行 进程是系统分配资源的基本单位（内存、CPU时间片）进程是用来实现多进程并发执行的一个实体，实现对CPU的虚拟化，让每个进程感觉都拥有一个CPU，核心技术就是上下文切换和进程调度。进程是正在运行的程序的实例。进程是一个具有一定独立功能的程序关于某个数据集合的一次运行活动。它是操作系统动态执行的基本单元，在传统的操作系统中，进程既是基本的分配单元，也是基本的执行单元。进程是执行中的程序，除了可执行代码外还包含进程的活动信息和数据，比如用来存放函数变量、局部变量、返回值的用户栈，存放进程相关数据的数据段，内核中进程间切换的内核栈，动态分配的堆。 早期操作系统程序都是单个运行的，CPU利用率低下，为了提高CPU的利用率，加载多个程序到内存并发运行，在单核CPU中这种属于伪并发。其实在同一时间只运行一个程序   线程通常在一个进程中可以包含若干个线程，它们可以利用进程所拥有的资源，在引入线程的操作系统中，通常都是把进程作为分配资源的基本单位，而把线程作为独立运行和独立调度的基本单位，由于线程比进程更小，基本上不拥有系统资源，故对它的调度...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2024/05/20/Sentinel%E7%9A%84%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86%E5%92%8C%E5%85%B3%E9%94%AE%E7%AE%97%E6%B3%95/" title="今日学习笔记：Sentinel 核心原理与关键算法"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-05-20</div><div class="info-item-2">今日学习笔记：Sentinel 核心原理与关键算法</div></div><div class="info-2"><div class="info-item-1">一、Sentinel 对外部请求的感知机制 Sentinel 对请求的感知依赖于 Web 框架适配与拦截器机制，核心是通过自动装配实现请求链路的透明化监控，为后续流量控制提供数据基础。  实现基础：SPI 与 Spring Boot 自动装配  Sentinel 提供  sentinel-spring-webmvc-adapter  等适配模块，基于 Spring Boot 的 SPI 机制（META-INF&#x2F;spring.factories） 实现自动配置，无需手动注入拦截器，降低集成成本。  启动流程   Spring Boot 容器启动时，Sentinel 自动加载并注册配置类 SentinelWebAutoConfiguration（用户原表述中“config-auto configuration”修正为标准类名）。 该配置类向 Spring 容器注入 SentinelWebInterceptor（网络拦截器），拦截所有符合规则的 HTTP 请求（默认拦截 &#x2F;* 路径，可通过配置自定义）。   请求处理逻辑   拦截器的  preHandle  方法（...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="utterances-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src= "/img/loading.png" data-lazy-src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">GoofySatoshi</div><div class="author-info-description">分享技术、读书笔记和生活点滴</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">21</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">66</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">31</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/GoofySatoshi"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/GoofySatoshi" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">连雨不知春归去，一晴方觉夏已深</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%80%E3%80%81ThreadLocal"><span class="toc-number">1.</span> <span class="toc-text">一、ThreadLocal</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E6%9C%89ThreadLocal"><span class="toc-number">1.1.</span> <span class="toc-text">1. 为什么要有ThreadLocal ?</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-ThreadLocal%E7%9A%84%E4%BD%BF%E7%94%A8"><span class="toc-number">1.2.</span> <span class="toc-text">2. ThreadLocal的使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-ThreadLocal%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-number">1.3.</span> <span class="toc-text">3. ThreadLocal的实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-%E7%BB%93%E6%9E%84%E8%AE%BE%E8%AE%A1"><span class="toc-number">1.3.1.</span> <span class="toc-text">1.结构设计</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E5%93%88%E5%B8%8C%E5%86%B2%E7%AA%81"><span class="toc-number">1.3.2.</span> <span class="toc-text">2.哈希冲突</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F"><span class="toc-number">1.3.3.</span> <span class="toc-text">3.内存泄漏</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BA%8C%E3%80%81CAS-Atomic%E5%8E%9F%E5%AD%90%E6%93%8D%E4%BD%9C%E8%AF%A6%E8%A7%A3"><span class="toc-number">2.</span> <span class="toc-text">二、CAS &amp; Atomic原子操作详解</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E5%8E%9F%E5%AD%90%E6%93%8D%E4%BD%9C%EF%BC%9F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E5%8E%9F%E5%AD%90%E6%93%8D%E4%BD%9C%EF%BC%9F"><span class="toc-number">2.1.</span> <span class="toc-text">什么是原子操作？如何实现原子操作？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#ABA%E9%97%AE%E9%A2%98"><span class="toc-number">2.1.1.</span> <span class="toc-text">ABA问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BE%AA%E7%8E%AF%E5%BC%80%E9%94%80%E9%97%AE%E9%A2%98"><span class="toc-number">2.1.2.</span> <span class="toc-text">循环开销问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8F%AA%E8%83%BD%E4%BF%9D%E8%AF%81%E4%B8%80%E4%B8%AA%E5%85%B1%E4%BA%AB%E5%8F%98%E9%87%8F%E7%9A%84%E5%8E%9F%E5%AD%90%E6%93%8D%E4%BD%9C"><span class="toc-number">2.1.3.</span> <span class="toc-text">只能保证一个共享变量的原子操作</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#AtomicInteger"><span class="toc-number">2.2.</span> <span class="toc-text">AtomicInteger</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%A7%A3%E5%86%B3ABA%E9%97%AE%E9%A2%98%E7%9A%84Atomic%E5%8E%9F%E5%AD%90%E7%B1%BB"><span class="toc-number">2.3.</span> <span class="toc-text">解决ABA问题的Atomic原子类</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E9%97%AE%E9%A2%98"><span class="toc-number">3.</span> <span class="toc-text">三、线程安全问题</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E6%80%A7"><span class="toc-number">3.1.</span> <span class="toc-text">线程安全性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BA%BF%E7%A8%8B%E5%B0%81%E9%97%AD"><span class="toc-number">3.2.</span> <span class="toc-text">线程封闭</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%A0%88%E5%B0%81%E9%97%AD"><span class="toc-number">3.2.1.</span> <span class="toc-text">栈封闭</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%97%A0%E7%8A%B6%E6%80%81%E7%9A%84%E5%AF%B9%E8%B1%A1"><span class="toc-number">3.2.2.</span> <span class="toc-text">无状态的对象</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8A%A0%E9%94%81%E5%92%8CCAS"><span class="toc-number">3.3.</span> <span class="toc-text">加锁和CAS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%AD%BB%E9%94%81"><span class="toc-number">3.4.</span> <span class="toc-text">死锁</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%AD%BB%E9%94%81%E7%9A%84%E9%A2%84%E9%98%B2%E6%A0%B8%E5%BF%83"><span class="toc-number">3.4.1.</span> <span class="toc-text">死锁的预防核心</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E7%9A%84%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F"><span class="toc-number">3.5.</span> <span class="toc-text">线程安全的单例模式</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/10/23/ThreadLocal%E3%80%81CAS%E3%80%81Atomic%E5%8F%8A%E5%B9%B6%E5%8F%91%E5%AE%89%E5%85%A8/" title="ThreadLocal、CAS、Atomic及并发安全">ThreadLocal、CAS、Atomic及并发安全</a><time datetime="2025-10-23T14:00:00.000Z" title="发表于 2025-10-23 22:00:00">2025-10-23</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/10/21/%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E3%80%81%E7%AD%89%E5%BE%85%E9%80%9A%E7%9F%A5%E6%9C%BA%E5%88%B6/" title="多线程并发、等待及通知机制">多线程并发、等待及通知机制</a><time datetime="2025-10-21T15:00:00.000Z" title="发表于 2025-10-21 23:00:00">2025-10-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/10/15/sentinel%E6%8E%A8%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/" title="深入理解 Sentinel 限流组件推模式实现">深入理解 Sentinel 限流组件推模式实现</a><time datetime="2025-10-15T23:30:00.000Z" title="发表于 2025-10-16 07:30:00">2025-10-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/10/13/Tomcat%E7%9A%84IO%E6%A8%A1%E5%9E%8B/" title="Tomcat的IO模型与性能调优">Tomcat的IO模型与性能调优</a><time datetime="2025-10-13T07:30:00.000Z" title="发表于 2025-10-13 15:30:00">2025-10-13</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/10/12/Tomcat%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6%E8%AF%A6%E8%A7%A3/" title="Tomcat类加载机制与热部署原理详解">Tomcat类加载机制与热部署原理详解</a><time datetime="2025-10-12T17:07:00.000Z" title="发表于 2025-10-13 01:07:00">2025-10-13</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2019 - 2025 By GoofySatoshi</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/utils.min.js"></script><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/main.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+  const getUtterancesTheme = theme => theme === 'dark' ? 'github-dark' : 'github-light'
+
+  const loadUtterances = (el = document, key) => {
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyUtterances = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+
+    const config = {
+      src: 'https://utteranc.es/client.js',
+      repo: 'GoofySatoshi/GoofySatoshi.github.io',
+      theme: getUtterancesTheme(document.documentElement.getAttribute('data-theme')),
+      crossorigin: 'anonymous',
+      async: true,
+      ...option,
+      'issue-term': isShuoshuo ? key : (option && option['issue-term']) || 'pathname'
+    }
+
+    const ele = document.createElement('script')
+    Object.entries(config).forEach(([key, value]) => ele.setAttribute(key, value))
+    el.querySelector('#utterances-wrap').appendChild(ele)
+  }
+
+  const changeUtterancesTheme = theme => {
+    const iframe = document.querySelector('#utterances-wrap iframe')
+    if (iframe) {
+      const message = {
+        type: 'set-theme',
+        theme: getUtterancesTheme(theme)
+      };
+      iframe.contentWindow.postMessage(message, 'https://utteranc.es')
+    }
+  }
+
+  btf.addGlobalFn('themeChange', changeUtterancesTheme, 'utterances')
+
+  if (isShuoshuo) {
+    'Utterances' === 'Utterances'
+      ? window.shuoshuoComment = { loadComment: loadUtterances }
+      : window.loadOtherComment = loadUtterances
+    return
+  }
+  
+  if ('Utterances' === 'Utterances' || !false) {
+    if (false) btf.loadComment(document.getElementById('utterances-wrap'), loadUtterances)
+    else loadUtterances()
+  } else {
+    window.loadOtherComment = loadUtterances
+  }
+})()</script></div><script>
+  // 背景图片列表（替换为你的图片路径）
+  const backgroundImages = [
+    '/img/background1.jpg',
+    '/img/background2.png',
+    '/img/background3.jpg',
+    '/img/background4.jpg',
+    '/img/background5.jpg',
+    '/img/background6.jpg',
+    '/img/background7.jpg',
+    '/img/background8.jpg',
+    '/img/background9.jpg',
+    '/img/background10.jpg',
+    '/img/background11.jpg',
+    '/img/background12.jpg',
+    '/img/background13.jpg',
+    '/img/background14.jpg',
+    '/img/background15.jpg',
+    '/img/background16.jpg',
+    '/img/background17.jpg',
+    '/img/background18.jpg',
+    '/img/background19.jpg',
+    '/img/background20.jpg'
+  ];
+  // 随机选择一张图片
+  const randomImg = backgroundImages[Math.floor(Math.random() * backgroundImages.length)];
+  // 设置为背景
+  document.body.style.backgroundImage = `url(${randomImg})`;
+</script>
+<script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+POWERMODE.mobile = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章..." type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/search/local-search.min.js"></script></div></div></body></html>
