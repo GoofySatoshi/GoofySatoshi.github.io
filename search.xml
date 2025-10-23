@@ -917,6 +917,128 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
+    <title>Seata AT 模式与 XA 模式的区别</title>
+    <url>/2025/09/19/SEATA%E6%BA%90%E7%A0%81%EF%BC%9AAT%E4%B8%8EXA%E6%A8%A1%E5%BC%8F%E5%AD%A6%E4%B9%A0/</url>
+    <content><![CDATA[<h2 id="1-模式区别"><a href="#1-模式区别" class="headerlink" title="1. 模式区别"></a>1. 模式区别</h2><ul>
+<li><strong>AT 模式</strong>：生成的是数据源代理（DataSource Proxy），通过代理拦截 SQL 执行，无需额外配置默认模式（Seata 默认支持 AT 模式），而非“数据库动态代理”（表述更精准）。</li>
+<li><strong>XA 模式</strong>：生成的是 XA 数据源代理（XADataSource Proxy），需在 YAML 中显式配置 <code>seata.tx-mode=XA</code>（而非仅“配置默认模式为 XA”），且依赖数据库原生 XA 协议支持（如 MySQL、Oracle 的 XA 事务能力）。</li>
+</ul>
+<h2 id="2-AT-模式流程"><a href="#2-AT-模式流程" class="headerlink" title="2. AT 模式流程"></a>2. AT 模式流程</h2><ul>
+<li>第一步会申请<strong>全局事务 ID（XID）</strong>（需明确“全局”，与分支事务 ID 区分）。</li>
+<li>基于原有分布式服务调用逻辑扩展，实现异常后的<strong>自动回滚</strong>（而非“自动补偿”）——补偿逻辑通过 Undo Log 反向生成 SQL 实现，需明确概念。</li>
+<li><strong>事务开始前</strong>：申请 XID 并存储到 ThreadLocal（Seata 内部通过 <code>RootContext</code> 管理 XID，MDC 通常用于日志打印携带 XID，非核心存储位置，修正存储载体）；往 TC（事务协调器）的全局事务表（global_table）插入记录；将数据库连接的 Auto Commit 改为 <code>false</code>（手动提交）。</li>
+<li><strong>SQL 执行前</strong>：仅对<strong>写操作（insert&#x2F;update&#x2F;delete）</strong> 分析语法并生成前置镜像（查询操作不会触发镜像生成，也不会拼接 <code>for update</code>——<code>for update</code> 是用户业务 SQL 自主使用的行锁语法，AT 模式通过全局锁控制并发，修正“查询加锁”错误）。</li>
+<li><strong>SQL 执行后</strong>：对写操作获取后置镜像（基于主键&#x2F;唯一键查询，确保与前置镜像对应），此时事务未提交。</li>
+<li><strong>后续操作</strong>：将前置&#x2F;后置镜像、Undo Log 写入本地数据库的 undo_log 表（而非“Seata 的 TC 表”，TC 不存储镜像，仅管理事务状态）；向 TC 注册分支事务，TC 分配分支事务 ID（Branch ID），并将分支事务与全局事务关联；同时获取全局锁（往 TC 的 lock_table 插入记录，键为“表名+主键”，而非“事务 ID 作为标识”，修正锁标识逻辑）。</li>
+<li><strong>事务提交&#x2F;回滚</strong>：<ul>
+<li>若正常提交：TC 通知各分支删除 Undo Log，释放全局锁；</li>
+<li>若出现异常：TC 通知各分支执行 Undo Log 回滚（反向 SQL 恢复数据），之后删除 Undo Log 并释放锁；</li>
+<li>后置处理：清除 <code>RootContext</code> 中的 XID，释放数据库连接等资源（修正“清除 XID”的载体）。</li>
+</ul>
+</li>
+</ul>
+<h2 id="3-XID-传递"><a href="#3-XID-传递" class="headerlink" title="3. XID 传递"></a>3. XID 传递</h2><ul>
+<li>微服务间调用时，发起方从 <code>RootContext</code>（而非仅 MDC）获取 XID，通过 HTTP 请求头（默认键为 <code>TX_XID</code>）传递给接收方；</li>
+<li>接收方通过 Spring MVC 拦截器&#x2F;Feign 拦截器解析请求头中的 <code>TX_XID</code>，并绑定到自身的 <code>RootContext</code> 中，从而实现 XID 跨服务传递（MDC 仅用于日志携带 XID，方便排查，非传递核心逻辑）。</li>
+</ul>
+<h2 id="4-其他要点"><a href="#4-其他要点" class="headerlink" title="4. 其他要点"></a>4. 其他要点</h2><ul>
+<li><strong>AT 模式的全局锁</strong>：获取时往 TC 的 <code>lock_table</code> 插入记录，键为“<code>resource_id</code>（数据源标识）+表名+主键”（而非“事务 ID 作为标识”，事务 ID 用于关联全局事务，锁键才是唯一标识）；插入失败时会阻塞并重试（默认重试次数可配置），避免并发写冲突。</li>
+<li><strong>AT 模式的默认隔离级别</strong>：读已提交（Read Committed），但通过“全局锁+本地锁”的协同，可避免“脏写”，并在一定程度上缓解“不可重复读”（需补充隔离级别的实际效果）。</li>
+<li><strong>取消全局事务绑定</strong>：若某服务不想参与全局事务，需在调用下游服务前执行 <code>RootContext.unbind()</code>（解除当前 XID 绑定），下游服务将不会注册分支事务；若后续需重新参与，需再次绑定 XID（修正“调用下游前再重新绑定”的顺序逻辑）。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>分布式系统</category>
+        <category>中间件</category>
+        <category>Seata</category>
+      </categories>
+      <tags>
+        <tag>Seata</tag>
+        <tag>AT模式</tag>
+        <tag>XA模式</tag>
+        <tag>分布式事务</tag>
+        <tag>全局事务ID</tag>
+        <tag>Undo Log</tag>
+        <tag>事务协调器</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Seata 分布式事务其他模式学习笔记</title>
+    <url>/2025/09/07/Seata%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/</url>
+    <content><![CDATA[<p> </p>
+<p>今天学习了 Seata 分布式事务的其他模式，包括 XA 模式、TCC 模式和 Saga 模式，以下是详细整理：</p>
+<p>一、XA 模式</p>
+<p>核心特点</p>
+<ul>
+<li>连接持有机制：XA 模式会持有数据库连接（如 MySQL 的  Connection  对象）直至两阶段提交完成，在此期间连接无法释放，可能影响数据库连接池性能。</li>
+<li>注解使用：需同时使用  @GlobalTransactional （保证分布式事务的提交&#x2F;回滚）和  @Transactional （保证本地事务正常提交）两个注解。</li>
+<li>两阶段流程：<br>1. 一阶段：各分支事务执行本地业务逻辑，但不提交，仅记录日志并等待全局协调。<br>2. 二阶段：事务协调者（TC）根据全局事务状态，决定所有分支事务执行  commit （提交）或  rollback （回滚）。</li>
+</ul>
+<p>优缺点</p>
+<ul>
+<li>优点：强一致性，依赖数据库原生 XA 协议，无需侵入业务代码。</li>
+<li>缺点：长期持有连接导致性能损耗大，不适合高并发场景，一般不推荐使用。</li>
+</ul>
+<p>二、TCC 模式</p>
+<p>核心概念</p>
+<p>TCC 模式将分布式事务分为三个阶段，需手动实现业务逻辑：</p>
+<p>1. Try：资源检查与预留（如扣减库存前检查库存是否充足，并锁定部分库存）。<br>2. Confirm：确认提交（如实际扣减锁定的库存）。<br>3. Cancel：取消回滚（如释放锁定的库存）。</p>
+<p>注解使用</p>
+<p>需在服务类上配合使用  @LocalTCC  和  @TwoPhaseBusinessAction  注解，明确 Try、Confirm、Cancel 方法的映射关系。</p>
+<p>关键问题及解决方案</p>
+<p>1. 空回滚：</p>
+<ul>
+<li>问题：当某分支事务未执行完成（如远程调用失败），却触发了 Cancel 回滚，导致无实际业务可回滚。</li>
+<li>解决：Seata 通过全局事务 ID（XID）和分支 ID 查询对应记录，判断是否需要执行回滚逻辑。<br>2. 幂等性：</li>
+<li>问题：因网络重试等原因，同一事务可能被多次执行（如重复提交订单）。</li>
+<li>解决：通过状态机控制事务状态（如  Trying （执行中）、 Committed （已提交）、 Rollbacked （已回滚）），避免重复处理。<br>3. 悬挂问题：</li>
+<li>问题：事务执行顺序异常（如二阶段提交先于一阶段完成，导致一阶段失败后无法回滚）。</li>
+<li>解决：新版本 Seata 限制在一阶段业务逻辑未完成前，不允许执行二阶段的  commit  操作。</li>
+</ul>
+<p>优缺点</p>
+<ul>
+<li>优点：灵活性高，不依赖特定数据源，支持非关系型数据库。</li>
+<li>缺点：对业务代码侵入性强，需手动实现三个阶段的逻辑，开发成本高。</li>
+</ul>
+<p>三、Saga 模式</p>
+<p>核心特点</p>
+<ul>
+<li>状态机驱动：通过状态机定义业务流程的执行顺序，以及异常时的补偿逻辑（逆向操作）。</li>
+<li>回滚机制：当某环节失败时，通过状态机触发前置步骤的补偿操作（如订单创建失败，回滚支付、库存扣减等操作）。</li>
+</ul>
+<p>常见实践</p>
+<ul>
+<li>实际应用中，Saga 模式较少直接使用，更多结合 MQ 实现定时补偿：</li>
+<li>业务处理失败时，将补偿任务发送至 MQ，通过重试机制反复执行。</li>
+<li>多次重试失败后，消息进入死信队列，由人工介入处理，保证数据最终一致性。</li>
+</ul>
+<p>适用场景</p>
+<ul>
+<li>适合业务流程长、分支多的场景（如订单履约全流程）。</li>
+<li>适合老系统改造（无需深入了解原有业务细节，通过状态流转控制补偿逻辑）。</li>
+</ul>
+<p>四、模式对比与选择建议</p>
+<p>模式 一致性 性能 业务侵入性 适用场景<br>XA 强一致 差 无 低并发、强一致性要求极高场景<br>AT 最终一致 中 无 关系型数据库、一般微服务场景<br>TCC 最终一致 高 高 新业务、非关系型数据库场景<br>Saga 最终一致 中 低 长事务、老系统改造场景 </p>
+<p>选择建议</p>
+<ul>
+<li>新业务且需灵活控制资源：优先考虑 TCC 模式（需接受业务侵入性）。</li>
+<li>关系型数据库为主、低侵入需求：优先考虑 AT 模式。</li>
+<li>老系统改造或长事务：优先考虑 Saga 模式。</li>
+<li>性能敏感场景：避免使用 XA 模式。</li>
+</ul>
+<p>总结</p>
+<p>Seata 提供的多种分布式事务模式各有优劣，实际使用中需根据业务场景（如一致性要求、并发量、系统新旧程度）选择合适的模式，同时注意解决 TCC 等模式中的空回滚、幂等性、悬挂等问题，确保分布式事务的可靠性。</p>
+]]></content>
+      <categories>
+        <category>分布式系统</category>
+        <category>中间件</category>
+      </categories>
+      <tags>
+        <tag>Seata</tag>
+        <tag>分布式事务</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Nacos 2.X 核心源码学习笔记</title>
     <url>/2025/08/27/Nacos2-x%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
     <content><![CDATA[<h2 id="一、引言"><a href="#一、引言" class="headerlink" title="一、引言"></a>一、引言</h2><p>Nacos 作为阿里开源的分布式服务发现与配置管理平台，2.X 版本在架构上进行了协议升级（HTTP→gRPC）、存储结构优化（嵌套 Map→扁平分层）、一致性增强（Distro→Raft）</p>
@@ -1161,125 +1283,66 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title>Seata AT 模式与 XA 模式的区别</title>
-    <url>/2025/09/19/SEATA%E6%BA%90%E7%A0%81%EF%BC%9AAT%E4%B8%8EXA%E6%A8%A1%E5%BC%8F%E5%AD%A6%E4%B9%A0/</url>
-    <content><![CDATA[<h2 id="1-模式区别"><a href="#1-模式区别" class="headerlink" title="1. 模式区别"></a>1. 模式区别</h2><ul>
-<li><strong>AT 模式</strong>：生成的是数据源代理（DataSource Proxy），通过代理拦截 SQL 执行，无需额外配置默认模式（Seata 默认支持 AT 模式），而非“数据库动态代理”（表述更精准）。</li>
-<li><strong>XA 模式</strong>：生成的是 XA 数据源代理（XADataSource Proxy），需在 YAML 中显式配置 <code>seata.tx-mode=XA</code>（而非仅“配置默认模式为 XA”），且依赖数据库原生 XA 协议支持（如 MySQL、Oracle 的 XA 事务能力）。</li>
-</ul>
-<h2 id="2-AT-模式流程"><a href="#2-AT-模式流程" class="headerlink" title="2. AT 模式流程"></a>2. AT 模式流程</h2><ul>
-<li>第一步会申请<strong>全局事务 ID（XID）</strong>（需明确“全局”，与分支事务 ID 区分）。</li>
-<li>基于原有分布式服务调用逻辑扩展，实现异常后的<strong>自动回滚</strong>（而非“自动补偿”）——补偿逻辑通过 Undo Log 反向生成 SQL 实现，需明确概念。</li>
-<li><strong>事务开始前</strong>：申请 XID 并存储到 ThreadLocal（Seata 内部通过 <code>RootContext</code> 管理 XID，MDC 通常用于日志打印携带 XID，非核心存储位置，修正存储载体）；往 TC（事务协调器）的全局事务表（global_table）插入记录；将数据库连接的 Auto Commit 改为 <code>false</code>（手动提交）。</li>
-<li><strong>SQL 执行前</strong>：仅对<strong>写操作（insert&#x2F;update&#x2F;delete）</strong> 分析语法并生成前置镜像（查询操作不会触发镜像生成，也不会拼接 <code>for update</code>——<code>for update</code> 是用户业务 SQL 自主使用的行锁语法，AT 模式通过全局锁控制并发，修正“查询加锁”错误）。</li>
-<li><strong>SQL 执行后</strong>：对写操作获取后置镜像（基于主键&#x2F;唯一键查询，确保与前置镜像对应），此时事务未提交。</li>
-<li><strong>后续操作</strong>：将前置&#x2F;后置镜像、Undo Log 写入本地数据库的 undo_log 表（而非“Seata 的 TC 表”，TC 不存储镜像，仅管理事务状态）；向 TC 注册分支事务，TC 分配分支事务 ID（Branch ID），并将分支事务与全局事务关联；同时获取全局锁（往 TC 的 lock_table 插入记录，键为“表名+主键”，而非“事务 ID 作为标识”，修正锁标识逻辑）。</li>
-<li><strong>事务提交&#x2F;回滚</strong>：<ul>
-<li>若正常提交：TC 通知各分支删除 Undo Log，释放全局锁；</li>
-<li>若出现异常：TC 通知各分支执行 Undo Log 回滚（反向 SQL 恢复数据），之后删除 Undo Log 并释放锁；</li>
-<li>后置处理：清除 <code>RootContext</code> 中的 XID，释放数据库连接等资源（修正“清除 XID”的载体）。</li>
+    <title>Sentinel 控制台用法与工作原理学习笔记</title>
+    <url>/2025/09/01/Sentinel-%E6%8E%A7%E5%88%B6%E5%8F%B0%E7%94%A8%E6%B3%95%E4%B8%8E%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
+    <content><![CDATA[<h1 id="Sentinel-控制台用法与工作原理学习笔记"><a href="#Sentinel-控制台用法与工作原理学习笔记" class="headerlink" title="Sentinel 控制台用法与工作原理学习笔记"></a>Sentinel 控制台用法与工作原理学习笔记</h1><h2 id="一、流控规则配置"><a href="#一、流控规则配置" class="headerlink" title="一、流控规则配置"></a>一、流控规则配置</h2><ol>
+<li><strong>基础控制维度</strong>：支持对 QPS（每秒查询率）和并发线程数进行控制。</li>
+<li><strong>三种流控模式</strong>：<ul>
+<li>直接关系：直接针对接口配置流量规则，可设置 QPS 或并发线程数阈值，当触发阈值时直接对该接口进行限流。</li>
+<li>关联关系：适用于存在关联的服务，例如调用 A 服务的请求过多时，可配置当 A 服务的 QPS 或并发线程数达到阈值后，对关联的 B 服务进行流量控制，避免因 A 服务过载影响 B 服务。</li>
+<li>链路关系：针对具有调用关系的链路进行配置，可对链路上的特定节点或多个节点限流，进而控制整个链路的流量。需注意：1.7 版本后，链路控制功能需在配置文件中设置 <code>WebContextUtile</code> 参数为 <code>false</code> 才能生效。</li>
 </ul>
 </li>
+<li><strong>三种流控类型</strong>：<ul>
+<li>快速失败：当接口请求超过设定阈值（QPS 或并发线程数）时，直接返回失败结果。</li>
+<li>接口预热：服务启动时，通过模拟线程加载缓存等资源，避免刚启动就被大量流量击垮，逐渐提升接口处理能力至阈值。</li>
+<li>排队等待：可设置超时时间，请求会进入队列等待处理。若超时则被剔除并返回失败；未超时则正常响应。例如，阈值设为 20 时，每秒处理 20 个请求，超出部分进入队列等待。</li>
 </ul>
-<h2 id="3-XID-传递"><a href="#3-XID-传递" class="headerlink" title="3. XID 传递"></a>3. XID 传递</h2><ul>
-<li>微服务间调用时，发起方从 <code>RootContext</code>（而非仅 MDC）获取 XID，通过 HTTP 请求头（默认键为 <code>TX_XID</code>）传递给接收方；</li>
-<li>接收方通过 Spring MVC 拦截器&#x2F;Feign 拦截器解析请求头中的 <code>TX_XID</code>，并绑定到自身的 <code>RootContext</code> 中，从而实现 XID 跨服务传递（MDC 仅用于日志携带 XID，方便排查，非传递核心逻辑）。</li>
+</li>
+</ol>
+<h2 id="二、熔断降级配置"><a href="#二、熔断降级配置" class="headerlink" title="二、熔断降级配置"></a>二、熔断降级配置</h2><p>基于三种情况设置阈值，触发后进入熔断状态，熔断时间结束后恢复正常：</p>
+<ol>
+<li>慢调用比例：当慢调用（如慢查询接口）占比超过配置阈值时，触发熔断。</li>
+<li>异常比例：接口异常请求占比超过阈值时，触发熔断。</li>
+<li>异常数：接口异常请求数量达到阈值时，触发熔断。</li>
+</ol>
+<h2 id="三、热点限流"><a href="#三、热点限流" class="headerlink" title="三、热点限流"></a>三、热点限流</h2><p>针对接口的热点参数（仅支持 Java 7 种基本数据类型）进行 QPS 配置。例如，查询用户 ID 为 1 的数据是热点，可设置当该参数的 QPS 达到阈值时进行限流。</p>
+<h2 id="四、系统规则限流"><a href="#四、系统规则限流" class="headerlink" title="四、系统规则限流"></a>四、系统规则限流</h2><p>从系统整体层面限制流量，包含五种模式：</p>
+<ol>
+<li>Load：仅对 Linux&#x2F;Unix 机器生效，根据系统负载进行限流。</li>
+<li>RT（响应时间）：当系统整体响应时间超过阈值时，触发限流。</li>
+<li>线程数：限制系统最大支持的并发线程数，超过则限流。</li>
+<li>入口 QPS：限制单位时间内整体进入系统的 QPS，超过则限流。</li>
+<li>CPU 使用率：当 CPU 使用率超过阈值时，触发限流。</li>
+</ol>
+<h2 id="五、授权规则限流"><a href="#五、授权规则限流" class="headerlink" title="五、授权规则限流"></a>五、授权规则限流</h2><p>支持通过黑白名单实现微服务间的调用控制：</p>
+<ul>
+<li>需手动实现 <code>RequestOriginParser</code> 接口，并将其注册为 Spring 管理的 Bean，用于解析请求来源。</li>
+<li>根据解析的来源，结合黑白名单规则，允许或限制微服务间的调用。</li>
 </ul>
-<h2 id="4-其他要点"><a href="#4-其他要点" class="headerlink" title="4. 其他要点"></a>4. 其他要点</h2><ul>
-<li><strong>AT 模式的全局锁</strong>：获取时往 TC 的 <code>lock_table</code> 插入记录，键为“<code>resource_id</code>（数据源标识）+表名+主键”（而非“事务 ID 作为标识”，事务 ID 用于关联全局事务，锁键才是唯一标识）；插入失败时会阻塞并重试（默认重试次数可配置），避免并发写冲突。</li>
-<li><strong>AT 模式的默认隔离级别</strong>：读已提交（Read Committed），但通过“全局锁+本地锁”的协同，可避免“脏写”，并在一定程度上缓解“不可重复读”（需补充隔离级别的实际效果）。</li>
-<li><strong>取消全局事务绑定</strong>：若某服务不想参与全局事务，需在调用下游服务前执行 <code>RootContext.unbind()</code>（解除当前 XID 绑定），下游服务将不会注册分支事务；若后续需重新参与，需再次绑定 XID（修正“调用下游前再重新绑定”的顺序逻辑）。</li>
+<h2 id="六、集群流控"><a href="#六、集群流控" class="headerlink" title="六、集群流控"></a>六、集群流控</h2><ol>
+<li>基础配置：在流控规则中可选择是否为集群模式，支持单机均摊或整体阈值设置。</li>
+<li>差异化配置：通过 <code>Token Server</code> 和 <code>Token Client</code> 实现，可针对不同机器（如配置高低）设置差异化 QPS 阈值，配置高的机器可适当提高 QPS，配置低的则降低。</li>
+</ol>
+<h2 id="七、工作原理"><a href="#七、工作原理" class="headerlink" title="七、工作原理"></a>七、工作原理</h2><ol>
+<li><strong>核心抽象</strong>：将流量规则控制、集群节点聚簇等功能抽象为一个个 <code>Slot</code>（插槽）。</li>
+<li><strong>责任链模式</strong>：所有插槽构成一条责任链，请求需依次经过链路上的各个插槽检查。</li>
+<li><strong>执行流程</strong>：<ul>
+<li>外部请求进入后，先进行统计簇点构建和监控统计。</li>
+<li>依次经过热点参数限流、系统保护限流、来源访问控制限流、流量控制、熔断降级等插槽的检查。</li>
+<li>若链路上任何一个插槽的限流规则未通过，返回快速失败结果；全部通过则执行接口逻辑。</li>
 </ul>
+</li>
+</ol>
 ]]></content>
       <categories>
-        <category>分布式系统</category>
-        <category>中间件</category>
-        <category>Seata</category>
+        <category>技术笔记</category>
+        <category>中间件学习</category>
       </categories>
       <tags>
-        <tag>Seata</tag>
-        <tag>AT模式</tag>
-        <tag>XA模式</tag>
-        <tag>分布式事务</tag>
-        <tag>全局事务ID</tag>
-        <tag>Undo Log</tag>
-        <tag>事务协调器</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Seata 分布式事务其他模式学习笔记</title>
-    <url>/2025/09/07/Seata%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/</url>
-    <content><![CDATA[<p> </p>
-<p>今天学习了 Seata 分布式事务的其他模式，包括 XA 模式、TCC 模式和 Saga 模式，以下是详细整理：</p>
-<p>一、XA 模式</p>
-<p>核心特点</p>
-<ul>
-<li>连接持有机制：XA 模式会持有数据库连接（如 MySQL 的  Connection  对象）直至两阶段提交完成，在此期间连接无法释放，可能影响数据库连接池性能。</li>
-<li>注解使用：需同时使用  @GlobalTransactional （保证分布式事务的提交&#x2F;回滚）和  @Transactional （保证本地事务正常提交）两个注解。</li>
-<li>两阶段流程：<br>1. 一阶段：各分支事务执行本地业务逻辑，但不提交，仅记录日志并等待全局协调。<br>2. 二阶段：事务协调者（TC）根据全局事务状态，决定所有分支事务执行  commit （提交）或  rollback （回滚）。</li>
-</ul>
-<p>优缺点</p>
-<ul>
-<li>优点：强一致性，依赖数据库原生 XA 协议，无需侵入业务代码。</li>
-<li>缺点：长期持有连接导致性能损耗大，不适合高并发场景，一般不推荐使用。</li>
-</ul>
-<p>二、TCC 模式</p>
-<p>核心概念</p>
-<p>TCC 模式将分布式事务分为三个阶段，需手动实现业务逻辑：</p>
-<p>1. Try：资源检查与预留（如扣减库存前检查库存是否充足，并锁定部分库存）。<br>2. Confirm：确认提交（如实际扣减锁定的库存）。<br>3. Cancel：取消回滚（如释放锁定的库存）。</p>
-<p>注解使用</p>
-<p>需在服务类上配合使用  @LocalTCC  和  @TwoPhaseBusinessAction  注解，明确 Try、Confirm、Cancel 方法的映射关系。</p>
-<p>关键问题及解决方案</p>
-<p>1. 空回滚：</p>
-<ul>
-<li>问题：当某分支事务未执行完成（如远程调用失败），却触发了 Cancel 回滚，导致无实际业务可回滚。</li>
-<li>解决：Seata 通过全局事务 ID（XID）和分支 ID 查询对应记录，判断是否需要执行回滚逻辑。<br>2. 幂等性：</li>
-<li>问题：因网络重试等原因，同一事务可能被多次执行（如重复提交订单）。</li>
-<li>解决：通过状态机控制事务状态（如  Trying （执行中）、 Committed （已提交）、 Rollbacked （已回滚）），避免重复处理。<br>3. 悬挂问题：</li>
-<li>问题：事务执行顺序异常（如二阶段提交先于一阶段完成，导致一阶段失败后无法回滚）。</li>
-<li>解决：新版本 Seata 限制在一阶段业务逻辑未完成前，不允许执行二阶段的  commit  操作。</li>
-</ul>
-<p>优缺点</p>
-<ul>
-<li>优点：灵活性高，不依赖特定数据源，支持非关系型数据库。</li>
-<li>缺点：对业务代码侵入性强，需手动实现三个阶段的逻辑，开发成本高。</li>
-</ul>
-<p>三、Saga 模式</p>
-<p>核心特点</p>
-<ul>
-<li>状态机驱动：通过状态机定义业务流程的执行顺序，以及异常时的补偿逻辑（逆向操作）。</li>
-<li>回滚机制：当某环节失败时，通过状态机触发前置步骤的补偿操作（如订单创建失败，回滚支付、库存扣减等操作）。</li>
-</ul>
-<p>常见实践</p>
-<ul>
-<li>实际应用中，Saga 模式较少直接使用，更多结合 MQ 实现定时补偿：</li>
-<li>业务处理失败时，将补偿任务发送至 MQ，通过重试机制反复执行。</li>
-<li>多次重试失败后，消息进入死信队列，由人工介入处理，保证数据最终一致性。</li>
-</ul>
-<p>适用场景</p>
-<ul>
-<li>适合业务流程长、分支多的场景（如订单履约全流程）。</li>
-<li>适合老系统改造（无需深入了解原有业务细节，通过状态流转控制补偿逻辑）。</li>
-</ul>
-<p>四、模式对比与选择建议</p>
-<p>模式 一致性 性能 业务侵入性 适用场景<br>XA 强一致 差 无 低并发、强一致性要求极高场景<br>AT 最终一致 中 无 关系型数据库、一般微服务场景<br>TCC 最终一致 高 高 新业务、非关系型数据库场景<br>Saga 最终一致 中 低 长事务、老系统改造场景 </p>
-<p>选择建议</p>
-<ul>
-<li>新业务且需灵活控制资源：优先考虑 TCC 模式（需接受业务侵入性）。</li>
-<li>关系型数据库为主、低侵入需求：优先考虑 AT 模式。</li>
-<li>老系统改造或长事务：优先考虑 Saga 模式。</li>
-<li>性能敏感场景：避免使用 XA 模式。</li>
-</ul>
-<p>总结</p>
-<p>Seata 提供的多种分布式事务模式各有优劣，实际使用中需根据业务场景（如一致性要求、并发量、系统新旧程度）选择合适的模式，同时注意解决 TCC 等模式中的空回滚、幂等性、悬挂等问题，确保分布式事务的可靠性。</p>
-]]></content>
-      <categories>
-        <category>分布式系统</category>
-        <category>中间件</category>
-      </categories>
-      <tags>
-        <tag>Seata</tag>
-        <tag>分布式事务</tag>
+        <tag>Sentinel</tag>
+        <tag>流量控制</tag>
+        <tag>熔断降级</tag>
       </tags>
   </entry>
   <entry>
@@ -1350,69 +1413,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>Sentinel</tag>
         <tag>源码解析</tag>
         <tag>中间件</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Sentinel 控制台用法与工作原理学习笔记</title>
-    <url>/2025/09/01/Sentinel-%E6%8E%A7%E5%88%B6%E5%8F%B0%E7%94%A8%E6%B3%95%E4%B8%8E%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
-    <content><![CDATA[<h1 id="Sentinel-控制台用法与工作原理学习笔记"><a href="#Sentinel-控制台用法与工作原理学习笔记" class="headerlink" title="Sentinel 控制台用法与工作原理学习笔记"></a>Sentinel 控制台用法与工作原理学习笔记</h1><h2 id="一、流控规则配置"><a href="#一、流控规则配置" class="headerlink" title="一、流控规则配置"></a>一、流控规则配置</h2><ol>
-<li><strong>基础控制维度</strong>：支持对 QPS（每秒查询率）和并发线程数进行控制。</li>
-<li><strong>三种流控模式</strong>：<ul>
-<li>直接关系：直接针对接口配置流量规则，可设置 QPS 或并发线程数阈值，当触发阈值时直接对该接口进行限流。</li>
-<li>关联关系：适用于存在关联的服务，例如调用 A 服务的请求过多时，可配置当 A 服务的 QPS 或并发线程数达到阈值后，对关联的 B 服务进行流量控制，避免因 A 服务过载影响 B 服务。</li>
-<li>链路关系：针对具有调用关系的链路进行配置，可对链路上的特定节点或多个节点限流，进而控制整个链路的流量。需注意：1.7 版本后，链路控制功能需在配置文件中设置 <code>WebContextUtile</code> 参数为 <code>false</code> 才能生效。</li>
-</ul>
-</li>
-<li><strong>三种流控类型</strong>：<ul>
-<li>快速失败：当接口请求超过设定阈值（QPS 或并发线程数）时，直接返回失败结果。</li>
-<li>接口预热：服务启动时，通过模拟线程加载缓存等资源，避免刚启动就被大量流量击垮，逐渐提升接口处理能力至阈值。</li>
-<li>排队等待：可设置超时时间，请求会进入队列等待处理。若超时则被剔除并返回失败；未超时则正常响应。例如，阈值设为 20 时，每秒处理 20 个请求，超出部分进入队列等待。</li>
-</ul>
-</li>
-</ol>
-<h2 id="二、熔断降级配置"><a href="#二、熔断降级配置" class="headerlink" title="二、熔断降级配置"></a>二、熔断降级配置</h2><p>基于三种情况设置阈值，触发后进入熔断状态，熔断时间结束后恢复正常：</p>
-<ol>
-<li>慢调用比例：当慢调用（如慢查询接口）占比超过配置阈值时，触发熔断。</li>
-<li>异常比例：接口异常请求占比超过阈值时，触发熔断。</li>
-<li>异常数：接口异常请求数量达到阈值时，触发熔断。</li>
-</ol>
-<h2 id="三、热点限流"><a href="#三、热点限流" class="headerlink" title="三、热点限流"></a>三、热点限流</h2><p>针对接口的热点参数（仅支持 Java 7 种基本数据类型）进行 QPS 配置。例如，查询用户 ID 为 1 的数据是热点，可设置当该参数的 QPS 达到阈值时进行限流。</p>
-<h2 id="四、系统规则限流"><a href="#四、系统规则限流" class="headerlink" title="四、系统规则限流"></a>四、系统规则限流</h2><p>从系统整体层面限制流量，包含五种模式：</p>
-<ol>
-<li>Load：仅对 Linux&#x2F;Unix 机器生效，根据系统负载进行限流。</li>
-<li>RT（响应时间）：当系统整体响应时间超过阈值时，触发限流。</li>
-<li>线程数：限制系统最大支持的并发线程数，超过则限流。</li>
-<li>入口 QPS：限制单位时间内整体进入系统的 QPS，超过则限流。</li>
-<li>CPU 使用率：当 CPU 使用率超过阈值时，触发限流。</li>
-</ol>
-<h2 id="五、授权规则限流"><a href="#五、授权规则限流" class="headerlink" title="五、授权规则限流"></a>五、授权规则限流</h2><p>支持通过黑白名单实现微服务间的调用控制：</p>
-<ul>
-<li>需手动实现 <code>RequestOriginParser</code> 接口，并将其注册为 Spring 管理的 Bean，用于解析请求来源。</li>
-<li>根据解析的来源，结合黑白名单规则，允许或限制微服务间的调用。</li>
-</ul>
-<h2 id="六、集群流控"><a href="#六、集群流控" class="headerlink" title="六、集群流控"></a>六、集群流控</h2><ol>
-<li>基础配置：在流控规则中可选择是否为集群模式，支持单机均摊或整体阈值设置。</li>
-<li>差异化配置：通过 <code>Token Server</code> 和 <code>Token Client</code> 实现，可针对不同机器（如配置高低）设置差异化 QPS 阈值，配置高的机器可适当提高 QPS，配置低的则降低。</li>
-</ol>
-<h2 id="七、工作原理"><a href="#七、工作原理" class="headerlink" title="七、工作原理"></a>七、工作原理</h2><ol>
-<li><strong>核心抽象</strong>：将流量规则控制、集群节点聚簇等功能抽象为一个个 <code>Slot</code>（插槽）。</li>
-<li><strong>责任链模式</strong>：所有插槽构成一条责任链，请求需依次经过链路上的各个插槽检查。</li>
-<li><strong>执行流程</strong>：<ul>
-<li>外部请求进入后，先进行统计簇点构建和监控统计。</li>
-<li>依次经过热点参数限流、系统保护限流、来源访问控制限流、流量控制、熔断降级等插槽的检查。</li>
-<li>若链路上任何一个插槽的限流规则未通过，返回快速失败结果；全部通过则执行接口逻辑。</li>
-</ul>
-</li>
-</ol>
-]]></content>
-      <categories>
-        <category>技术笔记</category>
-        <category>中间件学习</category>
-      </categories>
-      <tags>
-        <tag>Sentinel</tag>
-        <tag>流量控制</tag>
-        <tag>熔断降级</tag>
       </tags>
   </entry>
   <entry>
@@ -1524,7 +1524,7 @@ LoadBalancer 3.2.0+ 2023.0.3+
 </li>
 </ul>
 <p>一般实现原子操作都会使用锁机制,虽然锁机制可以满足简单基本的业务需求,但是有的时候我们需要更有效、灵活的机制。sychronized这种基于阻塞的锁机制，持有锁的时候，其他线程会被全部阻塞，直到持有锁的线程释放锁。为了解决这个问题，Java提供了Atomic的原子工具类。</p>
-<p>Aotmic内部机制一般均为循环CAS重试来实现的,CAS这种无锁无阻塞循环尝试更新的操作，在性能上通常比sychronized锁机制更良好。<br>虽然CAS在锁竞争弱的情况下性能上比阻塞锁机制要优秀，但是这是有代价的。CAS有下面三个缺陷</p>
+<p>在JDK早期版本：Aotmic内部机制一般均为循环CAS重试来实现的,CAS这种无锁无阻塞循环尝试更新的操作，在性能上通常比sychronized锁机制更良好。<br>但是JDK不断对sychronized锁进行优化，现在两者性能上差距基本上没什么区别了。<br>虽然CAS在锁竞争弱的情况下性能上比阻塞锁机制要优秀，但是这是有代价的。CAS有下面三个缺陷</p>
 <h3 id="ABA问题"><a href="#ABA问题" class="headerlink" title="ABA问题"></a>ABA问题</h3><p>ABA问题是CAS操作的弊病之一，在多线程并发的条件下，虽然期望值是A,但可能已经被其他线程修改成A了,如果此时进行更新操作，就会因为这种ABA问题发生并发条件下的数据脏写。ABA问题的解决方案一般是使用版本号进行记录数据版本,来根据版本号+期望值 双期望值来决定要不要更新数据。</p>
 <h3 id="循环开销问题"><a href="#循环开销问题" class="headerlink" title="循环开销问题"></a>循环开销问题</h3><p>虽然CAS是无锁不阻塞的方式进行尝试更新数据，但是高并发环境下大量线程竞争，循环导致的额外开销会非常大，导致CPU的空转开销，造成性能上的浪费，这种情况下更适合使用sychronized阻塞锁来保证数据的原子性、安全性。</p>
 <h3 id="只能保证一个共享变量的原子操作"><a href="#只能保证一个共享变量的原子操作" class="headerlink" title="只能保证一个共享变量的原子操作"></a>只能保证一个共享变量的原子操作</h3><p>CAS的机制决定了只能保证对一个共享变量进行原子操作。但并不是绝对的，我们可以把多个共享变量合并成一个共享变量的对象进行操作（但是这种情况下又会导致锁竞争加剧，性能下降严重）</p>
@@ -1977,82 +1977,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title>Tomcat类加载机制与热部署原理详解</title>
-    <url>/2025/10/12/Tomcat%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6%E8%AF%A6%E8%A7%A3/</url>
-    <content><![CDATA[<h1 id="1-Tomcat类加载机制详解"><a href="#1-Tomcat类加载机制详解" class="headerlink" title="1.Tomcat类加载机制详解"></a>1.Tomcat类加载机制详解</h1><h2 id="1-1-JVM类加载器"><a href="#1-1-JVM类加载器" class="headerlink" title="1.1 JVM类加载器"></a>1.1 JVM类加载器</h2><p>Java中有3种类加载器，当然你也可以自定义类加载器</p>
-<ul>
-<li>引导类加载器（启动类加载器）：负责加载支撑JVM运行的位于JRE的lib目录下的核心类库，比如rt.jar、charsets.jar</li>
-<li>扩展类加载器：负责加载支撑JVM运行的JRE的lib目录下ext扩展目录中的核心jar包</li>
-<li>应用程序类加载器（系统类加载器）：负责ClassPath路径下的类包，主要就是加载你自己写的类</li>
-<li>自定义类加载器：自己实现，负责加载自定义路径下的类包<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ClassLoaderDemo</span>&#123;</span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span>&#123;</span><br><span class="line">    <span class="comment">// BootStrapClassLoader c/c++实现，java层面是获取不到的，会输出null</span></span><br><span class="line">    System.out.println(ReentrantLock.class.getClassLoader());</span><br><span class="line">    <span class="comment">// ExtClassLoader</span></span><br><span class="line">    System.out.println(ZipInfo.class.getClassLoader());</span><br><span class="line">    <span class="comment">// AppClassLoader</span></span><br><span class="line">    System.out.println(ClassLoaderDemo.class.getClassLoader());</span><br><span class="line">    System.out.println(<span class="string">&quot;===========JVM类加载器父子关系==============&quot;</span>);</span><br><span class="line">    <span class="comment">// AppClassLoader </span></span><br><span class="line">    System.out.println(ClassLoader.getSystemClassLoader());</span><br><span class="line">    <span class="comment">// ExtClassLoader</span></span><br><span class="line">    System.out.println(ClassLoader.getSystemClassLoader().getParent());</span><br><span class="line">    <span class="comment">// BootStrapClassLoader</span></span><br><span class="line">    System.out.println(ClassLoader.getSystemClassLoader().getParent().getParent());</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
-</ul>
-<h2 id="1-2-双亲委派机制"><a href="#1-2-双亲委派机制" class="headerlink" title="1.2 双亲委派机制"></a>1.2 双亲委派机制</h2><p>Java中的类加载依赖双亲委派机制，加载某个类时会先委托父加载器寻找目标类，找不到再委托上层父加载器加载，如果所有父加载器在自己的加载类路径下都找不到目标类，则在自己的类加载目录中查找并载入目标类，双亲委派机制说简单点就是，先找父亲加载，不行再由儿子自己加载<br><img width="1404" height="1188" alt="image" src="https://github.com/user-attachments/assets/dcd36232-ea06-418a-a266-178af135f9b0" /></p>
-<h3 id="为什么设计双亲委派机制？"><a href="#为什么设计双亲委派机制？" class="headerlink" title="为什么设计双亲委派机制？"></a>为什么设计双亲委派机制？</h3><ul>
-<li>沙箱安全机制:防止核心类库API被随意篡改</li>
-<li>避免类的重复加载：父加载器已经加载了该类时，就没必要子类加载器再加载一次，保证被加载类的唯一性</li>
-</ul>
-<h3 id="ClassLocader-loadClass源码分析"><a href="#ClassLocader-loadClass源码分析" class="headerlink" title="ClassLocader#loadClass源码分析"></a>ClassLocader#loadClass源码分析</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">class</span> <span class="title class_">ClassLoader</span> &#123;</span><br><span class="line">    <span class="comment">// The parent class loader for delegation</span></span><br><span class="line">    <span class="comment">// Note: VM hardcoded the offset of this field, thus all new fields</span></span><br><span class="line">    <span class="comment">// must be added *after* it.</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> ClassLoader parent;</span><br><span class="line">    <span class="keyword">public</span> Class&lt;?&gt; loadClass(String name) <span class="keyword">throws</span> ClassNotFoundException &#123;</span><br><span class="line">        <span class="keyword">return</span> loadClass(name, <span class="literal">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line"><span class="keyword">protected</span> Class&lt;?&gt; loadClass(String name, <span class="type">boolean</span> resolve)</span><br><span class="line">        <span class="keyword">throws</span> ClassNotFoundException</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (getClassLoadingLock(name)) &#123;</span><br><span class="line">            <span class="comment">// First, check if the class has already been loaded</span></span><br><span class="line">            Class&lt;?&gt; c = findLoadedClass(name);</span><br><span class="line">            <span class="keyword">if</span> (c == <span class="literal">null</span>) &#123;</span><br><span class="line">                <span class="type">long</span> <span class="variable">t0</span> <span class="operator">=</span> System.nanoTime();</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="keyword">if</span> (parent != <span class="literal">null</span>) &#123;</span><br><span class="line">                        c = parent.loadClass(name, <span class="literal">false</span>);</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        c = findBootstrapClassOrNull(name);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">                    <span class="comment">// ClassNotFoundException thrown if class not found</span></span><br><span class="line">                    <span class="comment">// from the non-null parent class loader</span></span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">if</span> (c == <span class="literal">null</span>) &#123;</span><br><span class="line">                    <span class="comment">// If still not found, then invoke findClass in order</span></span><br><span class="line">                    <span class="comment">// to find the class.</span></span><br><span class="line">                    <span class="type">long</span> <span class="variable">t1</span> <span class="operator">=</span> System.nanoTime();</span><br><span class="line">                    c = findClass(name);</span><br><span class="line"></span><br><span class="line">                    <span class="comment">// this is the defining class loader; record the stats</span></span><br><span class="line">                    PerfCounter.getParentDelegationTime().addTime(t1 - t0);</span><br><span class="line">                    PerfCounter.getFindClassTime().addElapsedTimeFrom(t1);</span><br><span class="line">                    PerfCounter.getFindClasses().increment();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (resolve) &#123;</span><br><span class="line">                resolveClass(c);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> c;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="1-3-Tomcat为什么（如何）打破双亲委派机制？"><a href="#1-3-Tomcat为什么（如何）打破双亲委派机制？" class="headerlink" title="1.3 Tomcat为什么（如何）打破双亲委派机制？"></a>1.3 Tomcat为什么（如何）打破双亲委派机制？</h2><p>Tomcat的主要目的是充当应用服务器并处理用户的业务请求，使用场景可能会单机部署多应用。所以Tomcat打破双亲委派机制，核心是为了解决多Web应用独立运行的类隔离需求：双亲委派要求类加载器优先委托父加载器加载类，而Tomcat中多个Web应用可能依赖同一类的不同版本（如不同Spring版本），若按双亲委派，父加载器（如CommonClassLoader）加载一个版本后，所有应用都只能使用该版本，会引发类版本冲突；因此Tomcat自定义了WebAppClassLoader等加载器，让每个Web应用的类加载器优先加载自身WEB-INF&#x2F;classes和WEB-INF&#x2F;lib下的类，仅在自身未找到时才委托父加载器，从而实现不同应用类的独立隔离，保证多应用在同一容器中互不干扰地运行。<br>Tomcat打破双亲委派具体实现就是重写ClassLoader的两个方法：findClass和loadClass，来改变双亲委派的类加载顺序，但是直接重写这两个实现依然需要保证核心类库被篡改，所以为了保证核心类库的安全性，并没有一开始就使用系统类型加载器加载，而是先查询本地目录缓存，为了避免本地目录下的类覆盖JRE的核心类，会先尝试用JVM扩展类加载器ExtClassLoader去加载</p>
-<h3 id="findClass方法"><a href="#findClass方法" class="headerlink" title="findClass方法"></a>findClass方法</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Class&lt;?&gt; findClass(String name) <span class="keyword">throws</span> ClassNotFoundException &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">        log.debug(<span class="string">&quot;    findClass(&quot;</span> + name + <span class="string">&quot;)&quot;</span>);</span><br><span class="line"></span><br><span class="line">    checkStateForClassLoading(name);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// (1) Permission to define this class when using a SecurityManager</span></span><br><span class="line">    <span class="keyword">if</span> (securityManager != <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> name.lastIndexOf(<span class="string">&#x27;.&#x27;</span>);</span><br><span class="line">        <span class="keyword">if</span> (i &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">                    log.trace(<span class="string">&quot;      securityManager.checkPackageDefinition&quot;</span>);</span><br><span class="line">                securityManager.checkPackageDefinition(name.substring(<span class="number">0</span>,i));</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception se) &#123;</span><br><span class="line">                <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">                    log.trace(<span class="string">&quot;      --&gt;Exception--&gt;ClassNotFoundException&quot;</span>, se);</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ClassNotFoundException</span>(name, se);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Ask our superclass to locate this class, if possible</span></span><br><span class="line">    <span class="comment">// (throws ClassNotFoundException if it is not found)</span></span><br><span class="line">    Class&lt;?&gt; clazz = <span class="literal">null</span>;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">            log.trace(<span class="string">&quot;      findClassInternal(&quot;</span> + name + <span class="string">&quot;)&quot;</span>);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (securityManager != <span class="literal">null</span>) &#123;</span><br><span class="line">                PrivilegedAction&lt;Class&lt;?&gt;&gt; dp =</span><br><span class="line">                    <span class="keyword">new</span> <span class="title class_">PrivilegedFindClassByName</span>(name);</span><br><span class="line">                clazz = AccessController.doPrivileged(dp);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                 <span class="comment">// 1、先在应用本地目录下查找类 </span></span><br><span class="line">                clazz = findClassInternal(name);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span>(AccessControlException ace) &#123;</span><br><span class="line">            log.warn(<span class="string">&quot;WebappClassLoader.findClassInternal(&quot;</span> + name</span><br><span class="line">                    + <span class="string">&quot;) security exception: &quot;</span> + ace.getMessage(), ace);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ClassNotFoundException</span>(name, ace);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (RuntimeException e) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">                log.trace(<span class="string">&quot;      --&gt;RuntimeException Rethrown&quot;</span>, e);</span><br><span class="line">            <span class="keyword">throw</span> e;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> ((clazz == <span class="literal">null</span>) &amp;&amp; hasExternalRepositories) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                 <span class="comment">// 2、如果在本地目录没有找到，委派父加载器去查找</span></span><br><span class="line">                clazz = <span class="built_in">super</span>.findClass(name);</span><br><span class="line">            &#125; <span class="keyword">catch</span>(AccessControlException ace) &#123;</span><br><span class="line">                log.warn(<span class="string">&quot;WebappClassLoader.findClassInternal(&quot;</span> + name</span><br><span class="line">                        + <span class="string">&quot;) security exception: &quot;</span> + ace.getMessage(), ace);</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ClassNotFoundException</span>(name, ace);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (RuntimeException e) &#123;</span><br><span class="line">                <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">                    log.trace(<span class="string">&quot;      --&gt;RuntimeException Rethrown&quot;</span>, e);</span><br><span class="line">                <span class="keyword">throw</span> e;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 3、如果父加载器也没找到，抛出异常</span></span><br><span class="line">        <span class="keyword">if</span> (clazz == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                log.debug(<span class="string">&quot;    --&gt; Returning ClassNotFoundException&quot;</span>);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ClassNotFoundException</span>(name);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">        <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">            log.trace(<span class="string">&quot;    --&gt; Passing on ClassNotFoundException&quot;</span>);</span><br><span class="line">        <span class="keyword">throw</span> e;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Return the class we have located</span></span><br><span class="line">    <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">        log.debug(<span class="string">&quot;      Returning class &quot;</span> + clazz);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (log.isTraceEnabled()) &#123;</span><br><span class="line">        ClassLoader cl;</span><br><span class="line">        <span class="keyword">if</span> (Globals.IS_SECURITY_ENABLED)&#123;</span><br><span class="line">            cl = AccessController.doPrivileged(</span><br><span class="line">                <span class="keyword">new</span> <span class="title class_">PrivilegedGetClassLoader</span>(clazz));</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            cl = clazz.getClassLoader();</span><br><span class="line">        &#125;</span><br><span class="line">        log.debug(<span class="string">&quot;      Loaded by &quot;</span> + cl.toString());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> (clazz);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="loadClass方法"><a href="#loadClass方法" class="headerlink" title="loadClass方法"></a>loadClass方法</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Class&lt;?&gt; loadClass(String name, <span class="type">boolean</span> resolve) <span class="keyword">throws</span> ClassNotFoundException &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">synchronized</span> (getClassLoadingLock(name)) &#123;</span><br><span class="line">        Class&lt;?&gt; clazz = <span class="literal">null</span>;</span><br><span class="line">        <span class="comment">// 1、从本地缓存中查找是否加载过此类</span></span><br><span class="line">        clazz = findLoadedClass0(name);</span><br><span class="line">        <span class="keyword">if</span> (clazz != <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                log.debug(<span class="string">&quot;  Returning class from cache&quot;</span>);</span><br><span class="line">            <span class="keyword">if</span> (resolve)</span><br><span class="line">                resolveClass(clazz);</span><br><span class="line">            <span class="keyword">return</span> clazz;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 2、从AppClassLoader中查找是否加载过此类</span></span><br><span class="line">        clazz = findLoadedClass(name);</span><br><span class="line">        <span class="keyword">if</span> (clazz != <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                log.debug(<span class="string">&quot;  Returning class from cache&quot;</span>);</span><br><span class="line">            <span class="keyword">if</span> (resolve)</span><br><span class="line">                resolveClass(clazz);</span><br><span class="line">            <span class="keyword">return</span> clazz;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="type">String</span> <span class="variable">resourceName</span> <span class="operator">=</span> binaryNameToPath(name, <span class="literal">false</span>);</span><br><span class="line">        <span class="comment">// 3、尝试用ExtClassLoader 类加载器加载类,防止应用覆盖JRE的核心类</span></span><br><span class="line">        <span class="type">ClassLoader</span> <span class="variable">javaseLoader</span> <span class="operator">=</span> getJavaseClassLoader();</span><br><span class="line">        <span class="type">boolean</span> tryLoadingFromJavaseLoader;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            URL url;</span><br><span class="line">            <span class="keyword">if</span> (securityManager != <span class="literal">null</span>) &#123;</span><br><span class="line">                PrivilegedAction&lt;URL&gt; dp = <span class="keyword">new</span> <span class="title class_">PrivilegedJavaseGetResource</span>(resourceName);</span><br><span class="line">                url = AccessController.doPrivileged(dp);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                url = javaseLoader.getResource(resourceName);</span><br><span class="line">            &#125;</span><br><span class="line">            tryLoadingFromJavaseLoader = (url != <span class="literal">null</span>);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">            tryLoadingFromJavaseLoader = <span class="literal">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="type">boolean</span> <span class="variable">delegateLoad</span> <span class="operator">=</span> delegate || filter(name, <span class="literal">true</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 4、判断是否设置了delegate属性,如果设置为true那么就按照双亲委派机制加载类</span></span><br><span class="line">        <span class="keyword">if</span> (delegateLoad) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                log.debug(<span class="string">&quot;  Delegating to parent classloader1 &quot;</span> + parent);</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                clazz = Class.forName(name, <span class="literal">false</span>, parent);</span><br><span class="line">                <span class="keyword">if</span> (clazz != <span class="literal">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                        log.debug(<span class="string">&quot;  Loading class from parent&quot;</span>);</span><br><span class="line">                    <span class="keyword">if</span> (resolve)</span><br><span class="line">                        resolveClass(clazz);</span><br><span class="line">                    <span class="keyword">return</span> clazz;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">                <span class="comment">// Ignore</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 5、默认是设置delegate是false的,那么就会先用WebAppClassLoader进行加载</span></span><br><span class="line">        <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">            log.debug(<span class="string">&quot;  Searching local repositories&quot;</span>);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            clazz = findClass(name);</span><br><span class="line">            <span class="keyword">if</span> (clazz != <span class="literal">null</span>) &#123;</span><br><span class="line">                <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                    log.debug(<span class="string">&quot;  Loading class from local repository&quot;</span>);</span><br><span class="line">                <span class="keyword">if</span> (resolve)</span><br><span class="line">                    resolveClass(clazz);</span><br><span class="line">                <span class="keyword">return</span> clazz;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">            <span class="comment">// Ignore</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 6、如果在WebAppClassLoader没找到类，那么就委托给AppClassLoader去加载</span></span><br><span class="line">        <span class="keyword">if</span> (!delegateLoad) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                log.debug(<span class="string">&quot;  Delegating to parent classloader at end: &quot;</span> + parent);</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                clazz = Class.forName(name, <span class="literal">false</span>, parent);</span><br><span class="line">                <span class="keyword">if</span> (clazz != <span class="literal">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                        log.debug(<span class="string">&quot;  Loading class from parent&quot;</span>);</span><br><span class="line">                    <span class="keyword">if</span> (resolve)</span><br><span class="line">                        resolveClass(clazz);</span><br><span class="line">                    <span class="keyword">return</span> clazz;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">                <span class="comment">// Ignore</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ClassNotFoundException</span>(name);</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<h2 id="1-4-Tomcat如何隔离Web应用"><a href="#1-4-Tomcat如何隔离Web应用" class="headerlink" title="1.4 Tomcat如何隔离Web应用"></a>1.4 Tomcat如何隔离Web应用</h2><p>Tomcat作为Servlet容器，它负责加载我们的Servlet类，此外它还负责加载Servlet所依赖的JAR包。并且Tomcat本身也是一个Java程序，因此它需要加载自己的类和依赖的JAR包。Tomcat此时需要解决下面这三个问题：</p>
-<ol>
-<li>Tomcat运行了两个Web应用程序，两个Web应用中有同名的Servlet,但是功能不同，Tomcat需要同时加载和管理这两个同名的Servlet类，保证它们不会冲突。Tomcat是如何实现Web应用之间的所有类都完成隔离的？</li>
-<li>两个Web应用都依赖同一个第三方的JAR包，比如Spring,Spring的JAR包被加载到内存后，Tomcat要保证这两个Web应用能够共享，也就是说Spring的JAR包只被加载一次，否则随着依赖第三方JAR包的增多，JVM的内存会膨胀，Tomcat是如何解决的？</li>
-<li>跟JVM一样，我们需要隔离Tomcat本身的类和Web应用的类。Tomcat是怎么实现的？<br>也就是如何实现内部类隔离，三方JAR包资源共享，以及自身的隔离性</li>
-</ol>
-<h3 id="Tomcat类加载器的层次结构"><a href="#Tomcat类加载器的层次结构" class="headerlink" title="Tomcat类加载器的层次结构"></a>Tomcat类加载器的层次结构</h3><p>为了解决这些问题，Tomcat设计了类加载器的层次结构，它们的关系如下图所示：<br><img width="1668" height="2034" alt="image" src="https://github.com/user-attachments/assets/ffc48507-ed9f-47a8-9b39-76ff73eaa2be" /></p>
-<ul>
-<li>commonLoader:Tomcat最基本的类加载器，加载路径中的class可以被Tomcat容器以及本身各个Webapp访问；</li>
-<li>catalinaLoader:Tomcat容器私有的类加载器，加载路径中的class对于Webapp不可见；</li>
-<li>sharedLoader:各个Webapp共享的类加载器，加载路径中的class对于所有的Webapp可见，但是对于Tomcat容器不可见；</li>
-<li>WebappClassLoader：各个Webapp私有的类加载器，加载路径中的class，只对当前webapp可见，加载war包里相关的类，每个war包应用都有自己的WebAppClassLoader，实现相互隔离，加载对应各自的依赖版本</li>
-</ul>
-<h3 id="全盘负责委托机制"><a href="#全盘负责委托机制" class="headerlink" title="全盘负责委托机制"></a>全盘负责委托机制</h3><p>当一个ClassLoader装载一个类的时候，除非显式的使用另一个ClassLoader，该类所依赖及引用的类也由这个ClassLoader载入。<br>比如Spring作为Bean工厂，它需要创建业务类的实例，并且创建业务类实例之前需要加载这些类。Spring是通过Class.forName来加载业务类的，下面是forName的源码：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> Class&lt;?&gt; forName(String className)&#123;</span><br><span class="line">    Class&lt;?&gt; caller = Reflection.getCallerClass();</span><br><span class="line">    <span class="keyword">return</span> forName(className,<span class="literal">true</span>,CLassLoader.getClassLoader(caller),caller);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>forName的函数中，会默认使用调用者的类加载器去加载业务类。<br>Web应用之间共享的JAR包可以交给SharedClassLoader来加载，从而避免重复加载。Spring作为共享的第三方JAR包，它本身是由SharedClassLoader来加载的，Spring又要去加载业务类，按照前面的那条规则，加载Spring的类加载器也会用来加载业务类，但是业务类再Web应用目录下，不在SharedClassLoader的加载路径下，Tomcat是如何解决这个问题的？</p>
-<h3 id="线程上下文加载器"><a href="#线程上下文加载器" class="headerlink" title="线程上下文加载器"></a>线程上下文加载器</h3><p>于是线程上下文加载器登场了，它其实是一种类加载器传递机制。为什么叫做“线程上下文加载器”？因为这个类加载器保存在线程私有数据里，只要是同一个线程，一旦设置了线程上下文加载器，在线程后续执行过程中就能把这个线程类加载器取出来使用。因此Tomcat为每个Web应用创建一个WebAppClassLoader类加载器，并在启动Web应用的线程里设置线程上下文加载器，这样Spring在启动时就将线程上下文类加载器取出来，用来加载Bean。源代码如下：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">c1 = Thread.currentThread().getContextClassLoader();</span><br></pre></td></tr></table></figure>
-<p>线程上下文加载器不仅仅可以用在Tomcat和Spring类加载器的场景里，核心框架类需要加载具体实现类时都可以用到它，比如我们熟悉的JDBC就是通过上下文类加载器来加载不同的数据库驱动的</p>
-<h1 id="2-Tomcat热加载和热部署"><a href="#2-Tomcat热加载和热部署" class="headerlink" title="2. Tomcat热加载和热部署"></a>2. Tomcat热加载和热部署</h1><p>项目开发过程中，经常要改动Java&#x2F;JSP文件，但是又不想重新启动Tomcat,有两种方式：热加载和热部署。热部署表示重新部署应用，它执行的主体是HOST。热加载表示重新加载class，它的执行主体是Context。</p>
-<ul>
-<li>热加载：在server.xml -&gt; context标签中 设置 reloadable &#x3D; “true”<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Context</span> <span class="attr">docBase</span>=<span class="string">&quot;C:\project&quot;</span> <span class="attr">path</span>=<span class="string">&quot;/project&quot;</span> <span class="attr">reloadable</span>=<span class="string">&quot;true&quot;</span>/&gt;</span></span><br></pre></td></tr></table></figure></li>
-<li>热部署：在server.xml -&gt; Host标签中 设置 autoDeploy&#x3D;”true”<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Host</span> <span class="attr">name</span>=<span class="string">&quot;localhost&quot;</span> <span class="attr">appBase</span>=<span class="string">&quot;webapps&quot;</span> <span class="attr">unpackWARS</span>=<span class="string">&quot;true&quot;</span> <span class="attr">autoDeploy</span>=<span class="string">&quot;true&quot;</span> /&gt;</span></span><br></pre></td></tr></table></figure>
-它们的区别是：</li>
-<li>热加载的实现方式是Web容器启动一个后台线程，定期检测类文件的变化，如果有变化，就重新加载类，这个过程中不会清空Session，一般用在开发环境</li>
-<li>热部署原理类似，也是由后台线程定时检测Web应用的变化，但它会重新加载整个Web应用。这种方式会清空Session，比热加载更加彻底，一般用于生产环境</li>
-</ul>
-<h2 id="2-1-Tomcat开启后台线程执行周期性任务"><a href="#2-1-Tomcat开启后台线程执行周期性任务" class="headerlink" title="2.1 Tomcat开启后台线程执行周期性任务"></a>2.1 Tomcat开启后台线程执行周期性任务</h2><p>Tomcat 通过ScheduledThreadPoolExecutor（定时线程池） 管理后台周期性任务，核心是在容器初始化时（如 Service 启动阶段）创建固定数量的后台线程，绑定到 Catalina 生命周期中统一管理。典型场景包括：会话过期清理（定期扫描 HttpSession，销毁超时会话）、日志滚动（按时间 &#x2F; 大小切割访问日志）、连接池维护（检测并回收空闲数据库连接）、集群节点心跳检测等。任务调度支持 “固定延迟”（如每隔 30 秒执行）或 “固定速率”（如每分钟执行一次），且线程池会自动处理任务异常，避免单个任务失败导致整个线程池崩溃，确保周期性任务稳定执行且不阻塞主线程。</p>
-<h2 id="2-2-Tomcat热加载实现原理"><a href="#2-2-Tomcat热加载实现原理" class="headerlink" title="2.2 Tomcat热加载实现原理"></a>2.2 Tomcat热加载实现原理</h2><p>Tomcat 热加载的核心是基于类加载器的 “重新加载” 机制，仅针对 Web 应用内部的类和资源（如 WEB-INF&#x2F;classes、WEB-INF&#x2F;lib），无需重启整个 Tomcat 容器。具体逻辑：</p>
-<ol>
-<li>后台线程（如 WebAppLoader 的监控线程）定期扫描 WEB-INF&#x2F;classes 和 lib 目录下文件的 “最后修改时间”，对比上次扫描记录；</li>
-<li>若检测到文件变化（如.class 文件更新、JAR 包替换），Tomcat 会销毁当前 Web 应用的WebAppClassLoader（应用级类加载器）（同时销毁其加载的所有类、Servlet 实例、线程资源）；</li>
-<li>创建新的 WebAppClassLoader，重新加载更新后的类和资源，初始化 Servlet、Spring 容器等组件，完成 “热加载”。该机制仅适用于开发环境（如调试时修改代码），且无法处理服务器级配置（如 server.xml）的变化，因这类配置依赖 Tomcat 核心类加载器，无法单独重新加载。<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 1. 启动资源监控线程（位于WebAppLoader中）</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">start</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="comment">// 启动定时监控线程（每2秒扫描一次资源变化）</span></span><br><span class="line">    monitorThread = <span class="keyword">new</span> <span class="title class_">Thread</span>(<span class="keyword">new</span> <span class="title class_">ResourceMonitor</span>(), <span class="string">&quot;WebappResourceMonitor&quot;</span>);</span><br><span class="line">    monitorThread.setDaemon(<span class="literal">true</span>);</span><br><span class="line">    monitorThread.start();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 2. 资源监控逻辑（检测类或JAR包变化）</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">ResourceMonitor</span> <span class="keyword">implements</span> <span class="title class_">Runnable</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">long</span> <span class="variable">lastModified</span> <span class="operator">=</span> <span class="number">0</span>;  <span class="comment">// 上次修改时间</span></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">run</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">while</span> (running) &#123;</span><br><span class="line">            <span class="comment">// 扫描WEB-INF/classes和lib目录的最后修改时间</span></span><br><span class="line">            <span class="type">long</span> <span class="variable">currentModified</span> <span class="operator">=</span> getResourcesLastModified();</span><br><span class="line">            <span class="keyword">if</span> (currentModified &gt; lastModified) &#123;</span><br><span class="line">                <span class="comment">// 检测到变化，触发热加载</span></span><br><span class="line">                context.reload();  <span class="comment">// 调用Context的重新加载方法</span></span><br><span class="line">                lastModified = currentModified;</span><br><span class="line">            &#125;</span><br><span class="line">            Thread.sleep(<span class="number">2000</span>);  <span class="comment">// 间隔2秒扫描</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 3. Context的reload方法（销毁旧类加载器，创建新的）</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">reload</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="comment">// 销毁当前Web应用的类加载器和资源</span></span><br><span class="line">    <span class="type">WebappClassLoader</span> <span class="variable">oldLoader</span> <span class="operator">=</span> <span class="built_in">this</span>.loader;</span><br><span class="line">    oldLoader.stop();  <span class="comment">// 释放类、Servlet实例等资源</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 创建新的类加载器，重新加载资源</span></span><br><span class="line">    <span class="built_in">this</span>.loader = <span class="keyword">new</span> <span class="title class_">WebappClassLoader</span>(oldLoader.getParent());</span><br><span class="line">    <span class="built_in">this</span>.loader.start();  <span class="comment">// 加载更新后的类和配置</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
-</ol>
-<h2 id="2-3-Tomcat热部署实现原理"><a href="#2-3-Tomcat热部署实现原理" class="headerlink" title="2.3 Tomcat热部署实现原理"></a>2.3 Tomcat热部署实现原理</h2><p>Tomcat 热部署是整个 Web 应用的 “卸载 - 重新部署” 过程，支持替换应用的完整资源（包括 WAR 包、配置文件、静态资源等），可用于生产环境的版本更新（通常需短暂停止应用）。具体逻辑：</p>
-<ol>
-<li>触发方式（手动复制新 WAR 包、通过 Manager 应用 &#x2F; API 发送部署指令）；</li>
-<li>卸载旧应用：停止应用所有 Servlet 和 Filter，关闭数据库连接池、线程池等资源，销毁对应的 WebAppClassLoader 和应用上下文（Context），删除旧应用的临时目录；</li>
-<li>部署新应用：解压新 WAR 包（若为 WAR 格式），创建新的 Context 和 WebAppClassLoader，加载新的类、资源和配置文件，初始化 Servlet、Listener 等组件，绑定到 Connector（连接器）接收请求。</li>
-</ol>
-<p>与热加载的核心区别是：热部署针对 “整个应用” 的替换，可处理配置文件（如 web.xml）的变化；热加载仅针对 “类和资源” 的重新加载，依赖应用级类加载器，不涉及 Context 销毁。</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 1. 热部署触发（检测webapps目录下的WAR包变化）</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HostConfig</span> <span class="keyword">implements</span> <span class="title class_">LifecycleListener</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">lifecycleEvent</span><span class="params">(LifecycleEvent event)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (event.getType().equals(Lifecycle.PERIODIC_EVENT)) &#123;</span><br><span class="line">            checkResources();  <span class="comment">// 定期检查应用资源变化</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">checkResources</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="comment">// 扫描webapps目录下的WAR包或目录</span></span><br><span class="line">        <span class="keyword">for</span> (File app : webappsDir.listFiles()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (isModified(app)) &#123;  <span class="comment">// 检测到应用更新（如WAR包替换）</span></span><br><span class="line">                redeploy(app);  <span class="comment">// 执行热部署</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 2. 重新部署逻辑（卸载旧应用+部署新应用）</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">redeploy</span><span class="params">(File app)</span> &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">appName</span> <span class="operator">=</span> app.getName();</span><br><span class="line">    <span class="comment">// 第一步：卸载旧应用</span></span><br><span class="line">    <span class="type">Context</span> <span class="variable">oldContext</span> <span class="operator">=</span> host.findContext(appName);</span><br><span class="line">    <span class="keyword">if</span> (oldContext != <span class="literal">null</span>) &#123;</span><br><span class="line">        host.removeChild(oldContext);  <span class="comment">// 从Host中移除旧Context</span></span><br><span class="line">        oldContext.stop();  <span class="comment">// 停止旧应用（释放连接池、线程等）</span></span><br><span class="line">        oldContext.destroy();  <span class="comment">// 销毁旧应用资源</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 第二步：部署新应用</span></span><br><span class="line">    <span class="type">Context</span> <span class="variable">newContext</span> <span class="operator">=</span> createContext(app);  <span class="comment">// 创建新Context</span></span><br><span class="line">    host.addChild(newContext);  <span class="comment">// 添加到Host</span></span><br><span class="line">    newContext.start();  <span class="comment">// 启动新应用（加载新类、初始化Servlet等）</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-]]></content>
-      <categories>
-        <category>后端技术</category>
-        <category>中间件</category>
-        <category>Tomcat</category>
-      </categories>
-      <tags>
-        <tag>Tomcat</tag>
-        <tag>类加载机制</tag>
-        <tag>热部署</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Sentinel 拉模式实现详解</title>
     <url>/2025/09/04/sentinel%E6%8B%89%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/</url>
     <content><![CDATA[<h2 id="一、为什么需要-Sentinel-拉模式？"><a href="#一、为什么需要-Sentinel-拉模式？" class="headerlink" title="一、为什么需要 Sentinel 拉模式？"></a>一、为什么需要 Sentinel 拉模式？</h2><p>Sentinel 默认的内存模式存在明显缺陷：限流规则仅存储在客户端内存中，应用重启后规则全部丢失，无法满足生产环境的规则持久化与统一管理需求。</p>
@@ -2184,6 +2108,82 @@ public MysqlPullFlowRuleDataSource mysqlPullFlowRuleDataSource() &#123;
         <tag>Sentinel</tag>
         <tag>流量控制</tag>
         <tag>拉模式</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Tomcat类加载机制与热部署原理详解</title>
+    <url>/2025/10/12/Tomcat%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6%E8%AF%A6%E8%A7%A3/</url>
+    <content><![CDATA[<h1 id="1-Tomcat类加载机制详解"><a href="#1-Tomcat类加载机制详解" class="headerlink" title="1.Tomcat类加载机制详解"></a>1.Tomcat类加载机制详解</h1><h2 id="1-1-JVM类加载器"><a href="#1-1-JVM类加载器" class="headerlink" title="1.1 JVM类加载器"></a>1.1 JVM类加载器</h2><p>Java中有3种类加载器，当然你也可以自定义类加载器</p>
+<ul>
+<li>引导类加载器（启动类加载器）：负责加载支撑JVM运行的位于JRE的lib目录下的核心类库，比如rt.jar、charsets.jar</li>
+<li>扩展类加载器：负责加载支撑JVM运行的JRE的lib目录下ext扩展目录中的核心jar包</li>
+<li>应用程序类加载器（系统类加载器）：负责ClassPath路径下的类包，主要就是加载你自己写的类</li>
+<li>自定义类加载器：自己实现，负责加载自定义路径下的类包<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ClassLoaderDemo</span>&#123;</span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span>&#123;</span><br><span class="line">    <span class="comment">// BootStrapClassLoader c/c++实现，java层面是获取不到的，会输出null</span></span><br><span class="line">    System.out.println(ReentrantLock.class.getClassLoader());</span><br><span class="line">    <span class="comment">// ExtClassLoader</span></span><br><span class="line">    System.out.println(ZipInfo.class.getClassLoader());</span><br><span class="line">    <span class="comment">// AppClassLoader</span></span><br><span class="line">    System.out.println(ClassLoaderDemo.class.getClassLoader());</span><br><span class="line">    System.out.println(<span class="string">&quot;===========JVM类加载器父子关系==============&quot;</span>);</span><br><span class="line">    <span class="comment">// AppClassLoader </span></span><br><span class="line">    System.out.println(ClassLoader.getSystemClassLoader());</span><br><span class="line">    <span class="comment">// ExtClassLoader</span></span><br><span class="line">    System.out.println(ClassLoader.getSystemClassLoader().getParent());</span><br><span class="line">    <span class="comment">// BootStrapClassLoader</span></span><br><span class="line">    System.out.println(ClassLoader.getSystemClassLoader().getParent().getParent());</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h2 id="1-2-双亲委派机制"><a href="#1-2-双亲委派机制" class="headerlink" title="1.2 双亲委派机制"></a>1.2 双亲委派机制</h2><p>Java中的类加载依赖双亲委派机制，加载某个类时会先委托父加载器寻找目标类，找不到再委托上层父加载器加载，如果所有父加载器在自己的加载类路径下都找不到目标类，则在自己的类加载目录中查找并载入目标类，双亲委派机制说简单点就是，先找父亲加载，不行再由儿子自己加载<br><img width="1404" height="1188" alt="image" src="https://github.com/user-attachments/assets/dcd36232-ea06-418a-a266-178af135f9b0" /></p>
+<h3 id="为什么设计双亲委派机制？"><a href="#为什么设计双亲委派机制？" class="headerlink" title="为什么设计双亲委派机制？"></a>为什么设计双亲委派机制？</h3><ul>
+<li>沙箱安全机制:防止核心类库API被随意篡改</li>
+<li>避免类的重复加载：父加载器已经加载了该类时，就没必要子类加载器再加载一次，保证被加载类的唯一性</li>
+</ul>
+<h3 id="ClassLocader-loadClass源码分析"><a href="#ClassLocader-loadClass源码分析" class="headerlink" title="ClassLocader#loadClass源码分析"></a>ClassLocader#loadClass源码分析</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">class</span> <span class="title class_">ClassLoader</span> &#123;</span><br><span class="line">    <span class="comment">// The parent class loader for delegation</span></span><br><span class="line">    <span class="comment">// Note: VM hardcoded the offset of this field, thus all new fields</span></span><br><span class="line">    <span class="comment">// must be added *after* it.</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> ClassLoader parent;</span><br><span class="line">    <span class="keyword">public</span> Class&lt;?&gt; loadClass(String name) <span class="keyword">throws</span> ClassNotFoundException &#123;</span><br><span class="line">        <span class="keyword">return</span> loadClass(name, <span class="literal">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line"><span class="keyword">protected</span> Class&lt;?&gt; loadClass(String name, <span class="type">boolean</span> resolve)</span><br><span class="line">        <span class="keyword">throws</span> ClassNotFoundException</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (getClassLoadingLock(name)) &#123;</span><br><span class="line">            <span class="comment">// First, check if the class has already been loaded</span></span><br><span class="line">            Class&lt;?&gt; c = findLoadedClass(name);</span><br><span class="line">            <span class="keyword">if</span> (c == <span class="literal">null</span>) &#123;</span><br><span class="line">                <span class="type">long</span> <span class="variable">t0</span> <span class="operator">=</span> System.nanoTime();</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="keyword">if</span> (parent != <span class="literal">null</span>) &#123;</span><br><span class="line">                        c = parent.loadClass(name, <span class="literal">false</span>);</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        c = findBootstrapClassOrNull(name);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">                    <span class="comment">// ClassNotFoundException thrown if class not found</span></span><br><span class="line">                    <span class="comment">// from the non-null parent class loader</span></span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">if</span> (c == <span class="literal">null</span>) &#123;</span><br><span class="line">                    <span class="comment">// If still not found, then invoke findClass in order</span></span><br><span class="line">                    <span class="comment">// to find the class.</span></span><br><span class="line">                    <span class="type">long</span> <span class="variable">t1</span> <span class="operator">=</span> System.nanoTime();</span><br><span class="line">                    c = findClass(name);</span><br><span class="line"></span><br><span class="line">                    <span class="comment">// this is the defining class loader; record the stats</span></span><br><span class="line">                    PerfCounter.getParentDelegationTime().addTime(t1 - t0);</span><br><span class="line">                    PerfCounter.getFindClassTime().addElapsedTimeFrom(t1);</span><br><span class="line">                    PerfCounter.getFindClasses().increment();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (resolve) &#123;</span><br><span class="line">                resolveClass(c);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> c;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="1-3-Tomcat为什么（如何）打破双亲委派机制？"><a href="#1-3-Tomcat为什么（如何）打破双亲委派机制？" class="headerlink" title="1.3 Tomcat为什么（如何）打破双亲委派机制？"></a>1.3 Tomcat为什么（如何）打破双亲委派机制？</h2><p>Tomcat的主要目的是充当应用服务器并处理用户的业务请求，使用场景可能会单机部署多应用。所以Tomcat打破双亲委派机制，核心是为了解决多Web应用独立运行的类隔离需求：双亲委派要求类加载器优先委托父加载器加载类，而Tomcat中多个Web应用可能依赖同一类的不同版本（如不同Spring版本），若按双亲委派，父加载器（如CommonClassLoader）加载一个版本后，所有应用都只能使用该版本，会引发类版本冲突；因此Tomcat自定义了WebAppClassLoader等加载器，让每个Web应用的类加载器优先加载自身WEB-INF&#x2F;classes和WEB-INF&#x2F;lib下的类，仅在自身未找到时才委托父加载器，从而实现不同应用类的独立隔离，保证多应用在同一容器中互不干扰地运行。<br>Tomcat打破双亲委派具体实现就是重写ClassLoader的两个方法：findClass和loadClass，来改变双亲委派的类加载顺序，但是直接重写这两个实现依然需要保证核心类库被篡改，所以为了保证核心类库的安全性，并没有一开始就使用系统类型加载器加载，而是先查询本地目录缓存，为了避免本地目录下的类覆盖JRE的核心类，会先尝试用JVM扩展类加载器ExtClassLoader去加载</p>
+<h3 id="findClass方法"><a href="#findClass方法" class="headerlink" title="findClass方法"></a>findClass方法</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Class&lt;?&gt; findClass(String name) <span class="keyword">throws</span> ClassNotFoundException &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">        log.debug(<span class="string">&quot;    findClass(&quot;</span> + name + <span class="string">&quot;)&quot;</span>);</span><br><span class="line"></span><br><span class="line">    checkStateForClassLoading(name);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// (1) Permission to define this class when using a SecurityManager</span></span><br><span class="line">    <span class="keyword">if</span> (securityManager != <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> name.lastIndexOf(<span class="string">&#x27;.&#x27;</span>);</span><br><span class="line">        <span class="keyword">if</span> (i &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">                    log.trace(<span class="string">&quot;      securityManager.checkPackageDefinition&quot;</span>);</span><br><span class="line">                securityManager.checkPackageDefinition(name.substring(<span class="number">0</span>,i));</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception se) &#123;</span><br><span class="line">                <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">                    log.trace(<span class="string">&quot;      --&gt;Exception--&gt;ClassNotFoundException&quot;</span>, se);</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ClassNotFoundException</span>(name, se);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Ask our superclass to locate this class, if possible</span></span><br><span class="line">    <span class="comment">// (throws ClassNotFoundException if it is not found)</span></span><br><span class="line">    Class&lt;?&gt; clazz = <span class="literal">null</span>;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">            log.trace(<span class="string">&quot;      findClassInternal(&quot;</span> + name + <span class="string">&quot;)&quot;</span>);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (securityManager != <span class="literal">null</span>) &#123;</span><br><span class="line">                PrivilegedAction&lt;Class&lt;?&gt;&gt; dp =</span><br><span class="line">                    <span class="keyword">new</span> <span class="title class_">PrivilegedFindClassByName</span>(name);</span><br><span class="line">                clazz = AccessController.doPrivileged(dp);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                 <span class="comment">// 1、先在应用本地目录下查找类 </span></span><br><span class="line">                clazz = findClassInternal(name);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span>(AccessControlException ace) &#123;</span><br><span class="line">            log.warn(<span class="string">&quot;WebappClassLoader.findClassInternal(&quot;</span> + name</span><br><span class="line">                    + <span class="string">&quot;) security exception: &quot;</span> + ace.getMessage(), ace);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ClassNotFoundException</span>(name, ace);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (RuntimeException e) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">                log.trace(<span class="string">&quot;      --&gt;RuntimeException Rethrown&quot;</span>, e);</span><br><span class="line">            <span class="keyword">throw</span> e;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> ((clazz == <span class="literal">null</span>) &amp;&amp; hasExternalRepositories) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                 <span class="comment">// 2、如果在本地目录没有找到，委派父加载器去查找</span></span><br><span class="line">                clazz = <span class="built_in">super</span>.findClass(name);</span><br><span class="line">            &#125; <span class="keyword">catch</span>(AccessControlException ace) &#123;</span><br><span class="line">                log.warn(<span class="string">&quot;WebappClassLoader.findClassInternal(&quot;</span> + name</span><br><span class="line">                        + <span class="string">&quot;) security exception: &quot;</span> + ace.getMessage(), ace);</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ClassNotFoundException</span>(name, ace);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (RuntimeException e) &#123;</span><br><span class="line">                <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">                    log.trace(<span class="string">&quot;      --&gt;RuntimeException Rethrown&quot;</span>, e);</span><br><span class="line">                <span class="keyword">throw</span> e;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 3、如果父加载器也没找到，抛出异常</span></span><br><span class="line">        <span class="keyword">if</span> (clazz == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                log.debug(<span class="string">&quot;    --&gt; Returning ClassNotFoundException&quot;</span>);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ClassNotFoundException</span>(name);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">        <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">            log.trace(<span class="string">&quot;    --&gt; Passing on ClassNotFoundException&quot;</span>);</span><br><span class="line">        <span class="keyword">throw</span> e;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Return the class we have located</span></span><br><span class="line">    <span class="keyword">if</span> (log.isTraceEnabled())</span><br><span class="line">        log.debug(<span class="string">&quot;      Returning class &quot;</span> + clazz);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (log.isTraceEnabled()) &#123;</span><br><span class="line">        ClassLoader cl;</span><br><span class="line">        <span class="keyword">if</span> (Globals.IS_SECURITY_ENABLED)&#123;</span><br><span class="line">            cl = AccessController.doPrivileged(</span><br><span class="line">                <span class="keyword">new</span> <span class="title class_">PrivilegedGetClassLoader</span>(clazz));</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            cl = clazz.getClassLoader();</span><br><span class="line">        &#125;</span><br><span class="line">        log.debug(<span class="string">&quot;      Loaded by &quot;</span> + cl.toString());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> (clazz);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="loadClass方法"><a href="#loadClass方法" class="headerlink" title="loadClass方法"></a>loadClass方法</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Class&lt;?&gt; loadClass(String name, <span class="type">boolean</span> resolve) <span class="keyword">throws</span> ClassNotFoundException &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">synchronized</span> (getClassLoadingLock(name)) &#123;</span><br><span class="line">        Class&lt;?&gt; clazz = <span class="literal">null</span>;</span><br><span class="line">        <span class="comment">// 1、从本地缓存中查找是否加载过此类</span></span><br><span class="line">        clazz = findLoadedClass0(name);</span><br><span class="line">        <span class="keyword">if</span> (clazz != <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                log.debug(<span class="string">&quot;  Returning class from cache&quot;</span>);</span><br><span class="line">            <span class="keyword">if</span> (resolve)</span><br><span class="line">                resolveClass(clazz);</span><br><span class="line">            <span class="keyword">return</span> clazz;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 2、从AppClassLoader中查找是否加载过此类</span></span><br><span class="line">        clazz = findLoadedClass(name);</span><br><span class="line">        <span class="keyword">if</span> (clazz != <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                log.debug(<span class="string">&quot;  Returning class from cache&quot;</span>);</span><br><span class="line">            <span class="keyword">if</span> (resolve)</span><br><span class="line">                resolveClass(clazz);</span><br><span class="line">            <span class="keyword">return</span> clazz;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="type">String</span> <span class="variable">resourceName</span> <span class="operator">=</span> binaryNameToPath(name, <span class="literal">false</span>);</span><br><span class="line">        <span class="comment">// 3、尝试用ExtClassLoader 类加载器加载类,防止应用覆盖JRE的核心类</span></span><br><span class="line">        <span class="type">ClassLoader</span> <span class="variable">javaseLoader</span> <span class="operator">=</span> getJavaseClassLoader();</span><br><span class="line">        <span class="type">boolean</span> tryLoadingFromJavaseLoader;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            URL url;</span><br><span class="line">            <span class="keyword">if</span> (securityManager != <span class="literal">null</span>) &#123;</span><br><span class="line">                PrivilegedAction&lt;URL&gt; dp = <span class="keyword">new</span> <span class="title class_">PrivilegedJavaseGetResource</span>(resourceName);</span><br><span class="line">                url = AccessController.doPrivileged(dp);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                url = javaseLoader.getResource(resourceName);</span><br><span class="line">            &#125;</span><br><span class="line">            tryLoadingFromJavaseLoader = (url != <span class="literal">null</span>);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">            tryLoadingFromJavaseLoader = <span class="literal">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="type">boolean</span> <span class="variable">delegateLoad</span> <span class="operator">=</span> delegate || filter(name, <span class="literal">true</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 4、判断是否设置了delegate属性,如果设置为true那么就按照双亲委派机制加载类</span></span><br><span class="line">        <span class="keyword">if</span> (delegateLoad) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                log.debug(<span class="string">&quot;  Delegating to parent classloader1 &quot;</span> + parent);</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                clazz = Class.forName(name, <span class="literal">false</span>, parent);</span><br><span class="line">                <span class="keyword">if</span> (clazz != <span class="literal">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                        log.debug(<span class="string">&quot;  Loading class from parent&quot;</span>);</span><br><span class="line">                    <span class="keyword">if</span> (resolve)</span><br><span class="line">                        resolveClass(clazz);</span><br><span class="line">                    <span class="keyword">return</span> clazz;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">                <span class="comment">// Ignore</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 5、默认是设置delegate是false的,那么就会先用WebAppClassLoader进行加载</span></span><br><span class="line">        <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">            log.debug(<span class="string">&quot;  Searching local repositories&quot;</span>);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            clazz = findClass(name);</span><br><span class="line">            <span class="keyword">if</span> (clazz != <span class="literal">null</span>) &#123;</span><br><span class="line">                <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                    log.debug(<span class="string">&quot;  Loading class from local repository&quot;</span>);</span><br><span class="line">                <span class="keyword">if</span> (resolve)</span><br><span class="line">                    resolveClass(clazz);</span><br><span class="line">                <span class="keyword">return</span> clazz;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">            <span class="comment">// Ignore</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 6、如果在WebAppClassLoader没找到类，那么就委托给AppClassLoader去加载</span></span><br><span class="line">        <span class="keyword">if</span> (!delegateLoad) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                log.debug(<span class="string">&quot;  Delegating to parent classloader at end: &quot;</span> + parent);</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                clazz = Class.forName(name, <span class="literal">false</span>, parent);</span><br><span class="line">                <span class="keyword">if</span> (clazz != <span class="literal">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">                        log.debug(<span class="string">&quot;  Loading class from parent&quot;</span>);</span><br><span class="line">                    <span class="keyword">if</span> (resolve)</span><br><span class="line">                        resolveClass(clazz);</span><br><span class="line">                    <span class="keyword">return</span> clazz;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">                <span class="comment">// Ignore</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ClassNotFoundException</span>(name);</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="1-4-Tomcat如何隔离Web应用"><a href="#1-4-Tomcat如何隔离Web应用" class="headerlink" title="1.4 Tomcat如何隔离Web应用"></a>1.4 Tomcat如何隔离Web应用</h2><p>Tomcat作为Servlet容器，它负责加载我们的Servlet类，此外它还负责加载Servlet所依赖的JAR包。并且Tomcat本身也是一个Java程序，因此它需要加载自己的类和依赖的JAR包。Tomcat此时需要解决下面这三个问题：</p>
+<ol>
+<li>Tomcat运行了两个Web应用程序，两个Web应用中有同名的Servlet,但是功能不同，Tomcat需要同时加载和管理这两个同名的Servlet类，保证它们不会冲突。Tomcat是如何实现Web应用之间的所有类都完成隔离的？</li>
+<li>两个Web应用都依赖同一个第三方的JAR包，比如Spring,Spring的JAR包被加载到内存后，Tomcat要保证这两个Web应用能够共享，也就是说Spring的JAR包只被加载一次，否则随着依赖第三方JAR包的增多，JVM的内存会膨胀，Tomcat是如何解决的？</li>
+<li>跟JVM一样，我们需要隔离Tomcat本身的类和Web应用的类。Tomcat是怎么实现的？<br>也就是如何实现内部类隔离，三方JAR包资源共享，以及自身的隔离性</li>
+</ol>
+<h3 id="Tomcat类加载器的层次结构"><a href="#Tomcat类加载器的层次结构" class="headerlink" title="Tomcat类加载器的层次结构"></a>Tomcat类加载器的层次结构</h3><p>为了解决这些问题，Tomcat设计了类加载器的层次结构，它们的关系如下图所示：<br><img width="1668" height="2034" alt="image" src="https://github.com/user-attachments/assets/ffc48507-ed9f-47a8-9b39-76ff73eaa2be" /></p>
+<ul>
+<li>commonLoader:Tomcat最基本的类加载器，加载路径中的class可以被Tomcat容器以及本身各个Webapp访问；</li>
+<li>catalinaLoader:Tomcat容器私有的类加载器，加载路径中的class对于Webapp不可见；</li>
+<li>sharedLoader:各个Webapp共享的类加载器，加载路径中的class对于所有的Webapp可见，但是对于Tomcat容器不可见；</li>
+<li>WebappClassLoader：各个Webapp私有的类加载器，加载路径中的class，只对当前webapp可见，加载war包里相关的类，每个war包应用都有自己的WebAppClassLoader，实现相互隔离，加载对应各自的依赖版本</li>
+</ul>
+<h3 id="全盘负责委托机制"><a href="#全盘负责委托机制" class="headerlink" title="全盘负责委托机制"></a>全盘负责委托机制</h3><p>当一个ClassLoader装载一个类的时候，除非显式的使用另一个ClassLoader，该类所依赖及引用的类也由这个ClassLoader载入。<br>比如Spring作为Bean工厂，它需要创建业务类的实例，并且创建业务类实例之前需要加载这些类。Spring是通过Class.forName来加载业务类的，下面是forName的源码：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> Class&lt;?&gt; forName(String className)&#123;</span><br><span class="line">    Class&lt;?&gt; caller = Reflection.getCallerClass();</span><br><span class="line">    <span class="keyword">return</span> forName(className,<span class="literal">true</span>,CLassLoader.getClassLoader(caller),caller);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>forName的函数中，会默认使用调用者的类加载器去加载业务类。<br>Web应用之间共享的JAR包可以交给SharedClassLoader来加载，从而避免重复加载。Spring作为共享的第三方JAR包，它本身是由SharedClassLoader来加载的，Spring又要去加载业务类，按照前面的那条规则，加载Spring的类加载器也会用来加载业务类，但是业务类再Web应用目录下，不在SharedClassLoader的加载路径下，Tomcat是如何解决这个问题的？</p>
+<h3 id="线程上下文加载器"><a href="#线程上下文加载器" class="headerlink" title="线程上下文加载器"></a>线程上下文加载器</h3><p>于是线程上下文加载器登场了，它其实是一种类加载器传递机制。为什么叫做“线程上下文加载器”？因为这个类加载器保存在线程私有数据里，只要是同一个线程，一旦设置了线程上下文加载器，在线程后续执行过程中就能把这个线程类加载器取出来使用。因此Tomcat为每个Web应用创建一个WebAppClassLoader类加载器，并在启动Web应用的线程里设置线程上下文加载器，这样Spring在启动时就将线程上下文类加载器取出来，用来加载Bean。源代码如下：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">c1 = Thread.currentThread().getContextClassLoader();</span><br></pre></td></tr></table></figure>
+<p>线程上下文加载器不仅仅可以用在Tomcat和Spring类加载器的场景里，核心框架类需要加载具体实现类时都可以用到它，比如我们熟悉的JDBC就是通过上下文类加载器来加载不同的数据库驱动的</p>
+<h1 id="2-Tomcat热加载和热部署"><a href="#2-Tomcat热加载和热部署" class="headerlink" title="2. Tomcat热加载和热部署"></a>2. Tomcat热加载和热部署</h1><p>项目开发过程中，经常要改动Java&#x2F;JSP文件，但是又不想重新启动Tomcat,有两种方式：热加载和热部署。热部署表示重新部署应用，它执行的主体是HOST。热加载表示重新加载class，它的执行主体是Context。</p>
+<ul>
+<li>热加载：在server.xml -&gt; context标签中 设置 reloadable &#x3D; “true”<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Context</span> <span class="attr">docBase</span>=<span class="string">&quot;C:\project&quot;</span> <span class="attr">path</span>=<span class="string">&quot;/project&quot;</span> <span class="attr">reloadable</span>=<span class="string">&quot;true&quot;</span>/&gt;</span></span><br></pre></td></tr></table></figure></li>
+<li>热部署：在server.xml -&gt; Host标签中 设置 autoDeploy&#x3D;”true”<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Host</span> <span class="attr">name</span>=<span class="string">&quot;localhost&quot;</span> <span class="attr">appBase</span>=<span class="string">&quot;webapps&quot;</span> <span class="attr">unpackWARS</span>=<span class="string">&quot;true&quot;</span> <span class="attr">autoDeploy</span>=<span class="string">&quot;true&quot;</span> /&gt;</span></span><br></pre></td></tr></table></figure>
+它们的区别是：</li>
+<li>热加载的实现方式是Web容器启动一个后台线程，定期检测类文件的变化，如果有变化，就重新加载类，这个过程中不会清空Session，一般用在开发环境</li>
+<li>热部署原理类似，也是由后台线程定时检测Web应用的变化，但它会重新加载整个Web应用。这种方式会清空Session，比热加载更加彻底，一般用于生产环境</li>
+</ul>
+<h2 id="2-1-Tomcat开启后台线程执行周期性任务"><a href="#2-1-Tomcat开启后台线程执行周期性任务" class="headerlink" title="2.1 Tomcat开启后台线程执行周期性任务"></a>2.1 Tomcat开启后台线程执行周期性任务</h2><p>Tomcat 通过ScheduledThreadPoolExecutor（定时线程池） 管理后台周期性任务，核心是在容器初始化时（如 Service 启动阶段）创建固定数量的后台线程，绑定到 Catalina 生命周期中统一管理。典型场景包括：会话过期清理（定期扫描 HttpSession，销毁超时会话）、日志滚动（按时间 &#x2F; 大小切割访问日志）、连接池维护（检测并回收空闲数据库连接）、集群节点心跳检测等。任务调度支持 “固定延迟”（如每隔 30 秒执行）或 “固定速率”（如每分钟执行一次），且线程池会自动处理任务异常，避免单个任务失败导致整个线程池崩溃，确保周期性任务稳定执行且不阻塞主线程。</p>
+<h2 id="2-2-Tomcat热加载实现原理"><a href="#2-2-Tomcat热加载实现原理" class="headerlink" title="2.2 Tomcat热加载实现原理"></a>2.2 Tomcat热加载实现原理</h2><p>Tomcat 热加载的核心是基于类加载器的 “重新加载” 机制，仅针对 Web 应用内部的类和资源（如 WEB-INF&#x2F;classes、WEB-INF&#x2F;lib），无需重启整个 Tomcat 容器。具体逻辑：</p>
+<ol>
+<li>后台线程（如 WebAppLoader 的监控线程）定期扫描 WEB-INF&#x2F;classes 和 lib 目录下文件的 “最后修改时间”，对比上次扫描记录；</li>
+<li>若检测到文件变化（如.class 文件更新、JAR 包替换），Tomcat 会销毁当前 Web 应用的WebAppClassLoader（应用级类加载器）（同时销毁其加载的所有类、Servlet 实例、线程资源）；</li>
+<li>创建新的 WebAppClassLoader，重新加载更新后的类和资源，初始化 Servlet、Spring 容器等组件，完成 “热加载”。该机制仅适用于开发环境（如调试时修改代码），且无法处理服务器级配置（如 server.xml）的变化，因这类配置依赖 Tomcat 核心类加载器，无法单独重新加载。<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 1. 启动资源监控线程（位于WebAppLoader中）</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">start</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="comment">// 启动定时监控线程（每2秒扫描一次资源变化）</span></span><br><span class="line">    monitorThread = <span class="keyword">new</span> <span class="title class_">Thread</span>(<span class="keyword">new</span> <span class="title class_">ResourceMonitor</span>(), <span class="string">&quot;WebappResourceMonitor&quot;</span>);</span><br><span class="line">    monitorThread.setDaemon(<span class="literal">true</span>);</span><br><span class="line">    monitorThread.start();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 2. 资源监控逻辑（检测类或JAR包变化）</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">ResourceMonitor</span> <span class="keyword">implements</span> <span class="title class_">Runnable</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">long</span> <span class="variable">lastModified</span> <span class="operator">=</span> <span class="number">0</span>;  <span class="comment">// 上次修改时间</span></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">run</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">while</span> (running) &#123;</span><br><span class="line">            <span class="comment">// 扫描WEB-INF/classes和lib目录的最后修改时间</span></span><br><span class="line">            <span class="type">long</span> <span class="variable">currentModified</span> <span class="operator">=</span> getResourcesLastModified();</span><br><span class="line">            <span class="keyword">if</span> (currentModified &gt; lastModified) &#123;</span><br><span class="line">                <span class="comment">// 检测到变化，触发热加载</span></span><br><span class="line">                context.reload();  <span class="comment">// 调用Context的重新加载方法</span></span><br><span class="line">                lastModified = currentModified;</span><br><span class="line">            &#125;</span><br><span class="line">            Thread.sleep(<span class="number">2000</span>);  <span class="comment">// 间隔2秒扫描</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 3. Context的reload方法（销毁旧类加载器，创建新的）</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">reload</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="comment">// 销毁当前Web应用的类加载器和资源</span></span><br><span class="line">    <span class="type">WebappClassLoader</span> <span class="variable">oldLoader</span> <span class="operator">=</span> <span class="built_in">this</span>.loader;</span><br><span class="line">    oldLoader.stop();  <span class="comment">// 释放类、Servlet实例等资源</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 创建新的类加载器，重新加载资源</span></span><br><span class="line">    <span class="built_in">this</span>.loader = <span class="keyword">new</span> <span class="title class_">WebappClassLoader</span>(oldLoader.getParent());</span><br><span class="line">    <span class="built_in">this</span>.loader.start();  <span class="comment">// 加载更新后的类和配置</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h2 id="2-3-Tomcat热部署实现原理"><a href="#2-3-Tomcat热部署实现原理" class="headerlink" title="2.3 Tomcat热部署实现原理"></a>2.3 Tomcat热部署实现原理</h2><p>Tomcat 热部署是整个 Web 应用的 “卸载 - 重新部署” 过程，支持替换应用的完整资源（包括 WAR 包、配置文件、静态资源等），可用于生产环境的版本更新（通常需短暂停止应用）。具体逻辑：</p>
+<ol>
+<li>触发方式（手动复制新 WAR 包、通过 Manager 应用 &#x2F; API 发送部署指令）；</li>
+<li>卸载旧应用：停止应用所有 Servlet 和 Filter，关闭数据库连接池、线程池等资源，销毁对应的 WebAppClassLoader 和应用上下文（Context），删除旧应用的临时目录；</li>
+<li>部署新应用：解压新 WAR 包（若为 WAR 格式），创建新的 Context 和 WebAppClassLoader，加载新的类、资源和配置文件，初始化 Servlet、Listener 等组件，绑定到 Connector（连接器）接收请求。</li>
+</ol>
+<p>与热加载的核心区别是：热部署针对 “整个应用” 的替换，可处理配置文件（如 web.xml）的变化；热加载仅针对 “类和资源” 的重新加载，依赖应用级类加载器，不涉及 Context 销毁。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 1. 热部署触发（检测webapps目录下的WAR包变化）</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HostConfig</span> <span class="keyword">implements</span> <span class="title class_">LifecycleListener</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">lifecycleEvent</span><span class="params">(LifecycleEvent event)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (event.getType().equals(Lifecycle.PERIODIC_EVENT)) &#123;</span><br><span class="line">            checkResources();  <span class="comment">// 定期检查应用资源变化</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">checkResources</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="comment">// 扫描webapps目录下的WAR包或目录</span></span><br><span class="line">        <span class="keyword">for</span> (File app : webappsDir.listFiles()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (isModified(app)) &#123;  <span class="comment">// 检测到应用更新（如WAR包替换）</span></span><br><span class="line">                redeploy(app);  <span class="comment">// 执行热部署</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 2. 重新部署逻辑（卸载旧应用+部署新应用）</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">redeploy</span><span class="params">(File app)</span> &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">appName</span> <span class="operator">=</span> app.getName();</span><br><span class="line">    <span class="comment">// 第一步：卸载旧应用</span></span><br><span class="line">    <span class="type">Context</span> <span class="variable">oldContext</span> <span class="operator">=</span> host.findContext(appName);</span><br><span class="line">    <span class="keyword">if</span> (oldContext != <span class="literal">null</span>) &#123;</span><br><span class="line">        host.removeChild(oldContext);  <span class="comment">// 从Host中移除旧Context</span></span><br><span class="line">        oldContext.stop();  <span class="comment">// 停止旧应用（释放连接池、线程等）</span></span><br><span class="line">        oldContext.destroy();  <span class="comment">// 销毁旧应用资源</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 第二步：部署新应用</span></span><br><span class="line">    <span class="type">Context</span> <span class="variable">newContext</span> <span class="operator">=</span> createContext(app);  <span class="comment">// 创建新Context</span></span><br><span class="line">    host.addChild(newContext);  <span class="comment">// 添加到Host</span></span><br><span class="line">    newContext.start();  <span class="comment">// 启动新应用（加载新类、初始化Servlet等）</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+]]></content>
+      <categories>
+        <category>后端技术</category>
+        <category>中间件</category>
+        <category>Tomcat</category>
+      </categories>
+      <tags>
+        <tag>Tomcat</tag>
+        <tag>类加载机制</tag>
+        <tag>热部署</tag>
       </tags>
   </entry>
   <entry>
