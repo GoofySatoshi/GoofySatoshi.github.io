@@ -463,7 +463,7 @@
       </tags>
   </entry>
   <entry>
-    <title>Spring Cloud Gateway 学习总结（优化版）</title>
+    <title>Spring Cloud Gateway</title>
     <url>/2024/05/20/Gateway%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
     <content><![CDATA[<h2 id="一、核心原理补充（易混淆点）"><a href="#一、核心原理补充（易混淆点）" class="headerlink" title="一、核心原理补充（易混淆点）"></a>一、核心原理补充（易混淆点）</h2><h3 id="1-响应式架构本质"><a href="#1-响应式架构本质" class="headerlink" title="1. 响应式架构本质"></a>1. 响应式架构本质</h3><p>Spring Cloud Gateway 基于 WebFlux 框架实现，底层依赖 Netty 实现异步非阻塞通信，与传统 Spring MVC 框架存在本质区别：</p>
 <ul>
