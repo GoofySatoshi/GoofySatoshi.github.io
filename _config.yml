@@ -164,3 +164,22 @@ sitemap:
 marked:
   prependRoot: true
   postAsset: true
+# live2d
+live2d:
+  enable: true                # 是否启用
+  scriptFrom: local           # 脚本来源（local 或 jsdelivr）
+  pluginRootPath: live2dw/    # 插件根目录
+  pluginJsPath: lib/          # 脚本文件路径
+  pluginModelPath: assets/    # 模型文件路径
+  tagMode: false              # 是否标签模式（默认嵌入页面）
+  debug: false                # 调试模式（显示日志）
+  model:
+    use: live2d-widget-model-miku  # 模型名称（与安装的模型对应）
+  display:
+    position: right           # 显示位置（left/right）
+    width: 150                # 宽度
+    height: 300               # 高度
+    hOffset: 0                # 水平偏移
+    vOffset: -20              # 垂直偏移
+  mobile:
+    show: true                # 移动端是否显示
