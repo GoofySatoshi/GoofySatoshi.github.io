@@ -960,7 +960,7 @@ LoadBalancer 3.2.0+ 2023.0.3+
   </entry>
   <entry>
     <title>LeetCode717. 1 比特与 2 比特字符</title>
-    <url>/2025/05/03/LeetCode717-1-%E6%AF%94%E7%89%B9%E4%B8%8E-2-%E6%AF%94%E7%89%B9%E5%AD%97%E7%AC%A6/</url>
+    <url>/2025/11/18/LeetCode717-1-%E6%AF%94%E7%89%B9%E4%B8%8E-2-%E6%AF%94%E7%89%B9%E5%AD%97%E7%AC%A6/</url>
     <content><![CDATA[<h1 id="717-1-比特与-2-比特字符"><a href="#717-1-比特与-2-比特字符" class="headerlink" title="717. 1 比特与 2 比特字符"></a><a href="https://leetcode.cn/problems/1-bit-and-2-bit-characters/description/">717. 1 比特与 2 比特字符</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>有两种特殊字符：</p>
 <ul>
 <li>第一种字符可以用一比特 0 表示<br></li>
@@ -1468,76 +1468,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title>Sentinel源码学习笔记</title>
-    <url>/2025/09/02/Sentinel%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
-    <content><![CDATA[<h1 id="Sentinel源码学习笔记"><a href="#Sentinel源码学习笔记" class="headerlink" title="Sentinel源码学习笔记"></a>Sentinel源码学习笔记</h1><p>一、客户端与服务端的交互流程</p>
-<p>1. 连接建立：客户端启动时通过配置的服务端地址（如  spring.cloud.sentinel.transport.dashboard.server ）与Sentinel Dashboard建立长连接（HTTP长轮询或WebSocket），定期发送心跳包保持连接。<br>2. 数据同步：</p>
-<ul>
-<li>客户端将实时统计的监控数据（QPS、异常数等）通过长连接上报给服务端，服务端在控制台展示实时监控图表。</li>
-<li>服务端通过长连接向客户端推送规则配置（流控、熔断等），客户端接收后更新本地规则缓存并生效。<br>3. 指令交互：服务端可通过控制台手动触发客户端规则更新、熔断状态重置等指令，客户端接收后执行对应操作并返回结果。</li>
-</ul>
-<p>二、自动配置类（以Spring Cloud整合为例）的核心逻辑</p>
-<p> SentinelAutoConfiguration  是核心自动配置类，主要执行以下操作：</p>
-<p>1. 初始化核心组件：注册  SentinelResourceAspect  切面，通过AOP拦截被  @SentinelResource  注解标记的资源（方法&#x2F;接口），触发责任链执行。<br>2. 规则加载：通过  DataSource  加载预设规则（如Nacos、Apollo配置的流控&#x2F;熔断规则），初始化到  RuleManager  中。<br>3. 适配Spring生态：注册  SentinelWebInterceptor  拦截HTTP请求，将URL自动作为资源进行监控；适配Feign、Dubbo等组件，自动拦截远程调用作为资源。<br>4. 异常处理：注册  SentinelExceptionHandler ，统一处理流控、熔断等异常（如  BlockException ），返回自定义响应。</p>
-<p>三、责任链（ProcessorSlotChain）的构建与核心插槽</p>
-<ol>
-<li>构建流程</li>
-</ol>
-<ul>
-<li>客户端初始化时， SlotChainProvider  会通过SPI机制加载默认插槽链，并允许通过  SlotChainBuilder  自定义扩展。</li>
-<li>默认链顺序（按优先级执行）： NodeSelectorSlot  →  ClusterBuilderSlot  →  LogSlot  →  StatisticSlot  →  AuthoritySlot  →  FlowSlot  →  DegradeSlot  →  SystemSlot （顺序固定）。</li>
-</ul>
-<ol start="2">
-<li>关键插槽工作原理</li>
-</ol>
-<ul>
-<li>StatisticSlot（统计插槽）：责任链核心，负责收集资源实时指标（QPS、响应时间、异常数等），为后续插槽提供数据支持；通过  ArrayMetric  维护滑动窗口统计，记录每个时间窗口的请求数、成功数等。</li>
-<li>FlowSlot（流控插槽）：使用  StatisticSlot  提供的QPS&#x2F;线程数数据，与预设流控规则对比，超过阈值则抛出  FlowException  拦截请求。</li>
-<li>DegradeSlot（熔断插槽）：通过  StatisticSlot  获取异常比例&#x2F;数、响应时间等数据，判断是否触发熔断（OPEN状态），拦截请求并抛出  DegradeException 。</li>
-<li>NodeSelectorSlot：为资源创建唯一统计节点（ DefaultNode ），用于区分不同上下文的资源调用（如不同服务调用同一接口）。</li>
-</ul>
-<p>四、断路器（熔断）实现逻辑</p>
-<ol>
-<li>状态机设计</li>
-</ol>
-<ul>
-<li>CLOSED：正常允许请求， DegradeSlot  实时统计异常比例&#x2F;数、响应时间。</li>
-<li>OPEN：触发熔断（如异常比例超阈值），拦截所有请求；持续  waitTimeout  时间后转为 HALF_OPEN。</li>
-<li>HALF_OPEN：允许少量请求通过，请求成功则转为 CLOSED，失败则重回 OPEN。</li>
-</ul>
-<ol start="2">
-<li>判断逻辑</li>
-</ol>
-<ul>
-<li>基于异常比例： （异常数 &#x2F; 总请求数）&gt; 阈值  且 总请求数≥最小请求数。</li>
-<li>基于响应时间：慢调用比例（响应时间&gt;阈值的请求数&#x2F;总请求数）&gt; 阈值。</li>
-</ul>
-<p>五、限流实现逻辑</p>
-<p>1.  FlowSlot  在责任链中检查  StatisticSlot  统计的实时QPS&#x2F;线程数，若超过预设规则阈值，直接抛出  FlowException  拦截请求。</p>
-<p>六、Fallback（降级）逻辑</p>
-<p>1. 触发场景：当资源被限流（ FlowException ）、熔断（ DegradeException ）或抛出业务异常时，执行预设的fallback逻辑。<br>2. 实现方式：</p>
-<ul>
-<li>注解指定： @SentinelResource(fallback &#x3D; “xxx”) ，方法  xxx  需与原方法参数一致，可接收异常参数。</li>
-<li>全局配置：通过  GlobalFallback  定义全局fallback，统一处理未指定局部fallback的资源。<br>3. 执行流程： SentinelResourceAspect  拦截到  BlockException  或业务异常后，通过反射调用fallback方法，返回降级结果。</li>
-</ul>
-<p>七、降级逻辑（与熔断的区别）</p>
-<ul>
-<li>熔断（Degrade）：服务端主动触发的保护机制（如异常率过高），属于“被动降级”，状态随指标自动切换（CLOSED→OPEN→HALF_OPEN→CLOSED）。</li>
-<li>限流（Flow）：主动限制请求量以防止资源耗尽，属于“主动降级”，触发条件是实时请求量超阈值。</li>
-<li>共性：两者最终均通过抛出异常被fallback逻辑捕获，返回降级响应，避免服务雪崩。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>中间件学习</category>
-        <category>Sentinel</category>
-      </categories>
-      <tags>
-        <tag>Sentinel</tag>
-        <tag>源码解析</tag>
-        <tag>中间件</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>今日学习笔记：Sentinel 核心原理与关键算法</title>
     <url>/2024/05/20/Sentinel%E7%9A%84%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86%E5%92%8C%E5%85%B3%E9%94%AE%E7%AE%97%E6%B3%95/</url>
     <content><![CDATA[<p>一、Sentinel 对外部请求的感知机制</p>
@@ -1610,6 +1540,76 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>流量控制</tag>
         <tag>微服务</tag>
         <tag>Java</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Sentinel源码学习笔记</title>
+    <url>/2025/09/02/Sentinel%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
+    <content><![CDATA[<h1 id="Sentinel源码学习笔记"><a href="#Sentinel源码学习笔记" class="headerlink" title="Sentinel源码学习笔记"></a>Sentinel源码学习笔记</h1><p>一、客户端与服务端的交互流程</p>
+<p>1. 连接建立：客户端启动时通过配置的服务端地址（如  spring.cloud.sentinel.transport.dashboard.server ）与Sentinel Dashboard建立长连接（HTTP长轮询或WebSocket），定期发送心跳包保持连接。<br>2. 数据同步：</p>
+<ul>
+<li>客户端将实时统计的监控数据（QPS、异常数等）通过长连接上报给服务端，服务端在控制台展示实时监控图表。</li>
+<li>服务端通过长连接向客户端推送规则配置（流控、熔断等），客户端接收后更新本地规则缓存并生效。<br>3. 指令交互：服务端可通过控制台手动触发客户端规则更新、熔断状态重置等指令，客户端接收后执行对应操作并返回结果。</li>
+</ul>
+<p>二、自动配置类（以Spring Cloud整合为例）的核心逻辑</p>
+<p> SentinelAutoConfiguration  是核心自动配置类，主要执行以下操作：</p>
+<p>1. 初始化核心组件：注册  SentinelResourceAspect  切面，通过AOP拦截被  @SentinelResource  注解标记的资源（方法&#x2F;接口），触发责任链执行。<br>2. 规则加载：通过  DataSource  加载预设规则（如Nacos、Apollo配置的流控&#x2F;熔断规则），初始化到  RuleManager  中。<br>3. 适配Spring生态：注册  SentinelWebInterceptor  拦截HTTP请求，将URL自动作为资源进行监控；适配Feign、Dubbo等组件，自动拦截远程调用作为资源。<br>4. 异常处理：注册  SentinelExceptionHandler ，统一处理流控、熔断等异常（如  BlockException ），返回自定义响应。</p>
+<p>三、责任链（ProcessorSlotChain）的构建与核心插槽</p>
+<ol>
+<li>构建流程</li>
+</ol>
+<ul>
+<li>客户端初始化时， SlotChainProvider  会通过SPI机制加载默认插槽链，并允许通过  SlotChainBuilder  自定义扩展。</li>
+<li>默认链顺序（按优先级执行）： NodeSelectorSlot  →  ClusterBuilderSlot  →  LogSlot  →  StatisticSlot  →  AuthoritySlot  →  FlowSlot  →  DegradeSlot  →  SystemSlot （顺序固定）。</li>
+</ul>
+<ol start="2">
+<li>关键插槽工作原理</li>
+</ol>
+<ul>
+<li>StatisticSlot（统计插槽）：责任链核心，负责收集资源实时指标（QPS、响应时间、异常数等），为后续插槽提供数据支持；通过  ArrayMetric  维护滑动窗口统计，记录每个时间窗口的请求数、成功数等。</li>
+<li>FlowSlot（流控插槽）：使用  StatisticSlot  提供的QPS&#x2F;线程数数据，与预设流控规则对比，超过阈值则抛出  FlowException  拦截请求。</li>
+<li>DegradeSlot（熔断插槽）：通过  StatisticSlot  获取异常比例&#x2F;数、响应时间等数据，判断是否触发熔断（OPEN状态），拦截请求并抛出  DegradeException 。</li>
+<li>NodeSelectorSlot：为资源创建唯一统计节点（ DefaultNode ），用于区分不同上下文的资源调用（如不同服务调用同一接口）。</li>
+</ul>
+<p>四、断路器（熔断）实现逻辑</p>
+<ol>
+<li>状态机设计</li>
+</ol>
+<ul>
+<li>CLOSED：正常允许请求， DegradeSlot  实时统计异常比例&#x2F;数、响应时间。</li>
+<li>OPEN：触发熔断（如异常比例超阈值），拦截所有请求；持续  waitTimeout  时间后转为 HALF_OPEN。</li>
+<li>HALF_OPEN：允许少量请求通过，请求成功则转为 CLOSED，失败则重回 OPEN。</li>
+</ul>
+<ol start="2">
+<li>判断逻辑</li>
+</ol>
+<ul>
+<li>基于异常比例： （异常数 &#x2F; 总请求数）&gt; 阈值  且 总请求数≥最小请求数。</li>
+<li>基于响应时间：慢调用比例（响应时间&gt;阈值的请求数&#x2F;总请求数）&gt; 阈值。</li>
+</ul>
+<p>五、限流实现逻辑</p>
+<p>1.  FlowSlot  在责任链中检查  StatisticSlot  统计的实时QPS&#x2F;线程数，若超过预设规则阈值，直接抛出  FlowException  拦截请求。</p>
+<p>六、Fallback（降级）逻辑</p>
+<p>1. 触发场景：当资源被限流（ FlowException ）、熔断（ DegradeException ）或抛出业务异常时，执行预设的fallback逻辑。<br>2. 实现方式：</p>
+<ul>
+<li>注解指定： @SentinelResource(fallback &#x3D; “xxx”) ，方法  xxx  需与原方法参数一致，可接收异常参数。</li>
+<li>全局配置：通过  GlobalFallback  定义全局fallback，统一处理未指定局部fallback的资源。<br>3. 执行流程： SentinelResourceAspect  拦截到  BlockException  或业务异常后，通过反射调用fallback方法，返回降级结果。</li>
+</ul>
+<p>七、降级逻辑（与熔断的区别）</p>
+<ul>
+<li>熔断（Degrade）：服务端主动触发的保护机制（如异常率过高），属于“被动降级”，状态随指标自动切换（CLOSED→OPEN→HALF_OPEN→CLOSED）。</li>
+<li>限流（Flow）：主动限制请求量以防止资源耗尽，属于“主动降级”，触发条件是实时请求量超阈值。</li>
+<li>共性：两者最终均通过抛出异常被fallback逻辑捕获，返回降级响应，避免服务雪崩。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>中间件学习</category>
+        <category>Sentinel</category>
+      </categories>
+      <tags>
+        <tag>Sentinel</tag>
+        <tag>源码解析</tag>
+        <tag>中间件</tag>
       </tags>
   </entry>
   <entry>
