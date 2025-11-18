@@ -959,6 +959,39 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
+    <title>LeetCode717. 1 比特与 2 比特字符</title>
+    <url>/2025/05/03/LeetCode717-1-%E6%AF%94%E7%89%B9%E4%B8%8E-2-%E6%AF%94%E7%89%B9%E5%AD%97%E7%AC%A6/</url>
+    <content><![CDATA[<h1 id="717-1-比特与-2-比特字符"><a href="#717-1-比特与-2-比特字符" class="headerlink" title="717. 1 比特与 2 比特字符"></a><a href="https://leetcode.cn/problems/1-bit-and-2-bit-characters/description/">717. 1 比特与 2 比特字符</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>有两种特殊字符：</p>
+<ul>
+<li>第一种字符可以用一比特 0 表示<br></li>
+<li>第二种字符可以用两比特（10 或 11）表示<br><br>给你一个以 0 结尾的二进制数组 bits ，如果最后一个字符必须是一个一比特字符，则返回 <code>true</code> 。</li>
+</ul>
+<h2 id="示例-1"><a href="#示例-1" class="headerlink" title="示例 1:"></a>示例 1:</h2><blockquote>
+<p><strong>输入:</strong> bits &#x3D; [1, 0, 0] <br><br><strong>输出:</strong> true <br><br><strong>解释:</strong> 唯一的解码方式是将其解析为一个两比特字符和一个一比特字符。所以最后一个字符是一比特字符。</p>
+</blockquote>
+<h2 id="示例-2"><a href="#示例-2" class="headerlink" title="示例 2:"></a>示例 2:</h2><blockquote>
+<p><strong>输入:</strong> bits &#x3D; [1,1,1,0]<br><br><strong>输出:</strong> false<br><br><strong>解释：</strong> 唯一的解码方式是将其解析为两比特字符和两比特字符。所以最后一个字符不是一比特字符。</p>
+</blockquote>
+<h2 id="提示"><a href="#提示" class="headerlink" title="提示:"></a>提示:</h2><ul>
+<li><code>1 &lt;= bits.length &lt;= 1000</code></li>
+<li><code>bits[i] 为 0 或 1</code></li>
+</ul>
+<h2 id="思路："><a href="#思路：" class="headerlink" title="思路："></a>思路：</h2><blockquote>
+<p>思维题,倒序判断最后一段1奇偶性,最后一个0被占用了，一旦构成01就是不合法的<br><br>最后一段1为奇数则一定不合法<br><br>最后一段1为偶数则一定合法<br><br>这个可以枚举验证一下</p>
+</blockquote>
+<h2 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">isOneBitCharacter</span><span class="params">(<span class="type">int</span>[] bits)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">n</span> <span class="operator">=</span> bits.length;</span><br><span class="line">        <span class="keyword">if</span> (bits[n - <span class="number">1</span>] == <span class="number">1</span>)</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        <span class="type">int</span> <span class="variable">r</span> <span class="operator">=</span> bits.length - <span class="number">2</span>;</span><br><span class="line">        <span class="type">int</span> <span class="variable">cnt</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">while</span> (r &gt; -<span class="number">1</span> &amp;&amp; bits[r] == <span class="number">1</span>) &#123;</span><br><span class="line">            cnt++;</span><br><span class="line">            r--;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> cnt % <span class="number">2</span> == <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>LeetCode</category>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>LeetCode</tag>
+        <tag>算法</tag>
+        <tag>数组</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Nacos 核心源码学习笔记</title>
     <url>/2025/08/26/Nacos-%E6%A0%B8%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
     <content><![CDATA[<h1 id="Nacos-核心源码学习笔记"><a href="#Nacos-核心源码学习笔记" class="headerlink" title="Nacos 核心源码学习笔记"></a>Nacos 核心源码学习笔记</h1><p>Nacos 作为微服务架构中核心的服务注册发现与配置中心，其底层设计与实现逻辑对理解微服务治理至关重要。本文从源码入口、服务注册、心跳检测、集群一致性四个核心维度，梳理 Nacos 关键机制的实现原理。</p>
