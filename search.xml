@@ -209,6 +209,109 @@
       </tags>
   </entry>
   <entry>
+    <title>Spring Cloud Nacos Config 配置中心源码学习</title>
+    <url>/2025/08/30/Spring-Cloud-Nacos%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0/</url>
+    <content><![CDATA[<h2 id="一、引言：Nacos-Config-的核心定位"><a href="#一、引言：Nacos-Config-的核心定位" class="headerlink" title="一、引言：Nacos Config 的核心定位"></a>一、引言：Nacos Config 的核心定位</h2><p>在 Spring Cloud 微服务架构中，配置管理是保障服务弹性与可维护性的关键环节。Nacos Config 作为官方推荐的配置中心，不仅实现了配置的集中存储与动态推送，还通过<strong>SPI 机制适配 Spring Boot 自动配置</strong>，解决了传统本地配置“修改需重启”“环境配置混乱”等问题。</p>
+<p>本文基于源码视角，从<strong>配置加载优先级</strong>、<strong>事件驱动的变更流程</strong>两大核心维度展开，同时补充一致性保障、多环境管理、安全加密等生产级关键特性，形成完整的 Nacos Config 知识体系。</p>
+<h2 id="二、配置文件加载逻辑与优先级排序"><a href="#二、配置文件加载逻辑与优先级排序" class="headerlink" title="二、配置文件加载逻辑与优先级排序"></a>二、配置文件加载逻辑与优先级排序</h2><p>Nacos Config 本质是 Spring Boot 自动配置的扩展，其配置加载依赖 <strong>Bootstrap 上下文</strong>与 <strong>Spring 环境（Environment）</strong> 的初始化顺序，最终形成明确的优先级规则（优先级从高到低）：</p>
+<table>
+<thead>
+<tr>
+<th>优先级排序</th>
+<th>配置文件类型</th>
+<th>核心作用与场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1（最高）</td>
+<td>服务名-环境名.yaml</td>
+<td>如 <code>order-service-dev.yaml</code>，针对<strong>特定服务+特定环境</strong>的精准配置（如开发环境的数据库地址），优先级最高，覆盖所有其他配置。</td>
+</tr>
+<tr>
+<td>2</td>
+<td>服务名.yaml</td>
+<td>如 <code>order-service.yaml</code>，该服务的<strong>通用基础配置</strong>（如服务端口、注册中心地址），无环境配置时作为默认值。</td>
+</tr>
+<tr>
+<td>3</td>
+<td>共享配置（shared-configs）</td>
+<td>多服务共享的通用配置（如日志输出格式、公共 API 密钥），通过 Nacos 控制台配置“共享数据集”，避免重复配置。</td>
+</tr>
+<tr>
+<td>4</td>
+<td>本地 application.yaml&#x2F;props</td>
+<td>应用级通用配置（如 Spring 全局参数），优先级低于 Nacos 远程配置，仅在远程配置缺失时生效。</td>
+</tr>
+<tr>
+<td>5（最低）</td>
+<td>本地 bootstrap.yaml&#x2F;props</td>
+<td>启动级基础配置（如 Nacos Server 地址 <code>spring.cloud.nacos.config.server-addr</code>），仅用于初始化 Nacos 连接，不参与业务配置。</td>
+</tr>
+</tbody></table>
+<h3 id="关键源码关联"><a href="#关键源码关联" class="headerlink" title="关键源码关联"></a>关键源码关联</h3><ul>
+<li><strong>Bootstrap 上下文初始化</strong>：通过 <code>BootstrapApplicationListener</code> 触发，优先加载 <code>bootstrap.yaml</code>，确保 Nacos 地址等启动配置先于业务配置加载。</li>
+<li><strong>配置优先级注入</strong>：<code>NacosConfigEnvironmentProcessor</code> 实现 <code>EnvironmentPostProcessor</code> 接口，将 Nacos 远程配置（按上述优先级）注入 Spring 环境，覆盖本地配置。</li>
+</ul>
+<h2 id="三、事件驱动模型：配置变更的全链路处理"><a href="#三、事件驱动模型：配置变更的全链路处理" class="headerlink" title="三、事件驱动模型：配置变更的全链路处理"></a>三、事件驱动模型：配置变更的全链路处理</h2><p>Nacos Config 的动态配置能力依赖<strong>事件驱动模型</strong>，核心是“变更触发→事件发布→监听器处理→客户端同步”的闭环流程，具体分为服务端与客户端两部分：</p>
+<h3 id="3-1-服务端：配置变更的触发与持久化"><a href="#3-1-服务端：配置变更的触发与持久化" class="headerlink" title="3.1 服务端：配置变更的触发与持久化"></a>3.1 服务端：配置变更的触发与持久化</h3><p>当通过 Nacos 控制台&#x2F;API 修改配置后，服务端执行以下步骤：</p>
+<ol>
+<li><p><strong>配置校验与持久化</strong></p>
+<ul>
+<li>先将变更后的配置写入<strong>本地磁盘</strong>（路径：<code>nacos/data/config-data</code>），确保单机故障时配置不丢失；</li>
+<li>同步写入 <strong>MySQL 数据库</strong>（表 <code>config_info</code>），通过数据库实现多节点（集群）间的配置一致性（Nacos 集群默认基于 MySQL 实现数据同步）。</li>
+</ul>
+</li>
+<li><p><strong>事件发布与任务调度</strong></p>
+<ul>
+<li>持久化完成后，发布 <code>ConfigDataChangedEvent</code> 事件，触发内部监听器（如 <code>ConfigChangeNotifier</code>）；</li>
+<li>监听器向客户端发送<strong>定时拉取任务</strong>（默认客户端每 30 秒拉取一次，可通过 <code>spring.cloud.nacos.config.refreshInterval</code> 调整），或通过 <strong>UDP 推送</strong>（需开启 <code>nacos.config.push.enabled=true</code>）主动通知客户端。</li>
+</ul>
+</li>
+</ol>
+<h3 id="3-2-客户端：配置变更的接收与应用"><a href="#3-2-客户端：配置变更的接收与应用" class="headerlink" title="3.2 客户端：配置变更的接收与应用"></a>3.2 客户端：配置变更的接收与应用</h3><p>客户端（微服务）通过 <code>NacosConfigManager</code> 与服务端交互，核心是<strong>阻塞队列+循环拉取</strong>的任务处理机制：</p>
+<ol>
+<li><strong>任务队列初始化</strong>：客户端启动时创建 <code>BlockingQueue</code>，用于存储服务端下发的“配置拉取任务”。</li>
+<li><strong>任务消费逻辑</strong>：通过 <code>ConfigPullTaskRunner</code> 线程，以 <code>while(true)</code> 循环从队列中获取任务，避免线程频繁创建销毁。</li>
+<li><strong>配置对比与更新</strong>：<ul>
+<li>拉取服务端最新配置后，与本地缓存（内存+本地文件 <code>nacos/config</code>）对比；</li>
+<li>若配置有变更，发布 <code>EnvironmentChangeEvent</code> 事件，触发 <code>@RefreshScope</code> 注解的 Bean 重新初始化，实现“零重启更新配置”。</li>
+</ul>
+</li>
+</ol>
+<h3 id="关键源码关联-1"><a href="#关键源码关联-1" class="headerlink" title="关键源码关联"></a>关键源码关联</h3><ul>
+<li><strong>服务端事件机制</strong>：<code>EventDispatcher</code> 作为事件调度核心，管理 <code>ConfigDataChangedEvent</code> 等事件的监听器注册与触发。</li>
+<li><strong>客户端缓存与刷新</strong>：<code>NacosConfigService</code> 负责缓存管理，<code>RefreshEventListener</code> 监听配置变更事件，触发 Bean 刷新。</li>
+</ul>
+<h2 id="四、生产级关键特性补充"><a href="#四、生产级关键特性补充" class="headerlink" title="四、生产级关键特性补充"></a>四、生产级关键特性补充</h2><h3 id="4-1-配置动态更新的一致性保障"><a href="#4-1-配置动态更新的一致性保障" class="headerlink" title="4.1 配置动态更新的一致性保障"></a>4.1 配置动态更新的一致性保障</h3><p>Nacos 通过“三重机制”确保服务端与客户端配置一致：</p>
+<ul>
+<li><strong>版本号校验</strong>：每个配置有唯一 <code>dataId</code> 和 <code>version</code>，客户端拉取时对比版本号，仅更新版本不同的配置；</li>
+<li><strong>本地缓存兜底</strong>：客户端将远程配置缓存到本地文件，网络中断时优先使用缓存配置，避免服务不可用；</li>
+<li><strong>集群数据同步</strong>：Nacos 集群通过 MySQL 主从同步或 Raft 协议（1.4.0+ 支持），确保多节点配置一致。</li>
+</ul>
+<h3 id="4-2-多环境与多版本管理"><a href="#4-2-多环境与多版本管理" class="headerlink" title="4.2 多环境与多版本管理"></a>4.2 多环境与多版本管理</h3><ul>
+<li><strong>多环境隔离</strong>：通过 <code>namespace</code>（命名空间）区分环境（如 <code>dev</code>&#x2F;<code>test</code>&#x2F;<code>prod</code>），每个命名空间下的配置完全隔离，避免环境混淆；</li>
+<li><strong>多版本回溯</strong>：Nacos 保留配置的历史版本（默认 30 天），支持一键回滚到历史版本，应对配置修改错误的场景。</li>
+</ul>
+<h3 id="4-3-配置安全：敏感信息加密"><a href="#4-3-配置安全：敏感信息加密" class="headerlink" title="4.3 配置安全：敏感信息加密"></a>4.3 配置安全：敏感信息加密</h3><p>针对数据库密码、AccessKey 等敏感配置，Nacos 提供两种加密方案：</p>
+<ul>
+<li><strong>传输加密</strong>：服务端与客户端通过 HTTPS 通信，避免配置在传输过程中被窃取；</li>
+<li><strong>存储加密</strong>：使用 AES-128 或 RSA 算法对敏感配置加密后存储到 MySQL，客户端通过配置 <code>secretKey</code> 解密后使用（需在 <code>bootstrap.yaml</code> 中配置加密密钥）。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>技术学习</category>
+        <category>Spring Cloud</category>
+      </categories>
+      <tags>
+        <tag>Spring Cloud</tag>
+        <tag>Nacos</tag>
+        <tag>配置中心</tag>
+        <tag>源码解析</tag>
+        <tag>事件驱动</tag>
+        <tag>动态配置</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>G1 垃圾收集器学习笔记</title>
     <url>/2025/09/22/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/</url>
     <content><![CDATA[<h1 id="G1垃圾收集器学习笔记"><a href="#G1垃圾收集器学习笔记" class="headerlink" title="G1垃圾收集器学习笔记"></a>G1垃圾收集器学习笔记</h1><h2 id="2025-09-23"><a href="#2025-09-23" class="headerlink" title="2025-09-23"></a>2025-09-23</h2><h2 id="一、G1垃圾收集器概述"><a href="#一、G1垃圾收集器概述" class="headerlink" title="一、G1垃圾收集器概述"></a>一、G1垃圾收集器概述</h2><p>G1（Garbage-First）是Java 9默认的垃圾收集器，核心特性如下：  </p>
@@ -357,109 +460,6 @@
         <tag>JVM</tag>
         <tag>Java 虚拟机</tag>
         <tag>垃圾回收机制</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring Cloud Nacos Config 配置中心源码学习</title>
-    <url>/2025/08/30/Spring-Cloud-Nacos%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0/</url>
-    <content><![CDATA[<h2 id="一、引言：Nacos-Config-的核心定位"><a href="#一、引言：Nacos-Config-的核心定位" class="headerlink" title="一、引言：Nacos Config 的核心定位"></a>一、引言：Nacos Config 的核心定位</h2><p>在 Spring Cloud 微服务架构中，配置管理是保障服务弹性与可维护性的关键环节。Nacos Config 作为官方推荐的配置中心，不仅实现了配置的集中存储与动态推送，还通过<strong>SPI 机制适配 Spring Boot 自动配置</strong>，解决了传统本地配置“修改需重启”“环境配置混乱”等问题。</p>
-<p>本文基于源码视角，从<strong>配置加载优先级</strong>、<strong>事件驱动的变更流程</strong>两大核心维度展开，同时补充一致性保障、多环境管理、安全加密等生产级关键特性，形成完整的 Nacos Config 知识体系。</p>
-<h2 id="二、配置文件加载逻辑与优先级排序"><a href="#二、配置文件加载逻辑与优先级排序" class="headerlink" title="二、配置文件加载逻辑与优先级排序"></a>二、配置文件加载逻辑与优先级排序</h2><p>Nacos Config 本质是 Spring Boot 自动配置的扩展，其配置加载依赖 <strong>Bootstrap 上下文</strong>与 <strong>Spring 环境（Environment）</strong> 的初始化顺序，最终形成明确的优先级规则（优先级从高到低）：</p>
-<table>
-<thead>
-<tr>
-<th>优先级排序</th>
-<th>配置文件类型</th>
-<th>核心作用与场景</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>1（最高）</td>
-<td>服务名-环境名.yaml</td>
-<td>如 <code>order-service-dev.yaml</code>，针对<strong>特定服务+特定环境</strong>的精准配置（如开发环境的数据库地址），优先级最高，覆盖所有其他配置。</td>
-</tr>
-<tr>
-<td>2</td>
-<td>服务名.yaml</td>
-<td>如 <code>order-service.yaml</code>，该服务的<strong>通用基础配置</strong>（如服务端口、注册中心地址），无环境配置时作为默认值。</td>
-</tr>
-<tr>
-<td>3</td>
-<td>共享配置（shared-configs）</td>
-<td>多服务共享的通用配置（如日志输出格式、公共 API 密钥），通过 Nacos 控制台配置“共享数据集”，避免重复配置。</td>
-</tr>
-<tr>
-<td>4</td>
-<td>本地 application.yaml&#x2F;props</td>
-<td>应用级通用配置（如 Spring 全局参数），优先级低于 Nacos 远程配置，仅在远程配置缺失时生效。</td>
-</tr>
-<tr>
-<td>5（最低）</td>
-<td>本地 bootstrap.yaml&#x2F;props</td>
-<td>启动级基础配置（如 Nacos Server 地址 <code>spring.cloud.nacos.config.server-addr</code>），仅用于初始化 Nacos 连接，不参与业务配置。</td>
-</tr>
-</tbody></table>
-<h3 id="关键源码关联"><a href="#关键源码关联" class="headerlink" title="关键源码关联"></a>关键源码关联</h3><ul>
-<li><strong>Bootstrap 上下文初始化</strong>：通过 <code>BootstrapApplicationListener</code> 触发，优先加载 <code>bootstrap.yaml</code>，确保 Nacos 地址等启动配置先于业务配置加载。</li>
-<li><strong>配置优先级注入</strong>：<code>NacosConfigEnvironmentProcessor</code> 实现 <code>EnvironmentPostProcessor</code> 接口，将 Nacos 远程配置（按上述优先级）注入 Spring 环境，覆盖本地配置。</li>
-</ul>
-<h2 id="三、事件驱动模型：配置变更的全链路处理"><a href="#三、事件驱动模型：配置变更的全链路处理" class="headerlink" title="三、事件驱动模型：配置变更的全链路处理"></a>三、事件驱动模型：配置变更的全链路处理</h2><p>Nacos Config 的动态配置能力依赖<strong>事件驱动模型</strong>，核心是“变更触发→事件发布→监听器处理→客户端同步”的闭环流程，具体分为服务端与客户端两部分：</p>
-<h3 id="3-1-服务端：配置变更的触发与持久化"><a href="#3-1-服务端：配置变更的触发与持久化" class="headerlink" title="3.1 服务端：配置变更的触发与持久化"></a>3.1 服务端：配置变更的触发与持久化</h3><p>当通过 Nacos 控制台&#x2F;API 修改配置后，服务端执行以下步骤：</p>
-<ol>
-<li><p><strong>配置校验与持久化</strong></p>
-<ul>
-<li>先将变更后的配置写入<strong>本地磁盘</strong>（路径：<code>nacos/data/config-data</code>），确保单机故障时配置不丢失；</li>
-<li>同步写入 <strong>MySQL 数据库</strong>（表 <code>config_info</code>），通过数据库实现多节点（集群）间的配置一致性（Nacos 集群默认基于 MySQL 实现数据同步）。</li>
-</ul>
-</li>
-<li><p><strong>事件发布与任务调度</strong></p>
-<ul>
-<li>持久化完成后，发布 <code>ConfigDataChangedEvent</code> 事件，触发内部监听器（如 <code>ConfigChangeNotifier</code>）；</li>
-<li>监听器向客户端发送<strong>定时拉取任务</strong>（默认客户端每 30 秒拉取一次，可通过 <code>spring.cloud.nacos.config.refreshInterval</code> 调整），或通过 <strong>UDP 推送</strong>（需开启 <code>nacos.config.push.enabled=true</code>）主动通知客户端。</li>
-</ul>
-</li>
-</ol>
-<h3 id="3-2-客户端：配置变更的接收与应用"><a href="#3-2-客户端：配置变更的接收与应用" class="headerlink" title="3.2 客户端：配置变更的接收与应用"></a>3.2 客户端：配置变更的接收与应用</h3><p>客户端（微服务）通过 <code>NacosConfigManager</code> 与服务端交互，核心是<strong>阻塞队列+循环拉取</strong>的任务处理机制：</p>
-<ol>
-<li><strong>任务队列初始化</strong>：客户端启动时创建 <code>BlockingQueue</code>，用于存储服务端下发的“配置拉取任务”。</li>
-<li><strong>任务消费逻辑</strong>：通过 <code>ConfigPullTaskRunner</code> 线程，以 <code>while(true)</code> 循环从队列中获取任务，避免线程频繁创建销毁。</li>
-<li><strong>配置对比与更新</strong>：<ul>
-<li>拉取服务端最新配置后，与本地缓存（内存+本地文件 <code>nacos/config</code>）对比；</li>
-<li>若配置有变更，发布 <code>EnvironmentChangeEvent</code> 事件，触发 <code>@RefreshScope</code> 注解的 Bean 重新初始化，实现“零重启更新配置”。</li>
-</ul>
-</li>
-</ol>
-<h3 id="关键源码关联-1"><a href="#关键源码关联-1" class="headerlink" title="关键源码关联"></a>关键源码关联</h3><ul>
-<li><strong>服务端事件机制</strong>：<code>EventDispatcher</code> 作为事件调度核心，管理 <code>ConfigDataChangedEvent</code> 等事件的监听器注册与触发。</li>
-<li><strong>客户端缓存与刷新</strong>：<code>NacosConfigService</code> 负责缓存管理，<code>RefreshEventListener</code> 监听配置变更事件，触发 Bean 刷新。</li>
-</ul>
-<h2 id="四、生产级关键特性补充"><a href="#四、生产级关键特性补充" class="headerlink" title="四、生产级关键特性补充"></a>四、生产级关键特性补充</h2><h3 id="4-1-配置动态更新的一致性保障"><a href="#4-1-配置动态更新的一致性保障" class="headerlink" title="4.1 配置动态更新的一致性保障"></a>4.1 配置动态更新的一致性保障</h3><p>Nacos 通过“三重机制”确保服务端与客户端配置一致：</p>
-<ul>
-<li><strong>版本号校验</strong>：每个配置有唯一 <code>dataId</code> 和 <code>version</code>，客户端拉取时对比版本号，仅更新版本不同的配置；</li>
-<li><strong>本地缓存兜底</strong>：客户端将远程配置缓存到本地文件，网络中断时优先使用缓存配置，避免服务不可用；</li>
-<li><strong>集群数据同步</strong>：Nacos 集群通过 MySQL 主从同步或 Raft 协议（1.4.0+ 支持），确保多节点配置一致。</li>
-</ul>
-<h3 id="4-2-多环境与多版本管理"><a href="#4-2-多环境与多版本管理" class="headerlink" title="4.2 多环境与多版本管理"></a>4.2 多环境与多版本管理</h3><ul>
-<li><strong>多环境隔离</strong>：通过 <code>namespace</code>（命名空间）区分环境（如 <code>dev</code>&#x2F;<code>test</code>&#x2F;<code>prod</code>），每个命名空间下的配置完全隔离，避免环境混淆；</li>
-<li><strong>多版本回溯</strong>：Nacos 保留配置的历史版本（默认 30 天），支持一键回滚到历史版本，应对配置修改错误的场景。</li>
-</ul>
-<h3 id="4-3-配置安全：敏感信息加密"><a href="#4-3-配置安全：敏感信息加密" class="headerlink" title="4.3 配置安全：敏感信息加密"></a>4.3 配置安全：敏感信息加密</h3><p>针对数据库密码、AccessKey 等敏感配置，Nacos 提供两种加密方案：</p>
-<ul>
-<li><strong>传输加密</strong>：服务端与客户端通过 HTTPS 通信，避免配置在传输过程中被窃取；</li>
-<li><strong>存储加密</strong>：使用 AES-128 或 RSA 算法对敏感配置加密后存储到 MySQL，客户端通过配置 <code>secretKey</code> 解密后使用（需在 <code>bootstrap.yaml</code> 中配置加密密钥）。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>技术学习</category>
-        <category>Spring Cloud</category>
-      </categories>
-      <tags>
-        <tag>Spring Cloud</tag>
-        <tag>Nacos</tag>
-        <tag>配置中心</tag>
-        <tag>源码解析</tag>
-        <tag>事件驱动</tag>
-        <tag>动态配置</tag>
       </tags>
   </entry>
   <entry>
@@ -1062,40 +1062,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title>LeetCode32.最长有效括号</title>
-    <url>/2025/11/22/LeetCode32-%E6%9C%80%E9%95%BF%E6%9C%89%E6%95%88%E6%8B%AC%E5%8F%B7/</url>
-    <content><![CDATA[<h1 id="LeetCode32-最长有效括号"><a href="#LeetCode32-最长有效括号" class="headerlink" title="LeetCode32.最长有效括号"></a><a href="https://leetcode.cn/problems/longest-valid-parentheses/description/">LeetCode32.最长有效括号</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给你一个只包含 <code>(</code> 和 <code>)</code> 的字符串，找出最长有效（格式正确且连续）括号 子串 的长度。<br></p>
-<p>左右括号匹配，即每个左括号都有对应的右括号将其闭合的字符串是格式正确的，比如 <code>(()())</code>。<br></p>
-<h2 id="示例-1"><a href="#示例-1" class="headerlink" title="示例 1:"></a>示例 1:</h2><blockquote>
-<p><strong>输入:</strong> s &#x3D; “(()” <br><br><strong>输出:</strong> 2 <br><br><strong>解释:</strong> 最长有效括号子串是 “()”<br></p>
-</blockquote>
-<h2 id="示例-2"><a href="#示例-2" class="headerlink" title="示例 2:"></a>示例 2:</h2><blockquote>
-<p><strong>输入:</strong> s &#x3D; “)()())”<br><br><strong>输出:</strong> 4<br><br><strong>解释：</strong>最长有效括号子串是 “()()”</p>
-</blockquote>
-<h2 id="示例-3"><a href="#示例-3" class="headerlink" title="示例 3:"></a>示例 3:</h2><blockquote>
-<p><strong>输入:</strong> s &#x3D; “”<br><br><strong>输出:</strong> 0<br></p>
-</blockquote>
-<h2 id="提示"><a href="#提示" class="headerlink" title="提示:"></a>提示:</h2><ul>
-<li><code>0 &lt;= s.length &lt;= 3 * 104</code></li>
-<li><code>s[i]</code> 为 <code>(</code> 或 <code>)</code></li>
-</ul>
-<h2 id="思路："><a href="#思路：" class="headerlink" title="思路："></a>思路：</h2><blockquote>
-<p>栈存下标，每次入栈取栈顶元素看当前待入栈元素是否为<code>)</code>,且栈顶元素为<code>(</code>，若满足条件则先弹出元素，然后取<code>ans = Math.max(i-stack(top),ans)</code><br>需要注意下边界条件，即栈为空边界</p>
-</blockquote>
-<h2 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">longestValidParentheses</span><span class="params">(String s)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">ans</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">        Deque&lt;Integer&gt; stack = <span class="keyword">new</span> <span class="title class_">ArrayDeque</span>&lt;&gt;();</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; s.length(); i++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!stack.isEmpty() &amp;&amp; s.charAt(i) == <span class="string">&#x27;)&#x27;</span> &amp;&amp; s.charAt(stack.peekFirst()) == <span class="string">&#x27;(&#x27;</span>) &#123;</span><br><span class="line">                stack.pop();</span><br><span class="line">                <span class="keyword">if</span> (stack.isEmpty()) &#123;</span><br><span class="line">                    ans = i + <span class="number">1</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="type">Integer</span> <span class="variable">index</span> <span class="operator">=</span> stack.peekFirst();</span><br><span class="line">                    ans = Math.max(i - index, ans);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            stack.push(i);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> ans;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>LeetCode</category>
-        <category>算法</category>
-      </categories>
-      <tags>
-        <tag>LeetCode</tag>
-        <tag>算法</tag>
-        <tag>字符串</tag>
-        <tag>栈</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>LeetCode3190.使所有元素都可以被3整除的最少操作数</title>
     <url>/2025/11/22/LeetCode3190-%E4%BD%BF%E6%89%80%E6%9C%89%E5%85%83%E7%B4%A0%E9%83%BD%E5%8F%AF%E4%BB%A5%E8%A2%AB3%E6%95%B4%E9%99%A4%E7%9A%84%E6%9C%80%E5%B0%91%E6%93%8D%E4%BD%9C%E6%95%B0/</url>
     <content><![CDATA[<h1 id="3190-使所有元素都可以被3整除的最少操作数"><a href="#3190-使所有元素都可以被3整除的最少操作数" class="headerlink" title="3190.使所有元素都可以被3整除的最少操作数"></a><a href="https://leetcode.cn/problems/find-minimum-operations-to-make-all-elements-divisible-by-three/description/">3190.使所有元素都可以被3整除的最少操作数</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给你一个整数数组 <code>nums</code> 。一次操作中，你可以将 <code>nums</code> 中的 任意 一个元素增加或者减少 <code>1</code> 。</p>
@@ -1131,6 +1097,51 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
+    <title>LeetCode65.有效数字</title>
+    <url>/2025/11/22/LeetCode65-%E6%9C%89%E6%95%88%E6%95%B0%E5%AD%97/</url>
+    <content><![CDATA[<h1 id="65-有效数字"><a href="#65-有效数字" class="headerlink" title="65.有效数字"></a><a href="https://leetcode.cn/problems/valid-number/description/">65.有效数字</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给定一个字符串 <code>s</code> ，返回 <code>s</code> 是否是一个 有效数字。<br></p>
+<p>例如，下面的都是有效数字：<code>2</code>, <code>0089</code>, <code>-0.1</code>, <code>+3.14</code>, <code>4.</code>, <code>-.9</code>, <code>2e10</code>, <code>-90E3</code>, <code>3e+7</code>, <code>+6e-1</code>, <code>53.5e93</code>, <code>-123.456e789</code>，而接下来的不是：<code>abc</code>, <code>1a</code>, <code>1e</code>, <code>e3</code>, <code>99e2.5</code>, <code>--6</code>, <code>-+3</code>, <code>95a54e53</code>。<br></p>
+<p>一般的，一个 有效数字 可以用以下的规则之一定义：<br></p>
+<ol>
+<li>一个 整数 后面跟着一个 可选指数。<br></li>
+<li>一个 十进制数 后面跟着一个 可选指数。<br></li>
+</ol>
+<p>一个 整数 定义为一个 可选符号 <code>-</code> 或 <code>+</code> 后面跟着 数字。<br><br>一个 十进制数 定义为一个 可选符号 <code>-</code> 或 <code>+</code> 后面跟着下述规则：<br></p>
+<ol>
+<li>数字 后跟着一个 小数点 <code>.</code>。<br></li>
+<li>数字 后跟着一个 小数点 <code>.</code> 再跟着 数位。<br></li>
+<li>一个 小数点 <code>. </code>后跟着 数位。<br><br>指数 定义为指数符号 <code>e</code> 或 <code>E</code>，后面跟着一个 整数。<br></li>
+</ol>
+<p>数字 定义为一个或多个数位。<br></p>
+<h2 id="示例-1"><a href="#示例-1" class="headerlink" title="示例 1:"></a>示例 1:</h2><blockquote>
+<p><strong>输入:</strong> s &#x3D; “0” <br><br><strong>输出:</strong> true <br></p>
+</blockquote>
+<h2 id="示例-2"><a href="#示例-2" class="headerlink" title="示例 2:"></a>示例 2:</h2><blockquote>
+<p><strong>输入:</strong> s &#x3D; “e”<br><br><strong>输出:</strong> false<br></p>
+</blockquote>
+<h2 id="示例-3"><a href="#示例-3" class="headerlink" title="示例 3:"></a>示例 3:</h2><blockquote>
+<p><strong>输入:</strong> s &#x3D; “”<br><br><strong>输出:</strong> false<br></p>
+</blockquote>
+<h2 id="提示"><a href="#提示" class="headerlink" title="提示:"></a>提示:</h2><ul>
+<li><code>1 &lt;= s.length &lt;= 20</code></li>
+<li><code>s</code> 仅含英文字母（大写和小写），数字（<code>0-9</code>），加号 <code>+</code> ，减号 <code>-</code> ，或者点 <code>.</code> 。</li>
+</ul>
+<h2 id="思路："><a href="#思路：" class="headerlink" title="思路："></a>思路：</h2><blockquote>
+<p>模式匹配,需要细心点，不然容易WA,写出三种数字判断函数，从e||E做拆分，带入函数得出结果</p>
+</blockquote>
+<h2 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="comment">// 判断是否是整数</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">isInteger</span><span class="params">(String s, <span class="type">int</span> l, <span class="type">int</span> r)</span> &#123;</span><br><span class="line">        <span class="type">char</span> <span class="variable">ch</span> <span class="operator">=</span> s.charAt(l++);</span><br><span class="line">        <span class="keyword">if</span> (ch != <span class="string">&#x27;-&#x27;</span> &amp;&amp; ch != <span class="string">&#x27;+&#x27;</span> &amp;&amp; (ch &lt; <span class="string">&#x27;0&#x27;</span> || ch &gt; <span class="string">&#x27;9&#x27;</span>)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">int</span> <span class="variable">numCnt</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (ch &gt;= <span class="string">&#x27;0&#x27;</span> &amp;&amp; ch &lt;= <span class="string">&#x27;9&#x27;</span>) &#123;</span><br><span class="line">            numCnt++;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">while</span> (l &lt;= r) &#123;</span><br><span class="line">            <span class="type">char</span> <span class="variable">item</span> <span class="operator">=</span> s.charAt(l++);</span><br><span class="line">            <span class="keyword">if</span> (item &lt; <span class="string">&#x27;0&#x27;</span> || item &gt; <span class="string">&#x27;9&#x27;</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            numCnt++;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> numCnt != <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 是否为十进制数</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">isDecimal</span><span class="params">(String s, <span class="type">int</span> l, <span class="type">int</span> r)</span> &#123;</span><br><span class="line">        <span class="type">char</span> <span class="variable">ch</span> <span class="operator">=</span> s.charAt(l++);</span><br><span class="line">        <span class="keyword">if</span> (ch != <span class="string">&#x27;-&#x27;</span> &amp;&amp; ch != <span class="string">&#x27;+&#x27;</span> &amp;&amp; ch != <span class="string">&#x27;.&#x27;</span> &amp;&amp; (ch &lt; <span class="string">&#x27;0&#x27;</span> || ch &gt; <span class="string">&#x27;9&#x27;</span>)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">int</span> <span class="variable">pointCnt</span> <span class="operator">=</span> <span class="number">0</span>, numCnt = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (ch == <span class="string">&#x27;.&#x27;</span>) &#123;</span><br><span class="line">            pointCnt++;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (ch &gt;= <span class="string">&#x27;0&#x27;</span> &amp;&amp; ch &lt;= <span class="string">&#x27;9&#x27;</span>) &#123;</span><br><span class="line">            numCnt++;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (l &gt; r) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">while</span> (l &lt;= r) &#123;</span><br><span class="line">            <span class="type">char</span> <span class="variable">item</span> <span class="operator">=</span> s.charAt(l++);</span><br><span class="line">            <span class="keyword">if</span> (item == <span class="string">&#x27;.&#x27;</span>) &#123;</span><br><span class="line">                <span class="keyword">if</span> (pointCnt == <span class="number">1</span>)</span><br><span class="line">                    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">                <span class="keyword">else</span></span><br><span class="line">                    pointCnt++;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (item == <span class="string">&#x27;e&#x27;</span> || item == <span class="string">&#x27;E&#x27;</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> numCnt != <span class="number">0</span> &amp;&amp; isIndex(s, l - <span class="number">1</span>, r);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (item &lt; <span class="string">&#x27;0&#x27;</span> || item &gt; <span class="string">&#x27;9&#x27;</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                numCnt++;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> numCnt != <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 是否为指数</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">isIndex</span><span class="params">(String s, <span class="type">int</span> l, <span class="type">int</span> r)</span> &#123;</span><br><span class="line">        <span class="type">char</span> <span class="variable">ch</span> <span class="operator">=</span> s.charAt(l++);</span><br><span class="line">        <span class="keyword">if</span> (ch != <span class="string">&#x27;e&#x27;</span> &amp;&amp; ch != <span class="string">&#x27;E&#x27;</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (l &gt; r) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> isInteger(s, l, r);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">isNumber</span><span class="params">(String s)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">r</span> <span class="operator">=</span> s.length() - <span class="number">1</span>;</span><br><span class="line">        <span class="type">int</span> <span class="variable">e</span> <span class="operator">=</span> Math.max(s.indexOf(<span class="string">&#x27;e&#x27;</span>), s.indexOf(<span class="string">&#x27;E&#x27;</span>));</span><br><span class="line">        <span class="keyword">if</span> (e == -<span class="number">1</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> isInteger(s, <span class="number">0</span>, r) || isDecimal(s, <span class="number">0</span>, r);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="type">boolean</span> <span class="variable">index</span> <span class="operator">=</span> isIndex(s, e, r);</span><br><span class="line">            <span class="keyword">return</span> (isInteger(s, <span class="number">0</span>, e - <span class="number">1</span>) || isDecimal(s, <span class="number">0</span>, e - <span class="number">1</span>)) &amp;&amp; index;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>LeetCode</category>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>LeetCode</tag>
+        <tag>算法</tag>
+        <tag>字符串</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>LeetCode717. 1 比特与 2 比特字符</title>
     <url>/2025/11/18/LeetCode717-1-%E6%AF%94%E7%89%B9%E4%B8%8E-2-%E6%AF%94%E7%89%B9%E5%AD%97%E7%AC%A6/</url>
     <content><![CDATA[<h1 id="717-1-比特与-2-比特字符"><a href="#717-1-比特与-2-比特字符" class="headerlink" title="717. 1 比特与 2 比特字符"></a><a href="https://leetcode.cn/problems/1-bit-and-2-bit-characters/description/">717. 1 比特与 2 比特字符</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>有两种特殊字符：</p>
@@ -1161,6 +1172,40 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>LeetCode</tag>
         <tag>算法</tag>
         <tag>数组</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>LeetCode32.最长有效括号</title>
+    <url>/2025/11/22/LeetCode32-%E6%9C%80%E9%95%BF%E6%9C%89%E6%95%88%E6%8B%AC%E5%8F%B7/</url>
+    <content><![CDATA[<h1 id="LeetCode32-最长有效括号"><a href="#LeetCode32-最长有效括号" class="headerlink" title="LeetCode32.最长有效括号"></a><a href="https://leetcode.cn/problems/longest-valid-parentheses/description/">LeetCode32.最长有效括号</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给你一个只包含 <code>(</code> 和 <code>)</code> 的字符串，找出最长有效（格式正确且连续）括号 子串 的长度。<br></p>
+<p>左右括号匹配，即每个左括号都有对应的右括号将其闭合的字符串是格式正确的，比如 <code>(()())</code>。<br></p>
+<h2 id="示例-1"><a href="#示例-1" class="headerlink" title="示例 1:"></a>示例 1:</h2><blockquote>
+<p><strong>输入:</strong> s &#x3D; “(()” <br><br><strong>输出:</strong> 2 <br><br><strong>解释:</strong> 最长有效括号子串是 “()”<br></p>
+</blockquote>
+<h2 id="示例-2"><a href="#示例-2" class="headerlink" title="示例 2:"></a>示例 2:</h2><blockquote>
+<p><strong>输入:</strong> s &#x3D; “)()())”<br><br><strong>输出:</strong> 4<br><br><strong>解释：</strong>最长有效括号子串是 “()()”</p>
+</blockquote>
+<h2 id="示例-3"><a href="#示例-3" class="headerlink" title="示例 3:"></a>示例 3:</h2><blockquote>
+<p><strong>输入:</strong> s &#x3D; “”<br><br><strong>输出:</strong> 0<br></p>
+</blockquote>
+<h2 id="提示"><a href="#提示" class="headerlink" title="提示:"></a>提示:</h2><ul>
+<li><code>0 &lt;= s.length &lt;= 3 * 104</code></li>
+<li><code>s[i]</code> 为 <code>(</code> 或 <code>)</code></li>
+</ul>
+<h2 id="思路："><a href="#思路：" class="headerlink" title="思路："></a>思路：</h2><blockquote>
+<p>栈存下标，每次入栈取栈顶元素看当前待入栈元素是否为<code>)</code>,且栈顶元素为<code>(</code>，若满足条件则先弹出元素，然后取<code>ans = Math.max(i-stack(top),ans)</code><br>需要注意下边界条件，即栈为空边界</p>
+</blockquote>
+<h2 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">longestValidParentheses</span><span class="params">(String s)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">ans</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">        Deque&lt;Integer&gt; stack = <span class="keyword">new</span> <span class="title class_">ArrayDeque</span>&lt;&gt;();</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; s.length(); i++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!stack.isEmpty() &amp;&amp; s.charAt(i) == <span class="string">&#x27;)&#x27;</span> &amp;&amp; s.charAt(stack.peekFirst()) == <span class="string">&#x27;(&#x27;</span>) &#123;</span><br><span class="line">                stack.pop();</span><br><span class="line">                <span class="keyword">if</span> (stack.isEmpty()) &#123;</span><br><span class="line">                    ans = i + <span class="number">1</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="type">Integer</span> <span class="variable">index</span> <span class="operator">=</span> stack.peekFirst();</span><br><span class="line">                    ans = Math.max(i - index, ans);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            stack.push(i);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> ans;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>LeetCode</category>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>LeetCode</tag>
+        <tag>算法</tag>
+        <tag>字符串</tag>
+        <tag>栈</tag>
       </tags>
   </entry>
   <entry>
