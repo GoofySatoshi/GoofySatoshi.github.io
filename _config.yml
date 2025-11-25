@@ -143,15 +143,6 @@ deploy:
   repo: git@github.com:GoofySatoshi/GoofySatoshi.github.io.git
   branch: main
 
-# ==================== 站点级 searchdb 插件配置 ====================
-search:
-  enable: true
-  path: search.json # 必须与主题配置的 path 一致
-  field: post # 搜索范围：post（仅文章）/ page（仅页面）/ all（全部）
-  format: html
-  limit: 10000
-  preload: false
-  cache: true # 启用缓存
 
 # Feed
 feed:
@@ -183,6 +174,13 @@ live2d:
     width: 150                # 宽度
     height: 300               # 高度
     hOffset: 0                # 水平偏移
-    vOffset: 20              # 垂直偏移
+    vOffset: -20              # 垂直偏移
   mobile:
     show: true                # 移动端是否显示
+
+# ==================== 站点级 searchdb 插件配置 ====================
+search:
+  path: search.xml # 必须与主题配置的 path 一致
+  field: post # 搜索范围：post（仅文章）/ page（仅页面）/ all（全部）
+  format: html
+  limit: 10000

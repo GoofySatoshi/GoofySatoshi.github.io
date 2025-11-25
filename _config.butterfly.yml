@@ -468,16 +468,18 @@ search:
 # Local Search
 # ==================== Butterfly 主题本地搜索配置 ====================
 local_search:
-  enable: true # 必须设为 true，启用本地搜索
-  path: /search.json # 索引文件路径，与 searchdb 插件生成的文件一致
-  trigger: auto # 触发方式：auto（输入自动搜索）/ manual（点击搜索）
-  preload: false # 是否预加载索引文件
-  unescape: false # 是否解码 HTML 实体
-  top_n_per_article: 1 # 每篇文章的顶部匹配结果数
-  hitsPerPage: 10 # 解决 hitsPerPage undefined 报错的核心字段
-  placeholder: 请输入搜索关键词 # 可选：搜索框占位符
-  empty_text: 没有找到相关结果 # 可选：无结果提示文本
-
+  # Preload the search data when the page loads.
+  preload: false
+  # Show top n results per article, show all results by setting to -1
+  top_n_per_article: 1
+  # Unescape html strings to the readable one.
+  unescape: false
+  # Enable pagination for search results
+  pagination:
+    enable: true
+    # Number of search results per page
+    hitsPerPage: 8
+  CDN:
 # Algolia Search
 algolia_search:
   # Number of search results per page
@@ -965,6 +967,16 @@ css_prefix: true
 inject:
   head:
     - |
+      <script>
+        // 强制同步执行，最早初始化pagination配置
+        const { path, top_n_per_article, unescape, languages, pagination } = GLOBAL_CONFIG.localSearch
+      
+      console.log('path：', path);
+      console.log('top_n_per_article：', top_n_per_article);
+      console.log('unescape：', unescape);
+      console.log('languages：', languages);
+      console.log('pagination：', pagination);
+      </script>
       <style>
         /* 1. 禁用侧边栏头像旋转（核心） */
         .sidebar-card .card-author .author-avatar img,
@@ -1002,12 +1014,12 @@ inject:
         #page-header .site-subtitle {
           color: #333 !important; /* 深色文字，背景浅时用；反之用#fff */
         }
-          /* 确保背景图显示样式正确 */
+        /* 确保背景图显示样式正确 */
         body {
-        background-repeat: no-repeat !important;
-        background-attachment: fixed !important;
-        background-size: cover !important;
-        background-position: center !important;
+          background-repeat: no-repeat !important;
+          background-attachment: fixed !important;
+          background-size: cover !important;
+          background-position: center !important;
         }
       </style>
   bottom:
