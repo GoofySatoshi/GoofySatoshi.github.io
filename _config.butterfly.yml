@@ -466,17 +466,17 @@ search:
   placeholder: 搜索文章...
 
 # Local Search
+# ==================== Butterfly 主题本地搜索配置 ====================
 local_search:
-  enable: true 
-  # Preload the search data when the page loads
-  preload: true
-  # Show top n results per article, show all results by setting to -1
-  top_n_per_article: 3
-  # Unescape html strings to the readable one
-  unescape: true
-  # Enable CDN
-  CDN: false
-  hitsPerPage: 10 
+  enable: true # 必须设为 true，启用本地搜索
+  path: search.json # 索引文件路径，与 searchdb 插件生成的文件一致
+  trigger: auto # 触发方式：auto（输入自动搜索）/ manual（点击搜索）
+  preload: false # 是否预加载索引文件
+  unescape: false # 是否解码 HTML 实体
+  top_n_per_article: 1 # 每篇文章的顶部匹配结果数
+  hitsPerPage: 10 # 解决 hitsPerPage undefined 报错的核心字段
+  placeholder: 请输入搜索关键词 # 可选：搜索框占位符
+  empty_text: 没有找到相关结果 # 可选：无结果提示文本
 
 # Algolia Search
 algolia_search:
