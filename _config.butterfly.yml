@@ -469,7 +469,7 @@ search:
 # ==================== Butterfly 主题本地搜索配置 ====================
 local_search:
   enable: true # 必须设为 true，启用本地搜索
-  path: search.json # 索引文件路径，与 searchdb 插件生成的文件一致
+  path: /search.json # 索引文件路径，与 searchdb 插件生成的文件一致
   trigger: auto # 触发方式：auto（输入自动搜索）/ manual（点击搜索）
   preload: false # 是否预加载索引文件
   unescape: false # 是否解码 HTML 实体
