@@ -143,12 +143,14 @@ deploy:
   repo: git@github.com:GoofySatoshi/GoofySatoshi.github.io.git
   branch: main
 
-# Search
+# ==================== 站点级 searchdb 插件配置 ====================
 search:
-  path: search.xml
-  field: post
+  enable: true
+  path: search.json # 必须与主题配置的 path 一致
+  field: post # 搜索范围：post（仅文章）/ page（仅页面）/ all（全部）
   format: html
   limit: 10000
+  preload: false
 
 # Feed
 feed:
