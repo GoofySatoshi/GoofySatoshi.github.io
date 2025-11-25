@@ -1,5 +1,5 @@
 ---
-title: Spring Cloud Gateway 学习总结（优化版）
+title: Spring Cloud Gateway 
 date: 2024-05-20 10:30:00
 tags:
   - Spring Cloud
