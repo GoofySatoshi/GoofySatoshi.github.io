@@ -265,8 +265,7 @@ footer:
   owner:
     enable: true
     since: 2019
-  custom_text: '<img src="https://beian.mps.gov.cn/img/logo01.dd7ff50e.png"> <a href="http://beian.miit.gov.cn/" style="color:white" target="_blank">浙ICP备2025214344号</a>'
-  # Copyright of theme and framework
+  custom_text: '测试footer是否生效'  
   copyright: true
 
 # --------------------------------------
