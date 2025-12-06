@@ -312,6 +312,157 @@
       </tags>
   </entry>
   <entry>
+    <title>G1 垃圾收集器学习笔记</title>
+    <url>/2025/09/22/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/</url>
+    <content><![CDATA[<h1 id="G1垃圾收集器学习笔记"><a href="#G1垃圾收集器学习笔记" class="headerlink" title="G1垃圾收集器学习笔记"></a>G1垃圾收集器学习笔记</h1><h2 id="2025-09-23"><a href="#2025-09-23" class="headerlink" title="2025-09-23"></a>2025-09-23</h2><h2 id="一、G1垃圾收集器概述"><a href="#一、G1垃圾收集器概述" class="headerlink" title="一、G1垃圾收集器概述"></a>一、G1垃圾收集器概述</h2><p>G1（Garbage-First）是Java 9默认的垃圾收集器，核心特性如下：  </p>
+<ul>
+<li><strong>取消物理分代</strong>：将内存划分为2048个逻辑<code>Region</code>（默认值）  </li>
+<li><strong>动态分区管理</strong>：年轻代&#x2F;老年代区域可相互转化  </li>
+<li><strong>巨型对象处理</strong>：新增<code>Humongous</code>区存储超Region 50%的大对象</li>
+</ul>
+<h2 id="二、内存管理机制"><a href="#二、内存管理机制" class="headerlink" title="二、内存管理机制"></a>二、内存管理机制</h2><h3 id="1-内存分区"><a href="#1-内存分区" class="headerlink" title="1. 内存分区"></a>1. 内存分区</h3><ul>
+<li><strong>逻辑分区</strong>：保留年轻代（Eden&#x2F;Survivor）、老年代概念  </li>
+<li><strong>物理结构</strong>：  <ul>
+<li>默认2048个Region（通过<code>-XX:G1HeapRegionSize</code>调整）  </li>
+<li>年轻代初始占比5%（动态调整，上限60%）  </li>
+<li>Eden:Survivor默认比例8:1:1</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-特殊区域"><a href="#2-特殊区域" class="headerlink" title="2. 特殊区域"></a>2. 特殊区域</h3><ul>
+<li><strong>Humongous区</strong>：  <ul>
+<li>存储超过Region 50%的大对象  </li>
+<li>若对象超过单个Region大小，会被分割存储于多个连续Region</li>
+</ul>
+</li>
+</ul>
+<h2 id="三、垃圾回收流程"><a href="#三、垃圾回收流程" class="headerlink" title="三、垃圾回收流程"></a>三、垃圾回收流程</h2><p>G1回收分为四个阶段：  </p>
+<ol>
+<li><strong>初始标记</strong>（Stop The World）  <ul>
+<li>标记GC Roots直接引用对象</li>
+</ul>
+</li>
+<li><strong>并发标记</strong>（Concurrent）  <ul>
+<li>与工作线程并行标记存活对象</li>
+</ul>
+</li>
+<li><strong>最终标记</strong>（Stop The World）  <ul>
+<li>修正并发阶段的增量引用</li>
+</ul>
+</li>
+<li><strong>筛选回收</strong>（Concurrent）  <ul>
+<li>按回收价值排序Region  </li>
+<li>执行复制算法整理内存</li>
+</ul>
+</li>
+</ol>
+<h2 id="四、核心特性"><a href="#四、核心特性" class="headerlink" title="四、核心特性"></a>四、核心特性</h2><ol>
+<li><strong>并行与并发</strong>  <ul>
+<li>多核CPU缩短停顿时间</li>
+</ul>
+</li>
+<li><strong>分代抽象管理</strong>  <ul>
+<li>逻辑分代替代物理分区</li>
+</ul>
+</li>
+<li><strong>空间整合</strong>  <ul>
+<li>整体标记整理 + 局部复制算法  </li>
+<li>减少内存碎片</li>
+</ul>
+</li>
+</ol>
+<h2 id="五、垃圾收集分类"><a href="#五、垃圾收集分类" class="headerlink" title="五、垃圾收集分类"></a>五、垃圾收集分类</h2><h3 id="1-YoungGC（年轻代回收）"><a href="#1-YoungGC（年轻代回收）" class="headerlink" title="1. YoungGC（年轻代回收）"></a>1. YoungGC（年轻代回收）</h3><ul>
+<li><strong>触发条件</strong>：  <ul>
+<li>伊甸区填满时预估回收时间：  <ul>
+<li>若预估时间 &lt; <code>MaxGCPauseMillis</code> → 新增年轻代Region  </li>
+<li>若预估时间 ≈ <code>MaxGCPauseMillis</code> → 触发回收</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>执行逻辑</strong>：  <ul>
+<li>回收所有年轻代Region  </li>
+<li>存活对象晋升至老年代&#x2F;Survivor区</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-MixedGC（混合回收）"><a href="#2-MixedGC（混合回收）" class="headerlink" title="2. MixedGC（混合回收）"></a>2. MixedGC（混合回收）</h3><ul>
+<li><strong>触发条件</strong>：  <ul>
+<li>老年代占用率超过阈值（<code>-XX:InitiatingHeapOccupancyPercent</code>）</li>
+</ul>
+</li>
+<li><strong>执行逻辑</strong>：  <ul>
+<li>回收所有年轻代 + 部分老年代Region（非全部老年代）  </li>
+<li>具体回收数量由回收价值决定</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-Full-GC（负GC）"><a href="#3-Full-GC（负GC）" class="headerlink" title="3. Full GC（负GC）"></a>3. Full GC（负GC）</h3><ul>
+<li><strong>触发条件</strong>：  <ul>
+<li>内存不足（如MixedGC无法完成回收）</li>
+</ul>
+</li>
+<li><strong>执行逻辑</strong>：  <ul>
+<li>单线程标记-清理-压缩内存  </li>
+<li>现代JVM（Java 11+）通过<code>-XX:+UseG1GC -XX:-UseAdaptiveSizePolicy</code>可减少Full GC</li>
+</ul>
+</li>
+</ul>
+<h2 id="六、关键参数"><a href="#六、关键参数" class="headerlink" title="六、关键参数"></a>六、关键参数</h2><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-XX:MaxGCPauseMillis</code></td>
+<td>目标最大停顿时间（默认200ms）</td>
+</tr>
+<tr>
+<td><code>-XX:G1HeapRegionSize</code></td>
+<td>Region大小（推荐1MB-32MB）</td>
+</tr>
+<tr>
+<td><code>-XX:InitiatingHeapOccupancyPercent</code></td>
+<td>老年代触发并发回收阈值（默认45%）</td>
+</tr>
+</tbody></table>
+<h2 id="七、注意事项"><a href="#七、注意事项" class="headerlink" title="七、注意事项"></a>七、注意事项</h2><ul>
+<li>过度追求低停顿可能导致：  <ul>
+<li>垃圾堆积 → 负GC → 回收成本上升</li>
+</ul>
+</li>
+<li>生产环境建议保持默认参数配置  </li>
+<li>通过<code>-XX:+PrintGCDetails -XX:+PrintGCDateStamps</code>监控GC行为</li>
+</ul>
+<h2 id="八、其他相关回收器"><a href="#八、其他相关回收器" class="headerlink" title="八、其他相关回收器"></a>八、其他相关回收器</h2><ul>
+<li><strong>ZGC</strong>（JDK 11引入的低延迟垃圾收集器）：  <ul>
+<li>支持TB级内存  </li>
+<li>停顿时间&lt;10ms  </li>
+<li>基于Region的着色指针技术</li>
+</ul>
+</li>
+</ul>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a href="https://docs.oracle.com/javase/9/gctuning/garbage-first-garbage-collector.htm">G1官方文档</a>  </li>
+<li><a href="https://docs.oracle.com/javase/11/gctuning/z-garbage-collector.htm">ZGC官方文档</a>  </li>
+<li>《深入理解Java虚拟机》第三版（周志明）</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Java</category>
+        <category>JVM</category>
+        <category>垃圾收集器</category>
+      </categories>
+      <tags>
+        <tag>G1 垃圾收集器</tag>
+        <tag>JVM</tag>
+        <tag>Java 虚拟机</tag>
+        <tag>垃圾回收机制</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Spring Cloud Gateway</title>
     <url>/2024/05/20/Gateway%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
     <content><![CDATA[<h2 id="一、核心原理补充（易混淆点）"><a href="#一、核心原理补充（易混淆点）" class="headerlink" title="一、核心原理补充（易混淆点）"></a>一、核心原理补充（易混淆点）</h2><h3 id="1-响应式架构本质"><a href="#1-响应式架构本质" class="headerlink" title="1. 响应式架构本质"></a>1. 响应式架构本质</h3><p>Spring Cloud Gateway 基于 WebFlux 框架实现，底层依赖 Netty 实现异步非阻塞通信，与传统 Spring MVC 框架存在本质区别：</p>
@@ -612,157 +763,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title>G1 垃圾收集器学习笔记</title>
-    <url>/2025/09/22/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/</url>
-    <content><![CDATA[<h1 id="G1垃圾收集器学习笔记"><a href="#G1垃圾收集器学习笔记" class="headerlink" title="G1垃圾收集器学习笔记"></a>G1垃圾收集器学习笔记</h1><h2 id="2025-09-23"><a href="#2025-09-23" class="headerlink" title="2025-09-23"></a>2025-09-23</h2><h2 id="一、G1垃圾收集器概述"><a href="#一、G1垃圾收集器概述" class="headerlink" title="一、G1垃圾收集器概述"></a>一、G1垃圾收集器概述</h2><p>G1（Garbage-First）是Java 9默认的垃圾收集器，核心特性如下：  </p>
-<ul>
-<li><strong>取消物理分代</strong>：将内存划分为2048个逻辑<code>Region</code>（默认值）  </li>
-<li><strong>动态分区管理</strong>：年轻代&#x2F;老年代区域可相互转化  </li>
-<li><strong>巨型对象处理</strong>：新增<code>Humongous</code>区存储超Region 50%的大对象</li>
-</ul>
-<h2 id="二、内存管理机制"><a href="#二、内存管理机制" class="headerlink" title="二、内存管理机制"></a>二、内存管理机制</h2><h3 id="1-内存分区"><a href="#1-内存分区" class="headerlink" title="1. 内存分区"></a>1. 内存分区</h3><ul>
-<li><strong>逻辑分区</strong>：保留年轻代（Eden&#x2F;Survivor）、老年代概念  </li>
-<li><strong>物理结构</strong>：  <ul>
-<li>默认2048个Region（通过<code>-XX:G1HeapRegionSize</code>调整）  </li>
-<li>年轻代初始占比5%（动态调整，上限60%）  </li>
-<li>Eden:Survivor默认比例8:1:1</li>
-</ul>
-</li>
-</ul>
-<h3 id="2-特殊区域"><a href="#2-特殊区域" class="headerlink" title="2. 特殊区域"></a>2. 特殊区域</h3><ul>
-<li><strong>Humongous区</strong>：  <ul>
-<li>存储超过Region 50%的大对象  </li>
-<li>若对象超过单个Region大小，会被分割存储于多个连续Region</li>
-</ul>
-</li>
-</ul>
-<h2 id="三、垃圾回收流程"><a href="#三、垃圾回收流程" class="headerlink" title="三、垃圾回收流程"></a>三、垃圾回收流程</h2><p>G1回收分为四个阶段：  </p>
-<ol>
-<li><strong>初始标记</strong>（Stop The World）  <ul>
-<li>标记GC Roots直接引用对象</li>
-</ul>
-</li>
-<li><strong>并发标记</strong>（Concurrent）  <ul>
-<li>与工作线程并行标记存活对象</li>
-</ul>
-</li>
-<li><strong>最终标记</strong>（Stop The World）  <ul>
-<li>修正并发阶段的增量引用</li>
-</ul>
-</li>
-<li><strong>筛选回收</strong>（Concurrent）  <ul>
-<li>按回收价值排序Region  </li>
-<li>执行复制算法整理内存</li>
-</ul>
-</li>
-</ol>
-<h2 id="四、核心特性"><a href="#四、核心特性" class="headerlink" title="四、核心特性"></a>四、核心特性</h2><ol>
-<li><strong>并行与并发</strong>  <ul>
-<li>多核CPU缩短停顿时间</li>
-</ul>
-</li>
-<li><strong>分代抽象管理</strong>  <ul>
-<li>逻辑分代替代物理分区</li>
-</ul>
-</li>
-<li><strong>空间整合</strong>  <ul>
-<li>整体标记整理 + 局部复制算法  </li>
-<li>减少内存碎片</li>
-</ul>
-</li>
-</ol>
-<h2 id="五、垃圾收集分类"><a href="#五、垃圾收集分类" class="headerlink" title="五、垃圾收集分类"></a>五、垃圾收集分类</h2><h3 id="1-YoungGC（年轻代回收）"><a href="#1-YoungGC（年轻代回收）" class="headerlink" title="1. YoungGC（年轻代回收）"></a>1. YoungGC（年轻代回收）</h3><ul>
-<li><strong>触发条件</strong>：  <ul>
-<li>伊甸区填满时预估回收时间：  <ul>
-<li>若预估时间 &lt; <code>MaxGCPauseMillis</code> → 新增年轻代Region  </li>
-<li>若预估时间 ≈ <code>MaxGCPauseMillis</code> → 触发回收</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><strong>执行逻辑</strong>：  <ul>
-<li>回收所有年轻代Region  </li>
-<li>存活对象晋升至老年代&#x2F;Survivor区</li>
-</ul>
-</li>
-</ul>
-<h3 id="2-MixedGC（混合回收）"><a href="#2-MixedGC（混合回收）" class="headerlink" title="2. MixedGC（混合回收）"></a>2. MixedGC（混合回收）</h3><ul>
-<li><strong>触发条件</strong>：  <ul>
-<li>老年代占用率超过阈值（<code>-XX:InitiatingHeapOccupancyPercent</code>）</li>
-</ul>
-</li>
-<li><strong>执行逻辑</strong>：  <ul>
-<li>回收所有年轻代 + 部分老年代Region（非全部老年代）  </li>
-<li>具体回收数量由回收价值决定</li>
-</ul>
-</li>
-</ul>
-<h3 id="3-Full-GC（负GC）"><a href="#3-Full-GC（负GC）" class="headerlink" title="3. Full GC（负GC）"></a>3. Full GC（负GC）</h3><ul>
-<li><strong>触发条件</strong>：  <ul>
-<li>内存不足（如MixedGC无法完成回收）</li>
-</ul>
-</li>
-<li><strong>执行逻辑</strong>：  <ul>
-<li>单线程标记-清理-压缩内存  </li>
-<li>现代JVM（Java 11+）通过<code>-XX:+UseG1GC -XX:-UseAdaptiveSizePolicy</code>可减少Full GC</li>
-</ul>
-</li>
-</ul>
-<h2 id="六、关键参数"><a href="#六、关键参数" class="headerlink" title="六、关键参数"></a>六、关键参数</h2><table>
-<thead>
-<tr>
-<th>参数</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>-XX:MaxGCPauseMillis</code></td>
-<td>目标最大停顿时间（默认200ms）</td>
-</tr>
-<tr>
-<td><code>-XX:G1HeapRegionSize</code></td>
-<td>Region大小（推荐1MB-32MB）</td>
-</tr>
-<tr>
-<td><code>-XX:InitiatingHeapOccupancyPercent</code></td>
-<td>老年代触发并发回收阈值（默认45%）</td>
-</tr>
-</tbody></table>
-<h2 id="七、注意事项"><a href="#七、注意事项" class="headerlink" title="七、注意事项"></a>七、注意事项</h2><ul>
-<li>过度追求低停顿可能导致：  <ul>
-<li>垃圾堆积 → 负GC → 回收成本上升</li>
-</ul>
-</li>
-<li>生产环境建议保持默认参数配置  </li>
-<li>通过<code>-XX:+PrintGCDetails -XX:+PrintGCDateStamps</code>监控GC行为</li>
-</ul>
-<h2 id="八、其他相关回收器"><a href="#八、其他相关回收器" class="headerlink" title="八、其他相关回收器"></a>八、其他相关回收器</h2><ul>
-<li><strong>ZGC</strong>（JDK 11引入的低延迟垃圾收集器）：  <ul>
-<li>支持TB级内存  </li>
-<li>停顿时间&lt;10ms  </li>
-<li>基于Region的着色指针技术</li>
-</ul>
-</li>
-</ul>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
-<li><a href="https://docs.oracle.com/javase/9/gctuning/garbage-first-garbage-collector.htm">G1官方文档</a>  </li>
-<li><a href="https://docs.oracle.com/javase/11/gctuning/z-garbage-collector.htm">ZGC官方文档</a>  </li>
-<li>《深入理解Java虚拟机》第三版（周志明）</li>
-</ul>
-]]></content>
-      <categories>
-        <category>Java</category>
-        <category>JVM</category>
-        <category>垃圾收集器</category>
-      </categories>
-      <tags>
-        <tag>G1 垃圾收集器</tag>
-        <tag>JVM</tag>
-        <tag>Java 虚拟机</tag>
-        <tag>垃圾回收机制</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Hexo + GitHub Actions 实现自动化部署完整指南</title>
     <url>/2025/08/29/Hexo-GitHub-Actions-%E5%AE%9E%E7%8E%B0%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2%E5%AE%8C%E6%95%B4%E6%8C%87%E5%8D%97/</url>
     <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在使用 Hexo 搭建个人博客时，当我们终于把hexo生成的页面挂载到github页面后，每次提交博客都需要使用<code>hexo clean &amp;&amp; hexo g &amp;&amp; hexo d</code>来部署很麻烦，可以借助github actions来实现流水线布置，我们每次提交源代码到github存放源码的分支上，一旦监听到源代码的push事件，流水线就会就会自动拉取环境自动部署，所以我们需要一个存放源代码的分支，以及我们的发布分支，可以使用git命令创建这两个分支，自动CI&#x2F;CD,github需要密钥用来保证项目拉取和部署的权限，需要在本地生成ssh的密钥，公钥用来拉取项目，私钥用来部署推送更新页面，而且github对于npm安装有频率限制，我们可以通过配置国内镜像源+缓存配置，避免每次全量拉取，提高依赖安装以及部署的速度</p>
@@ -870,72 +870,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title>LeetCode1015.可被K整除的最小整数</title>
-    <url>/2025/11/25/LeetCode1015-%E5%8F%AF%E8%A2%ABK%E6%95%B4%E9%99%A4%E7%9A%84%E6%9C%80%E5%B0%8F%E6%95%B4%E6%95%B0/</url>
-    <content><![CDATA[<h1 id="1015-可被K整除的最小整数"><a href="#1015-可被K整除的最小整数" class="headerlink" title="1015.可被K整除的最小整数"></a><a href="https://leetcode.cn/problems/smallest-integer-divisible-by-k/description/">1015.可被K整除的最小整数</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给定正整数 <code>k</code> ，你需要找出可以被 <code>k</code> 整除的、仅包含数字 <code>1</code> 的最 小 正整数 <code>n</code> 的长度。<br></p>
-<p>返回 <code>n</code> 的长度。如果不存在这样的 <code>n</code> ，就返回<code>-1</code>。<br></p>
-<p>注意： <code>n</code> 可能不符合 <code>64</code> 位带符号整数。<br></p>
-<h2 id="示例-1"><a href="#示例-1" class="headerlink" title="示例 1:"></a>示例 1:</h2><blockquote>
-<p><strong>输入:</strong> k &#x3D; 1 <br><br><strong>输出:</strong> 1 <br><br><strong>解释:</strong> 最小的答案是 n &#x3D; 1，其长度为 1。<br></p>
-</blockquote>
-<h2 id="示例-2"><a href="#示例-2" class="headerlink" title="示例 2:"></a>示例 2:</h2><blockquote>
-<p><strong>输入:</strong> k &#x3D; 2<br><br><strong>输出:</strong> -1<br><br><strong>解释:</strong> 不存在可被 2 整除的正整数 n 。<br></p>
-</blockquote>
-<h2 id="示例-3"><a href="#示例-3" class="headerlink" title="示例 3:"></a>示例 3:</h2><blockquote>
-<p><strong>输入:</strong> k &#x3D; 3<br><br><strong>输出:</strong> 3<br><br><strong>解释:</strong> 最小的答案是 n &#x3D; 111，其长度为 3。<br></p>
-</blockquote>
-<h2 id="提示"><a href="#提示" class="headerlink" title="提示:"></a>提示:</h2><ul>
-<li><code>1 &lt;= k &lt;= 10^5</code></li>
-</ul>
-<h2 id="思路："><a href="#思路：" class="headerlink" title="思路："></a>思路：</h2><blockquote>
-<p>循环遍历乘<code>10</code>取余<code>k</code>，为了避免溢出对<code>k</code>取余,对<code>k</code>取余不会影响结果</p>
-</blockquote>
-<h2 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">smallestRepunitDivByK</span><span class="params">(<span class="type">int</span> k)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">res</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">1</span>; i &lt; <span class="number">100000</span>; i++) &#123;</span><br><span class="line">            res = (res * <span class="number">10</span> + <span class="number">1</span>) % k;</span><br><span class="line">            <span class="keyword">if</span> (res == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> i;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> -<span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>LeetCode</category>
-        <category>算法</category>
-      </categories>
-      <tags>
-        <tag>LeetCode</tag>
-        <tag>算法</tag>
-        <tag>哈希表</tag>
-        <tag>数学</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>LeetCode1018.可被5整除的二进制</title>
-    <url>/2025/11/24/LeetCode1018-%E5%8F%AF%E8%A2%AB5%E6%95%B4%E9%99%A4%E7%9A%84%E4%BA%8C%E8%BF%9B%E5%88%B6/</url>
-    <content><![CDATA[<h1 id="1018-可被5整除的二进制"><a href="#1018-可被5整除的二进制" class="headerlink" title="1018.可被5整除的二进制"></a><a href="https://leetcode.cn/problems/binary-prefix-divisible-by-5/description/">1018.可被5整除的二进制</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给定一个二进制数组 <code>nums</code> ( 索引从<code>0</code>开始 )。<br></p>
-<p>我们将<code>xi</code> 定义为其二进制表示形式为子数组 <code>nums[0..i]</code> (从最高有效位到最低有效位)。<br></p>
-<p>例如，如果 <code>nums =[1,0,1]</code> ，那么 <code>x0 = 1</code>, <code>x1 = 2</code>, 和 <code>x2 = 5</code>。<br><br>返回布尔值列表 <code>answer</code>，只有当 <code>xi</code> 可以被 <code>5</code> 整除时，答案 <code>answer[i]</code> 为 <code>true</code>，否则为 <code>false</code>。<br></p>
-<h2 id="示例-1"><a href="#示例-1" class="headerlink" title="示例 1:"></a>示例 1:</h2><blockquote>
-<p><strong>输入:</strong> nums &#x3D; [0,1,1] <br><br><strong>输出:</strong> [true,false,false] <br><br><strong>解释:</strong> 输入数字为 0, 01, 011；也就是十进制中的 0, 1, 3 。只有第一个数可以被 5 整除，因此 answer[0] 为 true 。<br></p>
-</blockquote>
-<h2 id="示例-2"><a href="#示例-2" class="headerlink" title="示例 2:"></a>示例 2:</h2><blockquote>
-<p><strong>输入:</strong> nums &#x3D; [1,1,1]<br><br><strong>输出:</strong> [false,false,false]<br></p>
-</blockquote>
-<h2 id="提示"><a href="#提示" class="headerlink" title="提示:"></a>提示:</h2><ul>
-<li><code>1 &lt;= nums.length &lt;= 105</code></li>
-<li><code>nums[i]</code> 仅为 <code>0</code> 或 <code>1</code></li>
-</ul>
-<h2 id="思路："><a href="#思路：" class="headerlink" title="思路："></a>思路：</h2><blockquote>
-<p>循环遍历左移一位取余<code>5</code>，为了避免溢出对5取余</p>
-</blockquote>
-<h2 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> List&lt;Boolean&gt; <span class="title function_">prefixesDivBy5</span><span class="params">(<span class="type">int</span>[] nums)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">n</span> <span class="operator">=</span> nums.length, cnt = <span class="number">0</span>;</span><br><span class="line">        List&lt;Boolean&gt; res = <span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;&gt;(n);</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; n; i++) &#123;</span><br><span class="line">            cnt = ((cnt &lt;&lt; <span class="number">1</span>) + nums[i]) % <span class="number">5</span>;</span><br><span class="line">            res.add(cnt == <span class="number">0</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> res;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>LeetCode</category>
-        <category>算法</category>
-      </categories>
-      <tags>
-        <tag>LeetCode</tag>
-        <tag>算法</tag>
-        <tag>位运算</tag>
-        <tag>数组</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>JUC 并发工具类</title>
     <url>/2025/10/24/JUC-%E5%B9%B6%E5%8F%91%E5%B7%A5%E5%85%B7%E7%B1%BB/</url>
     <content><![CDATA[<h1 id="一、ReentranLock工具类"><a href="#一、ReentranLock工具类" class="headerlink" title="一、ReentranLock工具类"></a>一、ReentranLock工具类</h1><p>Java官方在早期jdk1.5版本就引入了ReentranLock并发工具类，这是一种可重入的独占锁（排它锁），它允许同一个线程多次获取同一个锁而不会被阻塞。相比synchronized，它提供了更灵活的控制能力，如可中断锁、可超时获取锁、条件变量等，用于解决高并发场景下需要灵活控制的业务场景。<br>下面是使用ReentranLock的演示代码</p>
@@ -1022,6 +956,72 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>CyclicBarrier</tag>
         <tag>Exchanger</tag>
         <tag>Phaser</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>LeetCode1015.可被K整除的最小整数</title>
+    <url>/2025/11/25/LeetCode1015-%E5%8F%AF%E8%A2%ABK%E6%95%B4%E9%99%A4%E7%9A%84%E6%9C%80%E5%B0%8F%E6%95%B4%E6%95%B0/</url>
+    <content><![CDATA[<h1 id="1015-可被K整除的最小整数"><a href="#1015-可被K整除的最小整数" class="headerlink" title="1015.可被K整除的最小整数"></a><a href="https://leetcode.cn/problems/smallest-integer-divisible-by-k/description/">1015.可被K整除的最小整数</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给定正整数 <code>k</code> ，你需要找出可以被 <code>k</code> 整除的、仅包含数字 <code>1</code> 的最 小 正整数 <code>n</code> 的长度。<br></p>
+<p>返回 <code>n</code> 的长度。如果不存在这样的 <code>n</code> ，就返回<code>-1</code>。<br></p>
+<p>注意： <code>n</code> 可能不符合 <code>64</code> 位带符号整数。<br></p>
+<h2 id="示例-1"><a href="#示例-1" class="headerlink" title="示例 1:"></a>示例 1:</h2><blockquote>
+<p><strong>输入:</strong> k &#x3D; 1 <br><br><strong>输出:</strong> 1 <br><br><strong>解释:</strong> 最小的答案是 n &#x3D; 1，其长度为 1。<br></p>
+</blockquote>
+<h2 id="示例-2"><a href="#示例-2" class="headerlink" title="示例 2:"></a>示例 2:</h2><blockquote>
+<p><strong>输入:</strong> k &#x3D; 2<br><br><strong>输出:</strong> -1<br><br><strong>解释:</strong> 不存在可被 2 整除的正整数 n 。<br></p>
+</blockquote>
+<h2 id="示例-3"><a href="#示例-3" class="headerlink" title="示例 3:"></a>示例 3:</h2><blockquote>
+<p><strong>输入:</strong> k &#x3D; 3<br><br><strong>输出:</strong> 3<br><br><strong>解释:</strong> 最小的答案是 n &#x3D; 111，其长度为 3。<br></p>
+</blockquote>
+<h2 id="提示"><a href="#提示" class="headerlink" title="提示:"></a>提示:</h2><ul>
+<li><code>1 &lt;= k &lt;= 10^5</code></li>
+</ul>
+<h2 id="思路："><a href="#思路：" class="headerlink" title="思路："></a>思路：</h2><blockquote>
+<p>循环遍历乘<code>10</code>取余<code>k</code>，为了避免溢出对<code>k</code>取余,对<code>k</code>取余不会影响结果</p>
+</blockquote>
+<h2 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">smallestRepunitDivByK</span><span class="params">(<span class="type">int</span> k)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">res</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">1</span>; i &lt; <span class="number">100000</span>; i++) &#123;</span><br><span class="line">            res = (res * <span class="number">10</span> + <span class="number">1</span>) % k;</span><br><span class="line">            <span class="keyword">if</span> (res == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> i;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> -<span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>LeetCode</category>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>LeetCode</tag>
+        <tag>算法</tag>
+        <tag>哈希表</tag>
+        <tag>数学</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>LeetCode1018.可被5整除的二进制</title>
+    <url>/2025/11/24/LeetCode1018-%E5%8F%AF%E8%A2%AB5%E6%95%B4%E9%99%A4%E7%9A%84%E4%BA%8C%E8%BF%9B%E5%88%B6/</url>
+    <content><![CDATA[<h1 id="1018-可被5整除的二进制"><a href="#1018-可被5整除的二进制" class="headerlink" title="1018.可被5整除的二进制"></a><a href="https://leetcode.cn/problems/binary-prefix-divisible-by-5/description/">1018.可被5整除的二进制</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给定一个二进制数组 <code>nums</code> ( 索引从<code>0</code>开始 )。<br></p>
+<p>我们将<code>xi</code> 定义为其二进制表示形式为子数组 <code>nums[0..i]</code> (从最高有效位到最低有效位)。<br></p>
+<p>例如，如果 <code>nums =[1,0,1]</code> ，那么 <code>x0 = 1</code>, <code>x1 = 2</code>, 和 <code>x2 = 5</code>。<br><br>返回布尔值列表 <code>answer</code>，只有当 <code>xi</code> 可以被 <code>5</code> 整除时，答案 <code>answer[i]</code> 为 <code>true</code>，否则为 <code>false</code>。<br></p>
+<h2 id="示例-1"><a href="#示例-1" class="headerlink" title="示例 1:"></a>示例 1:</h2><blockquote>
+<p><strong>输入:</strong> nums &#x3D; [0,1,1] <br><br><strong>输出:</strong> [true,false,false] <br><br><strong>解释:</strong> 输入数字为 0, 01, 011；也就是十进制中的 0, 1, 3 。只有第一个数可以被 5 整除，因此 answer[0] 为 true 。<br></p>
+</blockquote>
+<h2 id="示例-2"><a href="#示例-2" class="headerlink" title="示例 2:"></a>示例 2:</h2><blockquote>
+<p><strong>输入:</strong> nums &#x3D; [1,1,1]<br><br><strong>输出:</strong> [false,false,false]<br></p>
+</blockquote>
+<h2 id="提示"><a href="#提示" class="headerlink" title="提示:"></a>提示:</h2><ul>
+<li><code>1 &lt;= nums.length &lt;= 105</code></li>
+<li><code>nums[i]</code> 仅为 <code>0</code> 或 <code>1</code></li>
+</ul>
+<h2 id="思路："><a href="#思路：" class="headerlink" title="思路："></a>思路：</h2><blockquote>
+<p>循环遍历左移一位取余<code>5</code>，为了避免溢出对5取余</p>
+</blockquote>
+<h2 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> List&lt;Boolean&gt; <span class="title function_">prefixesDivBy5</span><span class="params">(<span class="type">int</span>[] nums)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">n</span> <span class="operator">=</span> nums.length, cnt = <span class="number">0</span>;</span><br><span class="line">        List&lt;Boolean&gt; res = <span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;&gt;(n);</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; n; i++) &#123;</span><br><span class="line">            cnt = ((cnt &lt;&lt; <span class="number">1</span>) + nums[i]) % <span class="number">5</span>;</span><br><span class="line">            res.add(cnt == <span class="number">0</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> res;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>LeetCode</category>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>LeetCode</tag>
+        <tag>算法</tag>
+        <tag>位运算</tag>
+        <tag>数组</tag>
       </tags>
   </entry>
   <entry>
@@ -1394,191 +1394,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title>Seata AT 模式与 XA 模式的区别</title>
-    <url>/2025/09/19/SEATA%E6%BA%90%E7%A0%81%EF%BC%9AAT%E4%B8%8EXA%E6%A8%A1%E5%BC%8F%E5%AD%A6%E4%B9%A0/</url>
-    <content><![CDATA[<h2 id="1-模式区别"><a href="#1-模式区别" class="headerlink" title="1. 模式区别"></a>1. 模式区别</h2><ul>
-<li><strong>AT 模式</strong>：生成的是数据源代理（DataSource Proxy），通过代理拦截 SQL 执行，无需额外配置默认模式（Seata 默认支持 AT 模式），而非“数据库动态代理”（表述更精准）。</li>
-<li><strong>XA 模式</strong>：生成的是 XA 数据源代理（XADataSource Proxy），需在 YAML 中显式配置 <code>seata.tx-mode=XA</code>（而非仅“配置默认模式为 XA”），且依赖数据库原生 XA 协议支持（如 MySQL、Oracle 的 XA 事务能力）。</li>
-</ul>
-<h2 id="2-AT-模式流程"><a href="#2-AT-模式流程" class="headerlink" title="2. AT 模式流程"></a>2. AT 模式流程</h2><ul>
-<li>第一步会申请<strong>全局事务 ID（XID）</strong>（需明确“全局”，与分支事务 ID 区分）。</li>
-<li>基于原有分布式服务调用逻辑扩展，实现异常后的<strong>自动回滚</strong>（而非“自动补偿”）——补偿逻辑通过 Undo Log 反向生成 SQL 实现，需明确概念。</li>
-<li><strong>事务开始前</strong>：申请 XID 并存储到 ThreadLocal（Seata 内部通过 <code>RootContext</code> 管理 XID，MDC 通常用于日志打印携带 XID，非核心存储位置，修正存储载体）；往 TC（事务协调器）的全局事务表（global_table）插入记录；将数据库连接的 Auto Commit 改为 <code>false</code>（手动提交）。</li>
-<li><strong>SQL 执行前</strong>：仅对<strong>写操作（insert&#x2F;update&#x2F;delete）</strong> 分析语法并生成前置镜像（查询操作不会触发镜像生成，也不会拼接 <code>for update</code>——<code>for update</code> 是用户业务 SQL 自主使用的行锁语法，AT 模式通过全局锁控制并发，修正“查询加锁”错误）。</li>
-<li><strong>SQL 执行后</strong>：对写操作获取后置镜像（基于主键&#x2F;唯一键查询，确保与前置镜像对应），此时事务未提交。</li>
-<li><strong>后续操作</strong>：将前置&#x2F;后置镜像、Undo Log 写入本地数据库的 undo_log 表（而非“Seata 的 TC 表”，TC 不存储镜像，仅管理事务状态）；向 TC 注册分支事务，TC 分配分支事务 ID（Branch ID），并将分支事务与全局事务关联；同时获取全局锁（往 TC 的 lock_table 插入记录，键为“表名+主键”，而非“事务 ID 作为标识”，修正锁标识逻辑）。</li>
-<li><strong>事务提交&#x2F;回滚</strong>：<ul>
-<li>若正常提交：TC 通知各分支删除 Undo Log，释放全局锁；</li>
-<li>若出现异常：TC 通知各分支执行 Undo Log 回滚（反向 SQL 恢复数据），之后删除 Undo Log 并释放锁；</li>
-<li>后置处理：清除 <code>RootContext</code> 中的 XID，释放数据库连接等资源（修正“清除 XID”的载体）。</li>
-</ul>
-</li>
-</ul>
-<h2 id="3-XID-传递"><a href="#3-XID-传递" class="headerlink" title="3. XID 传递"></a>3. XID 传递</h2><ul>
-<li>微服务间调用时，发起方从 <code>RootContext</code>（而非仅 MDC）获取 XID，通过 HTTP 请求头（默认键为 <code>TX_XID</code>）传递给接收方；</li>
-<li>接收方通过 Spring MVC 拦截器&#x2F;Feign 拦截器解析请求头中的 <code>TX_XID</code>，并绑定到自身的 <code>RootContext</code> 中，从而实现 XID 跨服务传递（MDC 仅用于日志携带 XID，方便排查，非传递核心逻辑）。</li>
-</ul>
-<h2 id="4-其他要点"><a href="#4-其他要点" class="headerlink" title="4. 其他要点"></a>4. 其他要点</h2><ul>
-<li><strong>AT 模式的全局锁</strong>：获取时往 TC 的 <code>lock_table</code> 插入记录，键为“<code>resource_id</code>（数据源标识）+表名+主键”（而非“事务 ID 作为标识”，事务 ID 用于关联全局事务，锁键才是唯一标识）；插入失败时会阻塞并重试（默认重试次数可配置），避免并发写冲突。</li>
-<li><strong>AT 模式的默认隔离级别</strong>：读已提交（Read Committed），但通过“全局锁+本地锁”的协同，可避免“脏写”，并在一定程度上缓解“不可重复读”（需补充隔离级别的实际效果）。</li>
-<li><strong>取消全局事务绑定</strong>：若某服务不想参与全局事务，需在调用下游服务前执行 <code>RootContext.unbind()</code>（解除当前 XID 绑定），下游服务将不会注册分支事务；若后续需重新参与，需再次绑定 XID（修正“调用下游前再重新绑定”的顺序逻辑）。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>分布式系统</category>
-        <category>中间件</category>
-        <category>Seata</category>
-      </categories>
-      <tags>
-        <tag>Seata</tag>
-        <tag>AT模式</tag>
-        <tag>XA模式</tag>
-        <tag>分布式事务</tag>
-        <tag>全局事务ID</tag>
-        <tag>Undo Log</tag>
-        <tag>事务协调器</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Seata 分布式事务其他模式学习笔记</title>
-    <url>/2025/09/07/Seata%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/</url>
-    <content><![CDATA[<p> </p>
-<p>今天学习了 Seata 分布式事务的其他模式，包括 XA 模式、TCC 模式和 Saga 模式，以下是详细整理：</p>
-<p>一、XA 模式</p>
-<p>核心特点</p>
-<ul>
-<li>连接持有机制：XA 模式会持有数据库连接（如 MySQL 的  Connection  对象）直至两阶段提交完成，在此期间连接无法释放，可能影响数据库连接池性能。</li>
-<li>注解使用：需同时使用  @GlobalTransactional （保证分布式事务的提交&#x2F;回滚）和  @Transactional （保证本地事务正常提交）两个注解。</li>
-<li>两阶段流程：<br>1. 一阶段：各分支事务执行本地业务逻辑，但不提交，仅记录日志并等待全局协调。<br>2. 二阶段：事务协调者（TC）根据全局事务状态，决定所有分支事务执行  commit （提交）或  rollback （回滚）。</li>
-</ul>
-<p>优缺点</p>
-<ul>
-<li>优点：强一致性，依赖数据库原生 XA 协议，无需侵入业务代码。</li>
-<li>缺点：长期持有连接导致性能损耗大，不适合高并发场景，一般不推荐使用。</li>
-</ul>
-<p>二、TCC 模式</p>
-<p>核心概念</p>
-<p>TCC 模式将分布式事务分为三个阶段，需手动实现业务逻辑：</p>
-<p>1. Try：资源检查与预留（如扣减库存前检查库存是否充足，并锁定部分库存）。<br>2. Confirm：确认提交（如实际扣减锁定的库存）。<br>3. Cancel：取消回滚（如释放锁定的库存）。</p>
-<p>注解使用</p>
-<p>需在服务类上配合使用  @LocalTCC  和  @TwoPhaseBusinessAction  注解，明确 Try、Confirm、Cancel 方法的映射关系。</p>
-<p>关键问题及解决方案</p>
-<p>1. 空回滚：</p>
-<ul>
-<li>问题：当某分支事务未执行完成（如远程调用失败），却触发了 Cancel 回滚，导致无实际业务可回滚。</li>
-<li>解决：Seata 通过全局事务 ID（XID）和分支 ID 查询对应记录，判断是否需要执行回滚逻辑。<br>2. 幂等性：</li>
-<li>问题：因网络重试等原因，同一事务可能被多次执行（如重复提交订单）。</li>
-<li>解决：通过状态机控制事务状态（如  Trying （执行中）、 Committed （已提交）、 Rollbacked （已回滚）），避免重复处理。<br>3. 悬挂问题：</li>
-<li>问题：事务执行顺序异常（如二阶段提交先于一阶段完成，导致一阶段失败后无法回滚）。</li>
-<li>解决：新版本 Seata 限制在一阶段业务逻辑未完成前，不允许执行二阶段的  commit  操作。</li>
-</ul>
-<p>优缺点</p>
-<ul>
-<li>优点：灵活性高，不依赖特定数据源，支持非关系型数据库。</li>
-<li>缺点：对业务代码侵入性强，需手动实现三个阶段的逻辑，开发成本高。</li>
-</ul>
-<p>三、Saga 模式</p>
-<p>核心特点</p>
-<ul>
-<li>状态机驱动：通过状态机定义业务流程的执行顺序，以及异常时的补偿逻辑（逆向操作）。</li>
-<li>回滚机制：当某环节失败时，通过状态机触发前置步骤的补偿操作（如订单创建失败，回滚支付、库存扣减等操作）。</li>
-</ul>
-<p>常见实践</p>
-<ul>
-<li>实际应用中，Saga 模式较少直接使用，更多结合 MQ 实现定时补偿：</li>
-<li>业务处理失败时，将补偿任务发送至 MQ，通过重试机制反复执行。</li>
-<li>多次重试失败后，消息进入死信队列，由人工介入处理，保证数据最终一致性。</li>
-</ul>
-<p>适用场景</p>
-<ul>
-<li>适合业务流程长、分支多的场景（如订单履约全流程）。</li>
-<li>适合老系统改造（无需深入了解原有业务细节，通过状态流转控制补偿逻辑）。</li>
-</ul>
-<p>四、模式对比与选择建议</p>
-<p>模式 一致性 性能 业务侵入性 适用场景<br>XA 强一致 差 无 低并发、强一致性要求极高场景<br>AT 最终一致 中 无 关系型数据库、一般微服务场景<br>TCC 最终一致 高 高 新业务、非关系型数据库场景<br>Saga 最终一致 中 低 长事务、老系统改造场景 </p>
-<p>选择建议</p>
-<ul>
-<li>新业务且需灵活控制资源：优先考虑 TCC 模式（需接受业务侵入性）。</li>
-<li>关系型数据库为主、低侵入需求：优先考虑 AT 模式。</li>
-<li>老系统改造或长事务：优先考虑 Saga 模式。</li>
-<li>性能敏感场景：避免使用 XA 模式。</li>
-</ul>
-<p>总结</p>
-<p>Seata 提供的多种分布式事务模式各有优劣，实际使用中需根据业务场景（如一致性要求、并发量、系统新旧程度）选择合适的模式，同时注意解决 TCC 等模式中的空回滚、幂等性、悬挂等问题，确保分布式事务的可靠性。</p>
-]]></content>
-      <categories>
-        <category>分布式系统</category>
-        <category>中间件</category>
-      </categories>
-      <tags>
-        <tag>Seata</tag>
-        <tag>分布式事务</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Sentinel 控制台用法与工作原理学习笔记</title>
-    <url>/2025/09/01/Sentinel-%E6%8E%A7%E5%88%B6%E5%8F%B0%E7%94%A8%E6%B3%95%E4%B8%8E%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
-    <content><![CDATA[<h1 id="Sentinel-控制台用法与工作原理学习笔记"><a href="#Sentinel-控制台用法与工作原理学习笔记" class="headerlink" title="Sentinel 控制台用法与工作原理学习笔记"></a>Sentinel 控制台用法与工作原理学习笔记</h1><h2 id="一、流控规则配置"><a href="#一、流控规则配置" class="headerlink" title="一、流控规则配置"></a>一、流控规则配置</h2><ol>
-<li><strong>基础控制维度</strong>：支持对 QPS（每秒查询率）和并发线程数进行控制。</li>
-<li><strong>三种流控模式</strong>：<ul>
-<li>直接关系：直接针对接口配置流量规则，可设置 QPS 或并发线程数阈值，当触发阈值时直接对该接口进行限流。</li>
-<li>关联关系：适用于存在关联的服务，例如调用 A 服务的请求过多时，可配置当 A 服务的 QPS 或并发线程数达到阈值后，对关联的 B 服务进行流量控制，避免因 A 服务过载影响 B 服务。</li>
-<li>链路关系：针对具有调用关系的链路进行配置，可对链路上的特定节点或多个节点限流，进而控制整个链路的流量。需注意：1.7 版本后，链路控制功能需在配置文件中设置 <code>WebContextUtile</code> 参数为 <code>false</code> 才能生效。</li>
-</ul>
-</li>
-<li><strong>三种流控类型</strong>：<ul>
-<li>快速失败：当接口请求超过设定阈值（QPS 或并发线程数）时，直接返回失败结果。</li>
-<li>接口预热：服务启动时，通过模拟线程加载缓存等资源，避免刚启动就被大量流量击垮，逐渐提升接口处理能力至阈值。</li>
-<li>排队等待：可设置超时时间，请求会进入队列等待处理。若超时则被剔除并返回失败；未超时则正常响应。例如，阈值设为 20 时，每秒处理 20 个请求，超出部分进入队列等待。</li>
-</ul>
-</li>
-</ol>
-<h2 id="二、熔断降级配置"><a href="#二、熔断降级配置" class="headerlink" title="二、熔断降级配置"></a>二、熔断降级配置</h2><p>基于三种情况设置阈值，触发后进入熔断状态，熔断时间结束后恢复正常：</p>
-<ol>
-<li>慢调用比例：当慢调用（如慢查询接口）占比超过配置阈值时，触发熔断。</li>
-<li>异常比例：接口异常请求占比超过阈值时，触发熔断。</li>
-<li>异常数：接口异常请求数量达到阈值时，触发熔断。</li>
-</ol>
-<h2 id="三、热点限流"><a href="#三、热点限流" class="headerlink" title="三、热点限流"></a>三、热点限流</h2><p>针对接口的热点参数（仅支持 Java 7 种基本数据类型）进行 QPS 配置。例如，查询用户 ID 为 1 的数据是热点，可设置当该参数的 QPS 达到阈值时进行限流。</p>
-<h2 id="四、系统规则限流"><a href="#四、系统规则限流" class="headerlink" title="四、系统规则限流"></a>四、系统规则限流</h2><p>从系统整体层面限制流量，包含五种模式：</p>
-<ol>
-<li>Load：仅对 Linux&#x2F;Unix 机器生效，根据系统负载进行限流。</li>
-<li>RT（响应时间）：当系统整体响应时间超过阈值时，触发限流。</li>
-<li>线程数：限制系统最大支持的并发线程数，超过则限流。</li>
-<li>入口 QPS：限制单位时间内整体进入系统的 QPS，超过则限流。</li>
-<li>CPU 使用率：当 CPU 使用率超过阈值时，触发限流。</li>
-</ol>
-<h2 id="五、授权规则限流"><a href="#五、授权规则限流" class="headerlink" title="五、授权规则限流"></a>五、授权规则限流</h2><p>支持通过黑白名单实现微服务间的调用控制：</p>
-<ul>
-<li>需手动实现 <code>RequestOriginParser</code> 接口，并将其注册为 Spring 管理的 Bean，用于解析请求来源。</li>
-<li>根据解析的来源，结合黑白名单规则，允许或限制微服务间的调用。</li>
-</ul>
-<h2 id="六、集群流控"><a href="#六、集群流控" class="headerlink" title="六、集群流控"></a>六、集群流控</h2><ol>
-<li>基础配置：在流控规则中可选择是否为集群模式，支持单机均摊或整体阈值设置。</li>
-<li>差异化配置：通过 <code>Token Server</code> 和 <code>Token Client</code> 实现，可针对不同机器（如配置高低）设置差异化 QPS 阈值，配置高的机器可适当提高 QPS，配置低的则降低。</li>
-</ol>
-<h2 id="七、工作原理"><a href="#七、工作原理" class="headerlink" title="七、工作原理"></a>七、工作原理</h2><ol>
-<li><strong>核心抽象</strong>：将流量规则控制、集群节点聚簇等功能抽象为一个个 <code>Slot</code>（插槽）。</li>
-<li><strong>责任链模式</strong>：所有插槽构成一条责任链，请求需依次经过链路上的各个插槽检查。</li>
-<li><strong>执行流程</strong>：<ul>
-<li>外部请求进入后，先进行统计簇点构建和监控统计。</li>
-<li>依次经过热点参数限流、系统保护限流、来源访问控制限流、流量控制、熔断降级等插槽的检查。</li>
-<li>若链路上任何一个插槽的限流规则未通过，返回快速失败结果；全部通过则执行接口逻辑。</li>
-</ul>
-</li>
-</ol>
-]]></content>
-      <categories>
-        <category>技术笔记</category>
-        <category>中间件学习</category>
-      </categories>
-      <tags>
-        <tag>Sentinel</tag>
-        <tag>流量控制</tag>
-        <tag>熔断降级</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Nacos 2.X 核心源码学习笔记</title>
     <url>/2025/08/27/Nacos2-x%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
     <content><![CDATA[<h2 id="一、引言"><a href="#一、引言" class="headerlink" title="一、引言"></a>一、引言</h2><p>Nacos 作为阿里开源的分布式服务发现与配置管理平台，2.X 版本在架构上进行了协议升级（HTTP→gRPC）、存储结构优化（嵌套 Map→扁平分层）、一致性增强（Distro→Raft）</p>
@@ -1820,6 +1635,191 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>Nacos</tag>
         <tag>源码剖析</tag>
         <tag>分布式服务治理</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Seata AT 模式与 XA 模式的区别</title>
+    <url>/2025/09/19/SEATA%E6%BA%90%E7%A0%81%EF%BC%9AAT%E4%B8%8EXA%E6%A8%A1%E5%BC%8F%E5%AD%A6%E4%B9%A0/</url>
+    <content><![CDATA[<h2 id="1-模式区别"><a href="#1-模式区别" class="headerlink" title="1. 模式区别"></a>1. 模式区别</h2><ul>
+<li><strong>AT 模式</strong>：生成的是数据源代理（DataSource Proxy），通过代理拦截 SQL 执行，无需额外配置默认模式（Seata 默认支持 AT 模式），而非“数据库动态代理”（表述更精准）。</li>
+<li><strong>XA 模式</strong>：生成的是 XA 数据源代理（XADataSource Proxy），需在 YAML 中显式配置 <code>seata.tx-mode=XA</code>（而非仅“配置默认模式为 XA”），且依赖数据库原生 XA 协议支持（如 MySQL、Oracle 的 XA 事务能力）。</li>
+</ul>
+<h2 id="2-AT-模式流程"><a href="#2-AT-模式流程" class="headerlink" title="2. AT 模式流程"></a>2. AT 模式流程</h2><ul>
+<li>第一步会申请<strong>全局事务 ID（XID）</strong>（需明确“全局”，与分支事务 ID 区分）。</li>
+<li>基于原有分布式服务调用逻辑扩展，实现异常后的<strong>自动回滚</strong>（而非“自动补偿”）——补偿逻辑通过 Undo Log 反向生成 SQL 实现，需明确概念。</li>
+<li><strong>事务开始前</strong>：申请 XID 并存储到 ThreadLocal（Seata 内部通过 <code>RootContext</code> 管理 XID，MDC 通常用于日志打印携带 XID，非核心存储位置，修正存储载体）；往 TC（事务协调器）的全局事务表（global_table）插入记录；将数据库连接的 Auto Commit 改为 <code>false</code>（手动提交）。</li>
+<li><strong>SQL 执行前</strong>：仅对<strong>写操作（insert&#x2F;update&#x2F;delete）</strong> 分析语法并生成前置镜像（查询操作不会触发镜像生成，也不会拼接 <code>for update</code>——<code>for update</code> 是用户业务 SQL 自主使用的行锁语法，AT 模式通过全局锁控制并发，修正“查询加锁”错误）。</li>
+<li><strong>SQL 执行后</strong>：对写操作获取后置镜像（基于主键&#x2F;唯一键查询，确保与前置镜像对应），此时事务未提交。</li>
+<li><strong>后续操作</strong>：将前置&#x2F;后置镜像、Undo Log 写入本地数据库的 undo_log 表（而非“Seata 的 TC 表”，TC 不存储镜像，仅管理事务状态）；向 TC 注册分支事务，TC 分配分支事务 ID（Branch ID），并将分支事务与全局事务关联；同时获取全局锁（往 TC 的 lock_table 插入记录，键为“表名+主键”，而非“事务 ID 作为标识”，修正锁标识逻辑）。</li>
+<li><strong>事务提交&#x2F;回滚</strong>：<ul>
+<li>若正常提交：TC 通知各分支删除 Undo Log，释放全局锁；</li>
+<li>若出现异常：TC 通知各分支执行 Undo Log 回滚（反向 SQL 恢复数据），之后删除 Undo Log 并释放锁；</li>
+<li>后置处理：清除 <code>RootContext</code> 中的 XID，释放数据库连接等资源（修正“清除 XID”的载体）。</li>
+</ul>
+</li>
+</ul>
+<h2 id="3-XID-传递"><a href="#3-XID-传递" class="headerlink" title="3. XID 传递"></a>3. XID 传递</h2><ul>
+<li>微服务间调用时，发起方从 <code>RootContext</code>（而非仅 MDC）获取 XID，通过 HTTP 请求头（默认键为 <code>TX_XID</code>）传递给接收方；</li>
+<li>接收方通过 Spring MVC 拦截器&#x2F;Feign 拦截器解析请求头中的 <code>TX_XID</code>，并绑定到自身的 <code>RootContext</code> 中，从而实现 XID 跨服务传递（MDC 仅用于日志携带 XID，方便排查，非传递核心逻辑）。</li>
+</ul>
+<h2 id="4-其他要点"><a href="#4-其他要点" class="headerlink" title="4. 其他要点"></a>4. 其他要点</h2><ul>
+<li><strong>AT 模式的全局锁</strong>：获取时往 TC 的 <code>lock_table</code> 插入记录，键为“<code>resource_id</code>（数据源标识）+表名+主键”（而非“事务 ID 作为标识”，事务 ID 用于关联全局事务，锁键才是唯一标识）；插入失败时会阻塞并重试（默认重试次数可配置），避免并发写冲突。</li>
+<li><strong>AT 模式的默认隔离级别</strong>：读已提交（Read Committed），但通过“全局锁+本地锁”的协同，可避免“脏写”，并在一定程度上缓解“不可重复读”（需补充隔离级别的实际效果）。</li>
+<li><strong>取消全局事务绑定</strong>：若某服务不想参与全局事务，需在调用下游服务前执行 <code>RootContext.unbind()</code>（解除当前 XID 绑定），下游服务将不会注册分支事务；若后续需重新参与，需再次绑定 XID（修正“调用下游前再重新绑定”的顺序逻辑）。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>分布式系统</category>
+        <category>中间件</category>
+        <category>Seata</category>
+      </categories>
+      <tags>
+        <tag>Seata</tag>
+        <tag>AT模式</tag>
+        <tag>XA模式</tag>
+        <tag>分布式事务</tag>
+        <tag>全局事务ID</tag>
+        <tag>Undo Log</tag>
+        <tag>事务协调器</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Seata 分布式事务其他模式学习笔记</title>
+    <url>/2025/09/07/Seata%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/</url>
+    <content><![CDATA[<p> </p>
+<p>今天学习了 Seata 分布式事务的其他模式，包括 XA 模式、TCC 模式和 Saga 模式，以下是详细整理：</p>
+<p>一、XA 模式</p>
+<p>核心特点</p>
+<ul>
+<li>连接持有机制：XA 模式会持有数据库连接（如 MySQL 的  Connection  对象）直至两阶段提交完成，在此期间连接无法释放，可能影响数据库连接池性能。</li>
+<li>注解使用：需同时使用  @GlobalTransactional （保证分布式事务的提交&#x2F;回滚）和  @Transactional （保证本地事务正常提交）两个注解。</li>
+<li>两阶段流程：<br>1. 一阶段：各分支事务执行本地业务逻辑，但不提交，仅记录日志并等待全局协调。<br>2. 二阶段：事务协调者（TC）根据全局事务状态，决定所有分支事务执行  commit （提交）或  rollback （回滚）。</li>
+</ul>
+<p>优缺点</p>
+<ul>
+<li>优点：强一致性，依赖数据库原生 XA 协议，无需侵入业务代码。</li>
+<li>缺点：长期持有连接导致性能损耗大，不适合高并发场景，一般不推荐使用。</li>
+</ul>
+<p>二、TCC 模式</p>
+<p>核心概念</p>
+<p>TCC 模式将分布式事务分为三个阶段，需手动实现业务逻辑：</p>
+<p>1. Try：资源检查与预留（如扣减库存前检查库存是否充足，并锁定部分库存）。<br>2. Confirm：确认提交（如实际扣减锁定的库存）。<br>3. Cancel：取消回滚（如释放锁定的库存）。</p>
+<p>注解使用</p>
+<p>需在服务类上配合使用  @LocalTCC  和  @TwoPhaseBusinessAction  注解，明确 Try、Confirm、Cancel 方法的映射关系。</p>
+<p>关键问题及解决方案</p>
+<p>1. 空回滚：</p>
+<ul>
+<li>问题：当某分支事务未执行完成（如远程调用失败），却触发了 Cancel 回滚，导致无实际业务可回滚。</li>
+<li>解决：Seata 通过全局事务 ID（XID）和分支 ID 查询对应记录，判断是否需要执行回滚逻辑。<br>2. 幂等性：</li>
+<li>问题：因网络重试等原因，同一事务可能被多次执行（如重复提交订单）。</li>
+<li>解决：通过状态机控制事务状态（如  Trying （执行中）、 Committed （已提交）、 Rollbacked （已回滚）），避免重复处理。<br>3. 悬挂问题：</li>
+<li>问题：事务执行顺序异常（如二阶段提交先于一阶段完成，导致一阶段失败后无法回滚）。</li>
+<li>解决：新版本 Seata 限制在一阶段业务逻辑未完成前，不允许执行二阶段的  commit  操作。</li>
+</ul>
+<p>优缺点</p>
+<ul>
+<li>优点：灵活性高，不依赖特定数据源，支持非关系型数据库。</li>
+<li>缺点：对业务代码侵入性强，需手动实现三个阶段的逻辑，开发成本高。</li>
+</ul>
+<p>三、Saga 模式</p>
+<p>核心特点</p>
+<ul>
+<li>状态机驱动：通过状态机定义业务流程的执行顺序，以及异常时的补偿逻辑（逆向操作）。</li>
+<li>回滚机制：当某环节失败时，通过状态机触发前置步骤的补偿操作（如订单创建失败，回滚支付、库存扣减等操作）。</li>
+</ul>
+<p>常见实践</p>
+<ul>
+<li>实际应用中，Saga 模式较少直接使用，更多结合 MQ 实现定时补偿：</li>
+<li>业务处理失败时，将补偿任务发送至 MQ，通过重试机制反复执行。</li>
+<li>多次重试失败后，消息进入死信队列，由人工介入处理，保证数据最终一致性。</li>
+</ul>
+<p>适用场景</p>
+<ul>
+<li>适合业务流程长、分支多的场景（如订单履约全流程）。</li>
+<li>适合老系统改造（无需深入了解原有业务细节，通过状态流转控制补偿逻辑）。</li>
+</ul>
+<p>四、模式对比与选择建议</p>
+<p>模式 一致性 性能 业务侵入性 适用场景<br>XA 强一致 差 无 低并发、强一致性要求极高场景<br>AT 最终一致 中 无 关系型数据库、一般微服务场景<br>TCC 最终一致 高 高 新业务、非关系型数据库场景<br>Saga 最终一致 中 低 长事务、老系统改造场景 </p>
+<p>选择建议</p>
+<ul>
+<li>新业务且需灵活控制资源：优先考虑 TCC 模式（需接受业务侵入性）。</li>
+<li>关系型数据库为主、低侵入需求：优先考虑 AT 模式。</li>
+<li>老系统改造或长事务：优先考虑 Saga 模式。</li>
+<li>性能敏感场景：避免使用 XA 模式。</li>
+</ul>
+<p>总结</p>
+<p>Seata 提供的多种分布式事务模式各有优劣，实际使用中需根据业务场景（如一致性要求、并发量、系统新旧程度）选择合适的模式，同时注意解决 TCC 等模式中的空回滚、幂等性、悬挂等问题，确保分布式事务的可靠性。</p>
+]]></content>
+      <categories>
+        <category>分布式系统</category>
+        <category>中间件</category>
+      </categories>
+      <tags>
+        <tag>Seata</tag>
+        <tag>分布式事务</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Sentinel 控制台用法与工作原理学习笔记</title>
+    <url>/2025/09/01/Sentinel-%E6%8E%A7%E5%88%B6%E5%8F%B0%E7%94%A8%E6%B3%95%E4%B8%8E%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
+    <content><![CDATA[<h1 id="Sentinel-控制台用法与工作原理学习笔记"><a href="#Sentinel-控制台用法与工作原理学习笔记" class="headerlink" title="Sentinel 控制台用法与工作原理学习笔记"></a>Sentinel 控制台用法与工作原理学习笔记</h1><h2 id="一、流控规则配置"><a href="#一、流控规则配置" class="headerlink" title="一、流控规则配置"></a>一、流控规则配置</h2><ol>
+<li><strong>基础控制维度</strong>：支持对 QPS（每秒查询率）和并发线程数进行控制。</li>
+<li><strong>三种流控模式</strong>：<ul>
+<li>直接关系：直接针对接口配置流量规则，可设置 QPS 或并发线程数阈值，当触发阈值时直接对该接口进行限流。</li>
+<li>关联关系：适用于存在关联的服务，例如调用 A 服务的请求过多时，可配置当 A 服务的 QPS 或并发线程数达到阈值后，对关联的 B 服务进行流量控制，避免因 A 服务过载影响 B 服务。</li>
+<li>链路关系：针对具有调用关系的链路进行配置，可对链路上的特定节点或多个节点限流，进而控制整个链路的流量。需注意：1.7 版本后，链路控制功能需在配置文件中设置 <code>WebContextUtile</code> 参数为 <code>false</code> 才能生效。</li>
+</ul>
+</li>
+<li><strong>三种流控类型</strong>：<ul>
+<li>快速失败：当接口请求超过设定阈值（QPS 或并发线程数）时，直接返回失败结果。</li>
+<li>接口预热：服务启动时，通过模拟线程加载缓存等资源，避免刚启动就被大量流量击垮，逐渐提升接口处理能力至阈值。</li>
+<li>排队等待：可设置超时时间，请求会进入队列等待处理。若超时则被剔除并返回失败；未超时则正常响应。例如，阈值设为 20 时，每秒处理 20 个请求，超出部分进入队列等待。</li>
+</ul>
+</li>
+</ol>
+<h2 id="二、熔断降级配置"><a href="#二、熔断降级配置" class="headerlink" title="二、熔断降级配置"></a>二、熔断降级配置</h2><p>基于三种情况设置阈值，触发后进入熔断状态，熔断时间结束后恢复正常：</p>
+<ol>
+<li>慢调用比例：当慢调用（如慢查询接口）占比超过配置阈值时，触发熔断。</li>
+<li>异常比例：接口异常请求占比超过阈值时，触发熔断。</li>
+<li>异常数：接口异常请求数量达到阈值时，触发熔断。</li>
+</ol>
+<h2 id="三、热点限流"><a href="#三、热点限流" class="headerlink" title="三、热点限流"></a>三、热点限流</h2><p>针对接口的热点参数（仅支持 Java 7 种基本数据类型）进行 QPS 配置。例如，查询用户 ID 为 1 的数据是热点，可设置当该参数的 QPS 达到阈值时进行限流。</p>
+<h2 id="四、系统规则限流"><a href="#四、系统规则限流" class="headerlink" title="四、系统规则限流"></a>四、系统规则限流</h2><p>从系统整体层面限制流量，包含五种模式：</p>
+<ol>
+<li>Load：仅对 Linux&#x2F;Unix 机器生效，根据系统负载进行限流。</li>
+<li>RT（响应时间）：当系统整体响应时间超过阈值时，触发限流。</li>
+<li>线程数：限制系统最大支持的并发线程数，超过则限流。</li>
+<li>入口 QPS：限制单位时间内整体进入系统的 QPS，超过则限流。</li>
+<li>CPU 使用率：当 CPU 使用率超过阈值时，触发限流。</li>
+</ol>
+<h2 id="五、授权规则限流"><a href="#五、授权规则限流" class="headerlink" title="五、授权规则限流"></a>五、授权规则限流</h2><p>支持通过黑白名单实现微服务间的调用控制：</p>
+<ul>
+<li>需手动实现 <code>RequestOriginParser</code> 接口，并将其注册为 Spring 管理的 Bean，用于解析请求来源。</li>
+<li>根据解析的来源，结合黑白名单规则，允许或限制微服务间的调用。</li>
+</ul>
+<h2 id="六、集群流控"><a href="#六、集群流控" class="headerlink" title="六、集群流控"></a>六、集群流控</h2><ol>
+<li>基础配置：在流控规则中可选择是否为集群模式，支持单机均摊或整体阈值设置。</li>
+<li>差异化配置：通过 <code>Token Server</code> 和 <code>Token Client</code> 实现，可针对不同机器（如配置高低）设置差异化 QPS 阈值，配置高的机器可适当提高 QPS，配置低的则降低。</li>
+</ol>
+<h2 id="七、工作原理"><a href="#七、工作原理" class="headerlink" title="七、工作原理"></a>七、工作原理</h2><ol>
+<li><strong>核心抽象</strong>：将流量规则控制、集群节点聚簇等功能抽象为一个个 <code>Slot</code>（插槽）。</li>
+<li><strong>责任链模式</strong>：所有插槽构成一条责任链，请求需依次经过链路上的各个插槽检查。</li>
+<li><strong>执行流程</strong>：<ul>
+<li>外部请求进入后，先进行统计簇点构建和监控统计。</li>
+<li>依次经过热点参数限流、系统保护限流、来源访问控制限流、流量控制、熔断降级等插槽的检查。</li>
+<li>若链路上任何一个插槽的限流规则未通过，返回快速失败结果；全部通过则执行接口逻辑。</li>
+</ul>
+</li>
+</ol>
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+        <category>中间件学习</category>
+      </categories>
+      <tags>
+        <tag>Sentinel</tag>
+        <tag>流量控制</tag>
+        <tag>熔断降级</tag>
       </tags>
   </entry>
   <entry>
