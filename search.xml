@@ -959,6 +959,40 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
+    <title>LeetCode1015.可被K整除的最小整数</title>
+    <url>/2025/11/25/LeetCode1015-%E5%8F%AF%E8%A2%ABK%E6%95%B4%E9%99%A4%E7%9A%84%E6%9C%80%E5%B0%8F%E6%95%B4%E6%95%B0/</url>
+    <content><![CDATA[<h1 id="1015-可被K整除的最小整数"><a href="#1015-可被K整除的最小整数" class="headerlink" title="1015.可被K整除的最小整数"></a><a href="https://leetcode.cn/problems/smallest-integer-divisible-by-k/description/">1015.可被K整除的最小整数</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给定正整数 <code>k</code> ，你需要找出可以被 <code>k</code> 整除的、仅包含数字 <code>1</code> 的最 小 正整数 <code>n</code> 的长度。<br></p>
+<p>返回 <code>n</code> 的长度。如果不存在这样的 <code>n</code> ，就返回<code>-1</code>。<br></p>
+<p>注意： <code>n</code> 可能不符合 <code>64</code> 位带符号整数。<br></p>
+<h2 id="示例-1"><a href="#示例-1" class="headerlink" title="示例 1:"></a>示例 1:</h2><blockquote>
+<p><strong>输入:</strong> k &#x3D; 1 <br><br><strong>输出:</strong> 1 <br><br><strong>解释:</strong> 最小的答案是 n &#x3D; 1，其长度为 1。<br></p>
+</blockquote>
+<h2 id="示例-2"><a href="#示例-2" class="headerlink" title="示例 2:"></a>示例 2:</h2><blockquote>
+<p><strong>输入:</strong> k &#x3D; 2<br><br><strong>输出:</strong> -1<br><br><strong>解释:</strong> 不存在可被 2 整除的正整数 n 。<br></p>
+</blockquote>
+<h2 id="示例-3"><a href="#示例-3" class="headerlink" title="示例 3:"></a>示例 3:</h2><blockquote>
+<p><strong>输入:</strong> k &#x3D; 3<br><br><strong>输出:</strong> 3<br><br><strong>解释:</strong> 最小的答案是 n &#x3D; 111，其长度为 3。<br></p>
+</blockquote>
+<h2 id="提示"><a href="#提示" class="headerlink" title="提示:"></a>提示:</h2><ul>
+<li><code>1 &lt;= k &lt;= 10^5</code></li>
+</ul>
+<h2 id="思路："><a href="#思路：" class="headerlink" title="思路："></a>思路：</h2><blockquote>
+<p>循环遍历乘<code>10</code>取余<code>k</code>，为了避免溢出对<code>k</code>取余,对<code>k</code>取余不会影响结果</p>
+</blockquote>
+<h2 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">smallestRepunitDivByK</span><span class="params">(<span class="type">int</span> k)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">res</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">1</span>; i &lt; <span class="number">100000</span>; i++) &#123;</span><br><span class="line">            res = (res * <span class="number">10</span> + <span class="number">1</span>) % k;</span><br><span class="line">            <span class="keyword">if</span> (res == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> i;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> -<span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>LeetCode</category>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>LeetCode</tag>
+        <tag>算法</tag>
+        <tag>哈希表</tag>
+        <tag>数学</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>LeetCode1018.可被5整除的二进制</title>
     <url>/2025/11/24/LeetCode1018-%E5%8F%AF%E8%A2%AB5%E6%95%B4%E9%99%A4%E7%9A%84%E4%BA%8C%E8%BF%9B%E5%88%B6/</url>
     <content><![CDATA[<h1 id="1018-可被5整除的二进制"><a href="#1018-可被5整除的二进制" class="headerlink" title="1018.可被5整除的二进制"></a><a href="https://leetcode.cn/problems/binary-prefix-divisible-by-5/description/">1018.可被5整除的二进制</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给定一个二进制数组 <code>nums</code> ( 索引从<code>0</code>开始 )。<br></p>
@@ -1021,40 +1055,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>算法</tag>
         <tag>数组</tag>
         <tag>贪心</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>LeetCode1015.可被K整除的最小整数</title>
-    <url>/2025/11/25/LeetCode1015-%E5%8F%AF%E8%A2%ABK%E6%95%B4%E9%99%A4%E7%9A%84%E6%9C%80%E5%B0%8F%E6%95%B4%E6%95%B0/</url>
-    <content><![CDATA[<h1 id="1015-可被K整除的最小整数"><a href="#1015-可被K整除的最小整数" class="headerlink" title="1015.可被K整除的最小整数"></a><a href="https://leetcode.cn/problems/smallest-integer-divisible-by-k/description/">1015.可被K整除的最小整数</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给定正整数 <code>k</code> ，你需要找出可以被 <code>k</code> 整除的、仅包含数字 <code>1</code> 的最 小 正整数 <code>n</code> 的长度。<br></p>
-<p>返回 <code>n</code> 的长度。如果不存在这样的 <code>n</code> ，就返回<code>-1</code>。<br></p>
-<p>注意： <code>n</code> 可能不符合 <code>64</code> 位带符号整数。<br></p>
-<h2 id="示例-1"><a href="#示例-1" class="headerlink" title="示例 1:"></a>示例 1:</h2><blockquote>
-<p><strong>输入:</strong> k &#x3D; 1 <br><br><strong>输出:</strong> 1 <br><br><strong>解释:</strong> 最小的答案是 n &#x3D; 1，其长度为 1。<br></p>
-</blockquote>
-<h2 id="示例-2"><a href="#示例-2" class="headerlink" title="示例 2:"></a>示例 2:</h2><blockquote>
-<p><strong>输入:</strong> k &#x3D; 2<br><br><strong>输出:</strong> -1<br><br><strong>解释:</strong> 不存在可被 2 整除的正整数 n 。<br></p>
-</blockquote>
-<h2 id="示例-3"><a href="#示例-3" class="headerlink" title="示例 3:"></a>示例 3:</h2><blockquote>
-<p><strong>输入:</strong> k &#x3D; 3<br><br><strong>输出:</strong> 3<br><br><strong>解释:</strong> 最小的答案是 n &#x3D; 111，其长度为 3。<br></p>
-</blockquote>
-<h2 id="提示"><a href="#提示" class="headerlink" title="提示:"></a>提示:</h2><ul>
-<li><code>1 &lt;= k &lt;= 10^5</code></li>
-</ul>
-<h2 id="思路："><a href="#思路：" class="headerlink" title="思路："></a>思路：</h2><blockquote>
-<p>循环遍历乘<code>10</code>取余<code>k</code>，为了避免溢出对<code>k</code>取余,对<code>k</code>取余不会影响结果</p>
-</blockquote>
-<h2 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">smallestRepunitDivByK</span><span class="params">(<span class="type">int</span> k)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">res</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">1</span>; i &lt; <span class="number">100000</span>; i++) &#123;</span><br><span class="line">            res = (res * <span class="number">10</span> + <span class="number">1</span>) % k;</span><br><span class="line">            <span class="keyword">if</span> (res == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> i;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> -<span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>LeetCode</category>
-        <category>算法</category>
-      </categories>
-      <tags>
-        <tag>LeetCode</tag>
-        <tag>算法</tag>
-        <tag>哈希表</tag>
-        <tag>数学</tag>
       </tags>
   </entry>
   <entry>
@@ -1155,8 +1155,8 @@ LoadBalancer 3.2.0+ 2023.0.3+
       <tags>
         <tag>LeetCode</tag>
         <tag>算法</tag>
-        <tag>数组</tag>
         <tag>哈希表</tag>
+        <tag>数组</tag>
         <tag>排序</tag>
       </tags>
   </entry>
