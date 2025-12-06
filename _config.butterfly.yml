@@ -265,7 +265,7 @@ footer:
   owner:
     enable: true
     since: 2019
-  custom_text: '<img src="https://github.com/GoofySatoshi/GoofySatoshi.github.io/blob/source/source/img/logo.png" style="width:20px; height:auto; vertical-align:middle; margin-right:5px;"> <a href="http://beian.miit.gov.cn/" style="color:white; text-decoration:none;" target="_blank">浙ICP备2025214344号</a>'
+  custom_text: '<img src="https://github.com/GoofySatoshi/GoofySatoshi.github.io/blob/source/source/img/logo.png?raw=true" style="width:20px; height:auto; vertical-align:middle; margin-right:5px;"> <a href="http://beian.miit.gov.cn/" style="color:white; text-decoration:none;" target="_blank">浙ICP备2025214344号</a>'
   copyright: true
 
 # --------------------------------------
