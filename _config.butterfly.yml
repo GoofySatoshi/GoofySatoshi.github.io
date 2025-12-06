@@ -926,7 +926,7 @@ lazyload:
   # Specify the field to use lazyload (site or post)
   field: site
   # 占位图路径（如无则留空）
-  placeholder: /img/loading.png
+  placeholder: /img/load.gif
   blur: true  # 模糊加载效果
 
 # PWA
