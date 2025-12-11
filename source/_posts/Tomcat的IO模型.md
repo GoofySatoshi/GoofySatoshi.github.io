@@ -3,7 +3,6 @@ title: Tomcat的IO模型与性能调优
 date: 2025-10-13 23:30:00 +08:00
 categories:
   - Java Web
-  - 中间件
   - Tomcat
 tags:
   - Tomcat IO模型
