@@ -1,7 +1,7 @@
 ---
-title: Spring Cloud OpenFeign 学习笔记
+title: Spring Cloud OpenFeign
 date: 2025-08-26 15:13:19
-tags:
+tags: 微服务
 ---
 
 一、服务调用方式对比
