@@ -312,157 +312,6 @@
       </tags>
   </entry>
   <entry>
-    <title>G1 垃圾收集器学习笔记</title>
-    <url>/2025/09/22/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/</url>
-    <content><![CDATA[<h1 id="G1垃圾收集器学习笔记"><a href="#G1垃圾收集器学习笔记" class="headerlink" title="G1垃圾收集器学习笔记"></a>G1垃圾收集器学习笔记</h1><h2 id="2025-09-23"><a href="#2025-09-23" class="headerlink" title="2025-09-23"></a>2025-09-23</h2><h2 id="一、G1垃圾收集器概述"><a href="#一、G1垃圾收集器概述" class="headerlink" title="一、G1垃圾收集器概述"></a>一、G1垃圾收集器概述</h2><p>G1（Garbage-First）是Java 9默认的垃圾收集器，核心特性如下：  </p>
-<ul>
-<li><strong>取消物理分代</strong>：将内存划分为2048个逻辑<code>Region</code>（默认值）  </li>
-<li><strong>动态分区管理</strong>：年轻代&#x2F;老年代区域可相互转化  </li>
-<li><strong>巨型对象处理</strong>：新增<code>Humongous</code>区存储超Region 50%的大对象</li>
-</ul>
-<h2 id="二、内存管理机制"><a href="#二、内存管理机制" class="headerlink" title="二、内存管理机制"></a>二、内存管理机制</h2><h3 id="1-内存分区"><a href="#1-内存分区" class="headerlink" title="1. 内存分区"></a>1. 内存分区</h3><ul>
-<li><strong>逻辑分区</strong>：保留年轻代（Eden&#x2F;Survivor）、老年代概念  </li>
-<li><strong>物理结构</strong>：  <ul>
-<li>默认2048个Region（通过<code>-XX:G1HeapRegionSize</code>调整）  </li>
-<li>年轻代初始占比5%（动态调整，上限60%）  </li>
-<li>Eden:Survivor默认比例8:1:1</li>
-</ul>
-</li>
-</ul>
-<h3 id="2-特殊区域"><a href="#2-特殊区域" class="headerlink" title="2. 特殊区域"></a>2. 特殊区域</h3><ul>
-<li><strong>Humongous区</strong>：  <ul>
-<li>存储超过Region 50%的大对象  </li>
-<li>若对象超过单个Region大小，会被分割存储于多个连续Region</li>
-</ul>
-</li>
-</ul>
-<h2 id="三、垃圾回收流程"><a href="#三、垃圾回收流程" class="headerlink" title="三、垃圾回收流程"></a>三、垃圾回收流程</h2><p>G1回收分为四个阶段：  </p>
-<ol>
-<li><strong>初始标记</strong>（Stop The World）  <ul>
-<li>标记GC Roots直接引用对象</li>
-</ul>
-</li>
-<li><strong>并发标记</strong>（Concurrent）  <ul>
-<li>与工作线程并行标记存活对象</li>
-</ul>
-</li>
-<li><strong>最终标记</strong>（Stop The World）  <ul>
-<li>修正并发阶段的增量引用</li>
-</ul>
-</li>
-<li><strong>筛选回收</strong>（Concurrent）  <ul>
-<li>按回收价值排序Region  </li>
-<li>执行复制算法整理内存</li>
-</ul>
-</li>
-</ol>
-<h2 id="四、核心特性"><a href="#四、核心特性" class="headerlink" title="四、核心特性"></a>四、核心特性</h2><ol>
-<li><strong>并行与并发</strong>  <ul>
-<li>多核CPU缩短停顿时间</li>
-</ul>
-</li>
-<li><strong>分代抽象管理</strong>  <ul>
-<li>逻辑分代替代物理分区</li>
-</ul>
-</li>
-<li><strong>空间整合</strong>  <ul>
-<li>整体标记整理 + 局部复制算法  </li>
-<li>减少内存碎片</li>
-</ul>
-</li>
-</ol>
-<h2 id="五、垃圾收集分类"><a href="#五、垃圾收集分类" class="headerlink" title="五、垃圾收集分类"></a>五、垃圾收集分类</h2><h3 id="1-YoungGC（年轻代回收）"><a href="#1-YoungGC（年轻代回收）" class="headerlink" title="1. YoungGC（年轻代回收）"></a>1. YoungGC（年轻代回收）</h3><ul>
-<li><strong>触发条件</strong>：  <ul>
-<li>伊甸区填满时预估回收时间：  <ul>
-<li>若预估时间 &lt; <code>MaxGCPauseMillis</code> → 新增年轻代Region  </li>
-<li>若预估时间 ≈ <code>MaxGCPauseMillis</code> → 触发回收</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><strong>执行逻辑</strong>：  <ul>
-<li>回收所有年轻代Region  </li>
-<li>存活对象晋升至老年代&#x2F;Survivor区</li>
-</ul>
-</li>
-</ul>
-<h3 id="2-MixedGC（混合回收）"><a href="#2-MixedGC（混合回收）" class="headerlink" title="2. MixedGC（混合回收）"></a>2. MixedGC（混合回收）</h3><ul>
-<li><strong>触发条件</strong>：  <ul>
-<li>老年代占用率超过阈值（<code>-XX:InitiatingHeapOccupancyPercent</code>）</li>
-</ul>
-</li>
-<li><strong>执行逻辑</strong>：  <ul>
-<li>回收所有年轻代 + 部分老年代Region（非全部老年代）  </li>
-<li>具体回收数量由回收价值决定</li>
-</ul>
-</li>
-</ul>
-<h3 id="3-Full-GC（负GC）"><a href="#3-Full-GC（负GC）" class="headerlink" title="3. Full GC（负GC）"></a>3. Full GC（负GC）</h3><ul>
-<li><strong>触发条件</strong>：  <ul>
-<li>内存不足（如MixedGC无法完成回收）</li>
-</ul>
-</li>
-<li><strong>执行逻辑</strong>：  <ul>
-<li>单线程标记-清理-压缩内存  </li>
-<li>现代JVM（Java 11+）通过<code>-XX:+UseG1GC -XX:-UseAdaptiveSizePolicy</code>可减少Full GC</li>
-</ul>
-</li>
-</ul>
-<h2 id="六、关键参数"><a href="#六、关键参数" class="headerlink" title="六、关键参数"></a>六、关键参数</h2><table>
-<thead>
-<tr>
-<th>参数</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>-XX:MaxGCPauseMillis</code></td>
-<td>目标最大停顿时间（默认200ms）</td>
-</tr>
-<tr>
-<td><code>-XX:G1HeapRegionSize</code></td>
-<td>Region大小（推荐1MB-32MB）</td>
-</tr>
-<tr>
-<td><code>-XX:InitiatingHeapOccupancyPercent</code></td>
-<td>老年代触发并发回收阈值（默认45%）</td>
-</tr>
-</tbody></table>
-<h2 id="七、注意事项"><a href="#七、注意事项" class="headerlink" title="七、注意事项"></a>七、注意事项</h2><ul>
-<li>过度追求低停顿可能导致：  <ul>
-<li>垃圾堆积 → 负GC → 回收成本上升</li>
-</ul>
-</li>
-<li>生产环境建议保持默认参数配置  </li>
-<li>通过<code>-XX:+PrintGCDetails -XX:+PrintGCDateStamps</code>监控GC行为</li>
-</ul>
-<h2 id="八、其他相关回收器"><a href="#八、其他相关回收器" class="headerlink" title="八、其他相关回收器"></a>八、其他相关回收器</h2><ul>
-<li><strong>ZGC</strong>（JDK 11引入的低延迟垃圾收集器）：  <ul>
-<li>支持TB级内存  </li>
-<li>停顿时间&lt;10ms  </li>
-<li>基于Region的着色指针技术</li>
-</ul>
-</li>
-</ul>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
-<li><a href="https://docs.oracle.com/javase/9/gctuning/garbage-first-garbage-collector.htm">G1官方文档</a>  </li>
-<li><a href="https://docs.oracle.com/javase/11/gctuning/z-garbage-collector.htm">ZGC官方文档</a>  </li>
-<li>《深入理解Java虚拟机》第三版（周志明）</li>
-</ul>
-]]></content>
-      <categories>
-        <category>Java</category>
-        <category>JVM</category>
-        <category>垃圾收集器</category>
-      </categories>
-      <tags>
-        <tag>G1 垃圾收集器</tag>
-        <tag>JVM</tag>
-        <tag>Java 虚拟机</tag>
-        <tag>垃圾回收机制</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Spring Cloud Gateway</title>
     <url>/2024/05/20/Gateway%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
     <content><![CDATA[<h2 id="一、核心原理补充（易混淆点）"><a href="#一、核心原理补充（易混淆点）" class="headerlink" title="一、核心原理补充（易混淆点）"></a>一、核心原理补充（易混淆点）</h2><h3 id="1-响应式架构本质"><a href="#1-响应式架构本质" class="headerlink" title="1. 响应式架构本质"></a>1. 响应式架构本质</h3><p>Spring Cloud Gateway 基于 WebFlux 框架实现，底层依赖 Netty 实现异步非阻塞通信，与传统 Spring MVC 框架存在本质区别：</p>
@@ -760,6 +609,157 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>Spring Cloud</tag>
         <tag>微服务网关</tag>
         <tag>Gateway</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>G1 垃圾收集器学习笔记</title>
+    <url>/2025/09/22/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/</url>
+    <content><![CDATA[<h1 id="G1垃圾收集器学习笔记"><a href="#G1垃圾收集器学习笔记" class="headerlink" title="G1垃圾收集器学习笔记"></a>G1垃圾收集器学习笔记</h1><h2 id="2025-09-23"><a href="#2025-09-23" class="headerlink" title="2025-09-23"></a>2025-09-23</h2><h2 id="一、G1垃圾收集器概述"><a href="#一、G1垃圾收集器概述" class="headerlink" title="一、G1垃圾收集器概述"></a>一、G1垃圾收集器概述</h2><p>G1（Garbage-First）是Java 9默认的垃圾收集器，核心特性如下：  </p>
+<ul>
+<li><strong>取消物理分代</strong>：将内存划分为2048个逻辑<code>Region</code>（默认值）  </li>
+<li><strong>动态分区管理</strong>：年轻代&#x2F;老年代区域可相互转化  </li>
+<li><strong>巨型对象处理</strong>：新增<code>Humongous</code>区存储超Region 50%的大对象</li>
+</ul>
+<h2 id="二、内存管理机制"><a href="#二、内存管理机制" class="headerlink" title="二、内存管理机制"></a>二、内存管理机制</h2><h3 id="1-内存分区"><a href="#1-内存分区" class="headerlink" title="1. 内存分区"></a>1. 内存分区</h3><ul>
+<li><strong>逻辑分区</strong>：保留年轻代（Eden&#x2F;Survivor）、老年代概念  </li>
+<li><strong>物理结构</strong>：  <ul>
+<li>默认2048个Region（通过<code>-XX:G1HeapRegionSize</code>调整）  </li>
+<li>年轻代初始占比5%（动态调整，上限60%）  </li>
+<li>Eden:Survivor默认比例8:1:1</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-特殊区域"><a href="#2-特殊区域" class="headerlink" title="2. 特殊区域"></a>2. 特殊区域</h3><ul>
+<li><strong>Humongous区</strong>：  <ul>
+<li>存储超过Region 50%的大对象  </li>
+<li>若对象超过单个Region大小，会被分割存储于多个连续Region</li>
+</ul>
+</li>
+</ul>
+<h2 id="三、垃圾回收流程"><a href="#三、垃圾回收流程" class="headerlink" title="三、垃圾回收流程"></a>三、垃圾回收流程</h2><p>G1回收分为四个阶段：  </p>
+<ol>
+<li><strong>初始标记</strong>（Stop The World）  <ul>
+<li>标记GC Roots直接引用对象</li>
+</ul>
+</li>
+<li><strong>并发标记</strong>（Concurrent）  <ul>
+<li>与工作线程并行标记存活对象</li>
+</ul>
+</li>
+<li><strong>最终标记</strong>（Stop The World）  <ul>
+<li>修正并发阶段的增量引用</li>
+</ul>
+</li>
+<li><strong>筛选回收</strong>（Concurrent）  <ul>
+<li>按回收价值排序Region  </li>
+<li>执行复制算法整理内存</li>
+</ul>
+</li>
+</ol>
+<h2 id="四、核心特性"><a href="#四、核心特性" class="headerlink" title="四、核心特性"></a>四、核心特性</h2><ol>
+<li><strong>并行与并发</strong>  <ul>
+<li>多核CPU缩短停顿时间</li>
+</ul>
+</li>
+<li><strong>分代抽象管理</strong>  <ul>
+<li>逻辑分代替代物理分区</li>
+</ul>
+</li>
+<li><strong>空间整合</strong>  <ul>
+<li>整体标记整理 + 局部复制算法  </li>
+<li>减少内存碎片</li>
+</ul>
+</li>
+</ol>
+<h2 id="五、垃圾收集分类"><a href="#五、垃圾收集分类" class="headerlink" title="五、垃圾收集分类"></a>五、垃圾收集分类</h2><h3 id="1-YoungGC（年轻代回收）"><a href="#1-YoungGC（年轻代回收）" class="headerlink" title="1. YoungGC（年轻代回收）"></a>1. YoungGC（年轻代回收）</h3><ul>
+<li><strong>触发条件</strong>：  <ul>
+<li>伊甸区填满时预估回收时间：  <ul>
+<li>若预估时间 &lt; <code>MaxGCPauseMillis</code> → 新增年轻代Region  </li>
+<li>若预估时间 ≈ <code>MaxGCPauseMillis</code> → 触发回收</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>执行逻辑</strong>：  <ul>
+<li>回收所有年轻代Region  </li>
+<li>存活对象晋升至老年代&#x2F;Survivor区</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-MixedGC（混合回收）"><a href="#2-MixedGC（混合回收）" class="headerlink" title="2. MixedGC（混合回收）"></a>2. MixedGC（混合回收）</h3><ul>
+<li><strong>触发条件</strong>：  <ul>
+<li>老年代占用率超过阈值（<code>-XX:InitiatingHeapOccupancyPercent</code>）</li>
+</ul>
+</li>
+<li><strong>执行逻辑</strong>：  <ul>
+<li>回收所有年轻代 + 部分老年代Region（非全部老年代）  </li>
+<li>具体回收数量由回收价值决定</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-Full-GC（负GC）"><a href="#3-Full-GC（负GC）" class="headerlink" title="3. Full GC（负GC）"></a>3. Full GC（负GC）</h3><ul>
+<li><strong>触发条件</strong>：  <ul>
+<li>内存不足（如MixedGC无法完成回收）</li>
+</ul>
+</li>
+<li><strong>执行逻辑</strong>：  <ul>
+<li>单线程标记-清理-压缩内存  </li>
+<li>现代JVM（Java 11+）通过<code>-XX:+UseG1GC -XX:-UseAdaptiveSizePolicy</code>可减少Full GC</li>
+</ul>
+</li>
+</ul>
+<h2 id="六、关键参数"><a href="#六、关键参数" class="headerlink" title="六、关键参数"></a>六、关键参数</h2><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-XX:MaxGCPauseMillis</code></td>
+<td>目标最大停顿时间（默认200ms）</td>
+</tr>
+<tr>
+<td><code>-XX:G1HeapRegionSize</code></td>
+<td>Region大小（推荐1MB-32MB）</td>
+</tr>
+<tr>
+<td><code>-XX:InitiatingHeapOccupancyPercent</code></td>
+<td>老年代触发并发回收阈值（默认45%）</td>
+</tr>
+</tbody></table>
+<h2 id="七、注意事项"><a href="#七、注意事项" class="headerlink" title="七、注意事项"></a>七、注意事项</h2><ul>
+<li>过度追求低停顿可能导致：  <ul>
+<li>垃圾堆积 → 负GC → 回收成本上升</li>
+</ul>
+</li>
+<li>生产环境建议保持默认参数配置  </li>
+<li>通过<code>-XX:+PrintGCDetails -XX:+PrintGCDateStamps</code>监控GC行为</li>
+</ul>
+<h2 id="八、其他相关回收器"><a href="#八、其他相关回收器" class="headerlink" title="八、其他相关回收器"></a>八、其他相关回收器</h2><ul>
+<li><strong>ZGC</strong>（JDK 11引入的低延迟垃圾收集器）：  <ul>
+<li>支持TB级内存  </li>
+<li>停顿时间&lt;10ms  </li>
+<li>基于Region的着色指针技术</li>
+</ul>
+</li>
+</ul>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a href="https://docs.oracle.com/javase/9/gctuning/garbage-first-garbage-collector.htm">G1官方文档</a>  </li>
+<li><a href="https://docs.oracle.com/javase/11/gctuning/z-garbage-collector.htm">ZGC官方文档</a>  </li>
+<li>《深入理解Java虚拟机》第三版（周志明）</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Java</category>
+        <category>JVM</category>
+        <category>垃圾收集器</category>
+      </categories>
+      <tags>
+        <tag>G1 垃圾收集器</tag>
+        <tag>JVM</tag>
+        <tag>Java 虚拟机</tag>
+        <tag>垃圾回收机制</tag>
       </tags>
   </entry>
   <entry>
@@ -2049,6 +2049,121 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
+    <title>Tomcat的IO模型与性能调优</title>
+    <url>/2025/10/13/Tomcat%E7%9A%84IO%E6%A8%A1%E5%9E%8B/</url>
+    <content><![CDATA[<h1 id="1-Tomcat的I-O模型"><a href="#1-Tomcat的I-O模型" class="headerlink" title="1. Tomcat的I&#x2F;O模型"></a>1. Tomcat的I&#x2F;O模型</h1><h2 id="1-1-Linux-I-O模型"><a href="#1-1-Linux-I-O模型" class="headerlink" title="1.1 Linux I&#x2F;O模型"></a>1.1 Linux I&#x2F;O模型</h2><h3 id="I-O要解决什么问题？"><a href="#I-O要解决什么问题？" class="headerlink" title="I&#x2F;O要解决什么问题？"></a>I&#x2F;O要解决什么问题？</h3><p>I&#x2F;O本质上是在解决在计算机内存与外部设备之间拷贝数据的过程</p>
+<p>程序通过CPU向外部设备发出读指令，数据从外部设备拷贝至内存需要一段时间，这段时间CPU就没事情做了，程序此时有两种选择：</p>
+<ol>
+<li><p>让出CPU资源，CPU执行其他任务</p>
+</li>
+<li><p>继续使用CPU轮询数据是否拷贝完成</p>
+</li>
+</ol>
+<p>采取的具体策略就是不同I&#x2F;O模型要解决的问题</p>
+<p>以网络数据读取为例分析，会涉及两个对象，一个是调用I&#x2F;O操作的用户线程，另一个是操作系统内核。一个进程的地址空间分为用户空间和内核空间，基于安全上的考虑，用户程序只能访问用户空间，内核程序可以访问整个进程空间，只有内核可以直接访问各种硬件资源，比如磁盘和网卡。</p>
+<img width="1101" height="613" alt="image" src="https://github.com/user-attachments/assets/28b24729-5077-45e1-98c4-7145582e439f" />
+
+
+<p>当用户线程发起I&#x2F;O调用后，网络数据读取操作会经历两个步骤：</p>
+<ul>
+<li><p>数据准备阶段：用户线程等待内核将数据从网卡拷贝到内核空间</p>
+</li>
+<li><p>数据拷贝阶段：内核将数据从内核空间拷贝到用户空间（用户进程的缓冲区）</p>
+</li>
+</ul>
+<img width="1080" height="574" alt="image" src="https://github.com/user-attachments/assets/4b6fcf47-be70-46ef-bdef-9a9d32236d3c" />
+
+
+<h3 id="Linux的I-O模型分类"><a href="#Linux的I-O模型分类" class="headerlink" title="Linux的I&#x2F;O模型分类"></a>Linux的I&#x2F;O模型分类</h3><ul>
+<li><p>同步阻塞I&#x2F;O(bloking I&#x2F;O)</p>
+</li>
+<li><p>同步非阻塞I&#x2F;O(non-bloking I&#x2F;O)</p>
+</li>
+<li><p>I&#x2F;O多路复用（multiplexing I&#x2F;O）</p>
+</li>
+<li><p>信号驱动式I&#x2F;O（signal-driven I&#x2F;O）</p>
+</li>
+<li><p>异步I&#x2F;O(asynchronous I&#x2F;O)</p>
+</li>
+</ul>
+<p>其中信号驱动式I&#x2F;O在实际中并不常用:</p>
+<img width="1232" height="906" alt="image" src="https://github.com/user-attachments/assets/8ec4c31e-38ac-4b5f-97c8-e267edf7e5b2" />
+
+
+<ul>
+<li><p>阻塞或非阻塞I&#x2F;O是指应用程序在发起I&#x2F;O操作时，是立即返回还是等待</p>
+</li>
+<li><p>同步或异步是指应用程序在与内核通信时，数据从内核空间到应用空间的拷贝，是由内核主动发起还是应用程序来触发。</p>
+</li>
+</ul>
+<p>BIO的缺点：每个线程只能建立一个连接，所以必须使用线程池来管理多个客户端连接，客户端连接能力有限</p>
+<p>NIO的缺点：每次都需要轮询所有的客户连接，确认是否有读取事件，造成CPU的空转，浪费CPU资源</p>
+<p>多路复用I&#x2F;O:事件驱动模型的I&#x2F;O，每当有读取事件，或者写入事件发布时，会获取事件对应的连接，执行对应的事件，极大利用了CPU资源</p>
+<table>
+<thead>
+<tr>
+<th>BIO(JioEndpoint)</th>
+<th>同步阻塞式I&#x2F;O，即Tomcat使用传统java.io进行操作。该模式下每个请求都会创建一个线程，对性能开销大，不适合高并发场景。优点是稳定，适合连接数小且固定架构。Tomcat8.5.x开始移除BIO</th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NIO(NioEndPoint)</td>
+<td>同步非阻塞式I&#x2F;O，jdk1.4之后实现的新IO。该模式基于多路复用选择器监测连接状态再同步通知线程处理，从而达到非阻塞的目的。比传统BIO能更好的支持并发性能。Tomcat8.0之后默认采用该模式。NIO模式使用连接数目多且连接比较短（轻操作）的架构，比如聊天服务器，弹幕系统，服务器间通讯，编程比较复杂</td>
+<td></td>
+</tr>
+<tr>
+<td>AIO（Nio2EndPoint）</td>
+<td>异步非阻塞式IO，jdk1.7后支持，与NIO不同在于不需要多路复用选择器，而是请求处理线程执行完成之后进行回调通知，继续执行后续操作。Tomcat8之后支持。一般适用于连接数较多且连接时间较长的应用。</td>
+<td></td>
+</tr>
+<tr>
+<td>APR（APrEndPoint）</td>
+<td>（全称是Apache Portable Runtime&#x2F;Apache可移植运行库），是ApacheHTTP服务器的支持库。APrEndPoint是通过JNI调用APR本地库而实现非阻塞I&#x2F;O的。使用需要编译安装APR库</td>
+<td></td>
+</tr>
+</tbody></table>
+<h2 id="1-2-Tomcat-I-O模型如何选型"><a href="#1-2-Tomcat-I-O模型如何选型" class="headerlink" title="1.2 Tomcat I&#x2F;O模型如何选型"></a>1.2 Tomcat I&#x2F;O模型如何选型</h2><p>I&#x2F;O调优实际上是连接器类型的选择，一般情况下默认都是NIO，在绝大多数情况下都是够用的，除非你的WEB应用用到了TLS加密传输，而且对性能要求极高，这个时候可以考虑APR，因为APR通过OoenSSL来处理TLS握手和加解密。OpenSSL本身用C语言实现，它还对TLS通信做了优化，所以性能比Java要高。如果你的Tomcat跑在Windows上，并且HTTP请求的数据量比较大，可以考虑NIO2,这是因为Windows从操作系统层面实现了真正意义的异步I&#x2F;O，如果传输的数据量比较大，异步I&#x2F;O的效果就能显现出来。如果你的Tomcat跑在Linux平台上，建议使用NIO。因为在Linux上，JavaNIO和JavaNIO2底层都是通过epoll来实现的，但是JavaNIO更加简单高效。指定IO模型只需要修改server.xml的protocol配置</p>
+<h2 id="1-3-网络编程模型Reactor线程模型"><a href="#1-3-网络编程模型Reactor线程模型" class="headerlink" title="1.3 网络编程模型Reactor线程模型"></a>1.3 网络编程模型Reactor线程模型</h2><p>Reactor模型是网络服务器端用来处理高并发网络IO请求的一种编程模型。</p>
+<p>该模型主要有三类处理事件：即连接事件、写事件、读事件；</p>
+<p>三个关键角色：即reactor、acceptor、handler。</p>
+<p>accpetor负责连接事件，handler负责读写事件，reactor负责事件监听和事件分发</p>
+<h3 id="单Reactor单线程（redis用的就是这个）："><a href="#单Reactor单线程（redis用的就是这个）：" class="headerlink" title="单Reactor单线程（redis用的就是这个）："></a>单Reactor单线程（redis用的就是这个）：</h3><img width="955" height="630" alt="image" src="https://github.com/user-attachments/assets/dfa466fd-53dc-47ad-85d8-fc34e73d5df0" />
+
+
+<h3 id="单Reactor多线程模型"><a href="#单Reactor多线程模型" class="headerlink" title="单Reactor多线程模型"></a>单Reactor多线程模型</h3><img width="904" height="869" alt="image" src="https://github.com/user-attachments/assets/4b9e3e71-ff29-4191-a895-cee39c158cfb" />
+
+
+<h3 id="主从Reactor多线程"><a href="#主从Reactor多线程" class="headerlink" title="主从Reactor多线程"></a>主从Reactor多线程</h3><img width="935" height="970" alt="image" src="https://github.com/user-attachments/assets/e104c179-2062-4457-895e-e795a298d189" />
+
+
+<h2 id="1-4-Tomcat-NIO实现"><a href="#1-4-Tomcat-NIO实现" class="headerlink" title="1.4 Tomcat NIO实现"></a>1.4 Tomcat NIO实现</h2><p>在Tomcat中，Endpoint组件的主要工作就是处理IO，而NIOEndpoint利用Java NIO API实现了多路复用I&#x2F;O模型。Tomcat的NioEndPoint是基于主从Reactor多线程模型设计的</p>
+<p>有一个额外的线程单独处理连接事件，线程池负责处理事件</p>
+<p>学习主从Reactor多线程模型这种实现可以去看下thrift实现</p>
+<h1 id="2-Tomcat调优"><a href="#2-Tomcat调优" class="headerlink" title="2. Tomcat调优"></a>2. Tomcat调优</h1><h2 id="2-1-如何监控Tomcat的性能"><a href="#2-1-如何监控Tomcat的性能" class="headerlink" title="2.1 如何监控Tomcat的性能"></a>2.1 如何监控Tomcat的性能</h2><p>tomcat的关键指标有吞吐量、响应时间、错误数、线程池、CPU以及JVM内存。前三个指标是我们最关心的业务指标，Tomcat作为服务器，就是要能够又快又好地处理请求，因此吞吐量要大、响应时间要短，并且错误数要少。后面三个指标都是跟系统资源有关的，当某个资源出现瓶颈就会影响前面的业务指标，比如线程池种的线程数量不足会影响吞吐量和响应时间；但是线程数太多会耗费大量CPU，也会影响吞吐量，当内存不足时，会频繁触发GC,耗费CPU资源，最后也会反映在业务指标上来</p>
+<h4 id="通过JConsole监控Tomcat"><a href="#通过JConsole监控Tomcat" class="headerlink" title="通过JConsole监控Tomcat"></a>通过JConsole监控Tomcat</h4><p>1）开启JMX的远程监听端口</p>
+<p>我们可以在Tomcat的bin目录下新建一个名为setenv.sh的文件，然后输入下面内容</p>
+<p>2)重启Tomcat,这样JMX的监听端口8011就开启了，可以通过JConsole来连接这个端口</p>
+<p>这样就可以监控这些核心业务参数了</p>
+<h2 id="2-2-常用调优参数"><a href="#2-2-常用调优参数" class="headerlink" title="2.2 常用调优参数"></a>2.2 常用调优参数</h2><h3 id="线程池参数"><a href="#线程池参数" class="headerlink" title="线程池参数"></a>线程池参数</h3><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Executor</span> <span class="attr">name</span>=<span class="string">&quot;tomcatThreadPool&quot;</span> </span></span><br><span class="line"><span class="tag">          <span class="attr">namePrefix</span>=<span class="string">&quot;catalina-exec-&quot;</span>  &lt;!<span class="attr">--</span> <span class="attr">线程名前缀</span> <span class="attr">--</span>&gt;</span></span><br><span class="line">          maxThreads=&quot;500&quot;            <span class="comment">&lt;!-- 最大线程数 --&gt;</span></span><br><span class="line">          minSpareThreads=&quot;50&quot;        <span class="comment">&lt;!-- 最小空闲线程 --&gt;</span></span><br><span class="line">          maxIdleTime=&quot;60000&quot;         <span class="comment">&lt;!-- 线程空闲超时时间（毫秒） --&gt;</span></span><br><span class="line">          maxQueueSize=&quot;100&quot;          <span class="comment">&lt;!-- 任务队列大小 --&gt;</span></span><br><span class="line">          prestartminSpareThreads=&quot;true&quot;/&gt; <span class="comment">&lt;!-- 启动时初始化最小空闲线程 --&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 连接器引用线程池 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">Connector</span> <span class="attr">executor</span>=<span class="string">&quot;tomcatThreadPool&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">port</span>=<span class="string">&quot;8080&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">protocol</span>=<span class="string">&quot;org.apache.coyote.http11.Http11Nio2Protocol&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">...</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>Java Web</category>
+        <category>中间件</category>
+        <category>Tomcat</category>
+      </categories>
+      <tags>
+        <tag>Tomcat IO模型</tag>
+        <tag>Linux IO模型</tag>
+        <tag>Reactor线程模型</tag>
+        <tag>Tomcat性能调优</tag>
+        <tag>NIO</tag>
+        <tag>APR</tag>
+        <tag>Tomcat线程池参数</tag>
+        <tag>JConsole监控</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Tomcat 整体结构以及设计源码分析</title>
     <url>/2025/10/10/TomCat%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E4%BB%A5%E5%8F%8A%E8%AE%BE%E8%AE%A1%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</url>
     <content><![CDATA[<h1 id="1-Tomcat是什么？"><a href="#1-Tomcat是什么？" class="headerlink" title="1. Tomcat是什么？"></a>1. Tomcat是什么？</h1><p>Tomcat 是一款<strong>开源的 Java Web 服务器 + Servlet 容器</strong>，由 Apache 软件基金会开发维护，主要用于部署和运行 Java Web 应用程序（如基于 Servlet、JSP、Spring MVC 等技术的应用）。它是 Java 生态中最流行的 Web 容器之一，兼具轻量性、稳定性和易扩展性，广泛用于开发和生产环境。</p>
@@ -2336,121 +2451,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>LifeCycle 接口</tag>
         <tag>Tomcat 源码分析</tag>
         <tag>Web 应用部署</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Tomcat的IO模型与性能调优</title>
-    <url>/2025/10/13/Tomcat%E7%9A%84IO%E6%A8%A1%E5%9E%8B/</url>
-    <content><![CDATA[<h1 id="1-Tomcat的I-O模型"><a href="#1-Tomcat的I-O模型" class="headerlink" title="1. Tomcat的I&#x2F;O模型"></a>1. Tomcat的I&#x2F;O模型</h1><h2 id="1-1-Linux-I-O模型"><a href="#1-1-Linux-I-O模型" class="headerlink" title="1.1 Linux I&#x2F;O模型"></a>1.1 Linux I&#x2F;O模型</h2><h3 id="I-O要解决什么问题？"><a href="#I-O要解决什么问题？" class="headerlink" title="I&#x2F;O要解决什么问题？"></a>I&#x2F;O要解决什么问题？</h3><p>I&#x2F;O本质上是在解决在计算机内存与外部设备之间拷贝数据的过程</p>
-<p>程序通过CPU向外部设备发出读指令，数据从外部设备拷贝至内存需要一段时间，这段时间CPU就没事情做了，程序此时有两种选择：</p>
-<ol>
-<li><p>让出CPU资源，CPU执行其他任务</p>
-</li>
-<li><p>继续使用CPU轮询数据是否拷贝完成</p>
-</li>
-</ol>
-<p>采取的具体策略就是不同I&#x2F;O模型要解决的问题</p>
-<p>以网络数据读取为例分析，会涉及两个对象，一个是调用I&#x2F;O操作的用户线程，另一个是操作系统内核。一个进程的地址空间分为用户空间和内核空间，基于安全上的考虑，用户程序只能访问用户空间，内核程序可以访问整个进程空间，只有内核可以直接访问各种硬件资源，比如磁盘和网卡。</p>
-<img width="1101" height="613" alt="image" src="https://github.com/user-attachments/assets/28b24729-5077-45e1-98c4-7145582e439f" />
-
-
-<p>当用户线程发起I&#x2F;O调用后，网络数据读取操作会经历两个步骤：</p>
-<ul>
-<li><p>数据准备阶段：用户线程等待内核将数据从网卡拷贝到内核空间</p>
-</li>
-<li><p>数据拷贝阶段：内核将数据从内核空间拷贝到用户空间（用户进程的缓冲区）</p>
-</li>
-</ul>
-<img width="1080" height="574" alt="image" src="https://github.com/user-attachments/assets/4b6fcf47-be70-46ef-bdef-9a9d32236d3c" />
-
-
-<h3 id="Linux的I-O模型分类"><a href="#Linux的I-O模型分类" class="headerlink" title="Linux的I&#x2F;O模型分类"></a>Linux的I&#x2F;O模型分类</h3><ul>
-<li><p>同步阻塞I&#x2F;O(bloking I&#x2F;O)</p>
-</li>
-<li><p>同步非阻塞I&#x2F;O(non-bloking I&#x2F;O)</p>
-</li>
-<li><p>I&#x2F;O多路复用（multiplexing I&#x2F;O）</p>
-</li>
-<li><p>信号驱动式I&#x2F;O（signal-driven I&#x2F;O）</p>
-</li>
-<li><p>异步I&#x2F;O(asynchronous I&#x2F;O)</p>
-</li>
-</ul>
-<p>其中信号驱动式I&#x2F;O在实际中并不常用:</p>
-<img width="1232" height="906" alt="image" src="https://github.com/user-attachments/assets/8ec4c31e-38ac-4b5f-97c8-e267edf7e5b2" />
-
-
-<ul>
-<li><p>阻塞或非阻塞I&#x2F;O是指应用程序在发起I&#x2F;O操作时，是立即返回还是等待</p>
-</li>
-<li><p>同步或异步是指应用程序在与内核通信时，数据从内核空间到应用空间的拷贝，是由内核主动发起还是应用程序来触发。</p>
-</li>
-</ul>
-<p>BIO的缺点：每个线程只能建立一个连接，所以必须使用线程池来管理多个客户端连接，客户端连接能力有限</p>
-<p>NIO的缺点：每次都需要轮询所有的客户连接，确认是否有读取事件，造成CPU的空转，浪费CPU资源</p>
-<p>多路复用I&#x2F;O:事件驱动模型的I&#x2F;O，每当有读取事件，或者写入事件发布时，会获取事件对应的连接，执行对应的事件，极大利用了CPU资源</p>
-<table>
-<thead>
-<tr>
-<th>BIO(JioEndpoint)</th>
-<th>同步阻塞式I&#x2F;O，即Tomcat使用传统java.io进行操作。该模式下每个请求都会创建一个线程，对性能开销大，不适合高并发场景。优点是稳定，适合连接数小且固定架构。Tomcat8.5.x开始移除BIO</th>
-<th></th>
-</tr>
-</thead>
-<tbody><tr>
-<td>NIO(NioEndPoint)</td>
-<td>同步非阻塞式I&#x2F;O，jdk1.4之后实现的新IO。该模式基于多路复用选择器监测连接状态再同步通知线程处理，从而达到非阻塞的目的。比传统BIO能更好的支持并发性能。Tomcat8.0之后默认采用该模式。NIO模式使用连接数目多且连接比较短（轻操作）的架构，比如聊天服务器，弹幕系统，服务器间通讯，编程比较复杂</td>
-<td></td>
-</tr>
-<tr>
-<td>AIO（Nio2EndPoint）</td>
-<td>异步非阻塞式IO，jdk1.7后支持，与NIO不同在于不需要多路复用选择器，而是请求处理线程执行完成之后进行回调通知，继续执行后续操作。Tomcat8之后支持。一般适用于连接数较多且连接时间较长的应用。</td>
-<td></td>
-</tr>
-<tr>
-<td>APR（APrEndPoint）</td>
-<td>（全称是Apache Portable Runtime&#x2F;Apache可移植运行库），是ApacheHTTP服务器的支持库。APrEndPoint是通过JNI调用APR本地库而实现非阻塞I&#x2F;O的。使用需要编译安装APR库</td>
-<td></td>
-</tr>
-</tbody></table>
-<h2 id="1-2-Tomcat-I-O模型如何选型"><a href="#1-2-Tomcat-I-O模型如何选型" class="headerlink" title="1.2 Tomcat I&#x2F;O模型如何选型"></a>1.2 Tomcat I&#x2F;O模型如何选型</h2><p>I&#x2F;O调优实际上是连接器类型的选择，一般情况下默认都是NIO，在绝大多数情况下都是够用的，除非你的WEB应用用到了TLS加密传输，而且对性能要求极高，这个时候可以考虑APR，因为APR通过OoenSSL来处理TLS握手和加解密。OpenSSL本身用C语言实现，它还对TLS通信做了优化，所以性能比Java要高。如果你的Tomcat跑在Windows上，并且HTTP请求的数据量比较大，可以考虑NIO2,这是因为Windows从操作系统层面实现了真正意义的异步I&#x2F;O，如果传输的数据量比较大，异步I&#x2F;O的效果就能显现出来。如果你的Tomcat跑在Linux平台上，建议使用NIO。因为在Linux上，JavaNIO和JavaNIO2底层都是通过epoll来实现的，但是JavaNIO更加简单高效。指定IO模型只需要修改server.xml的protocol配置</p>
-<h2 id="1-3-网络编程模型Reactor线程模型"><a href="#1-3-网络编程模型Reactor线程模型" class="headerlink" title="1.3 网络编程模型Reactor线程模型"></a>1.3 网络编程模型Reactor线程模型</h2><p>Reactor模型是网络服务器端用来处理高并发网络IO请求的一种编程模型。</p>
-<p>该模型主要有三类处理事件：即连接事件、写事件、读事件；</p>
-<p>三个关键角色：即reactor、acceptor、handler。</p>
-<p>accpetor负责连接事件，handler负责读写事件，reactor负责事件监听和事件分发</p>
-<h3 id="单Reactor单线程（redis用的就是这个）："><a href="#单Reactor单线程（redis用的就是这个）：" class="headerlink" title="单Reactor单线程（redis用的就是这个）："></a>单Reactor单线程（redis用的就是这个）：</h3><img width="955" height="630" alt="image" src="https://github.com/user-attachments/assets/dfa466fd-53dc-47ad-85d8-fc34e73d5df0" />
-
-
-<h3 id="单Reactor多线程模型"><a href="#单Reactor多线程模型" class="headerlink" title="单Reactor多线程模型"></a>单Reactor多线程模型</h3><img width="904" height="869" alt="image" src="https://github.com/user-attachments/assets/4b9e3e71-ff29-4191-a895-cee39c158cfb" />
-
-
-<h3 id="主从Reactor多线程"><a href="#主从Reactor多线程" class="headerlink" title="主从Reactor多线程"></a>主从Reactor多线程</h3><img width="935" height="970" alt="image" src="https://github.com/user-attachments/assets/e104c179-2062-4457-895e-e795a298d189" />
-
-
-<h2 id="1-4-Tomcat-NIO实现"><a href="#1-4-Tomcat-NIO实现" class="headerlink" title="1.4 Tomcat NIO实现"></a>1.4 Tomcat NIO实现</h2><p>在Tomcat中，Endpoint组件的主要工作就是处理IO，而NIOEndpoint利用Java NIO API实现了多路复用I&#x2F;O模型。Tomcat的NioEndPoint是基于主从Reactor多线程模型设计的</p>
-<p>有一个额外的线程单独处理连接事件，线程池负责处理事件</p>
-<p>学习主从Reactor多线程模型这种实现可以去看下thrift实现</p>
-<h1 id="2-Tomcat调优"><a href="#2-Tomcat调优" class="headerlink" title="2. Tomcat调优"></a>2. Tomcat调优</h1><h2 id="2-1-如何监控Tomcat的性能"><a href="#2-1-如何监控Tomcat的性能" class="headerlink" title="2.1 如何监控Tomcat的性能"></a>2.1 如何监控Tomcat的性能</h2><p>tomcat的关键指标有吞吐量、响应时间、错误数、线程池、CPU以及JVM内存。前三个指标是我们最关心的业务指标，Tomcat作为服务器，就是要能够又快又好地处理请求，因此吞吐量要大、响应时间要短，并且错误数要少。后面三个指标都是跟系统资源有关的，当某个资源出现瓶颈就会影响前面的业务指标，比如线程池种的线程数量不足会影响吞吐量和响应时间；但是线程数太多会耗费大量CPU，也会影响吞吐量，当内存不足时，会频繁触发GC,耗费CPU资源，最后也会反映在业务指标上来</p>
-<h4 id="通过JConsole监控Tomcat"><a href="#通过JConsole监控Tomcat" class="headerlink" title="通过JConsole监控Tomcat"></a>通过JConsole监控Tomcat</h4><p>1）开启JMX的远程监听端口</p>
-<p>我们可以在Tomcat的bin目录下新建一个名为setenv.sh的文件，然后输入下面内容</p>
-<p>2)重启Tomcat,这样JMX的监听端口8011就开启了，可以通过JConsole来连接这个端口</p>
-<p>这样就可以监控这些核心业务参数了</p>
-<h2 id="2-2-常用调优参数"><a href="#2-2-常用调优参数" class="headerlink" title="2.2 常用调优参数"></a>2.2 常用调优参数</h2><h3 id="线程池参数"><a href="#线程池参数" class="headerlink" title="线程池参数"></a>线程池参数</h3><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Executor</span> <span class="attr">name</span>=<span class="string">&quot;tomcatThreadPool&quot;</span> </span></span><br><span class="line"><span class="tag">          <span class="attr">namePrefix</span>=<span class="string">&quot;catalina-exec-&quot;</span>  &lt;!<span class="attr">--</span> <span class="attr">线程名前缀</span> <span class="attr">--</span>&gt;</span></span><br><span class="line">          maxThreads=&quot;500&quot;            <span class="comment">&lt;!-- 最大线程数 --&gt;</span></span><br><span class="line">          minSpareThreads=&quot;50&quot;        <span class="comment">&lt;!-- 最小空闲线程 --&gt;</span></span><br><span class="line">          maxIdleTime=&quot;60000&quot;         <span class="comment">&lt;!-- 线程空闲超时时间（毫秒） --&gt;</span></span><br><span class="line">          maxQueueSize=&quot;100&quot;          <span class="comment">&lt;!-- 任务队列大小 --&gt;</span></span><br><span class="line">          prestartminSpareThreads=&quot;true&quot;/&gt; <span class="comment">&lt;!-- 启动时初始化最小空闲线程 --&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 连接器引用线程池 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">Connector</span> <span class="attr">executor</span>=<span class="string">&quot;tomcatThreadPool&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">port</span>=<span class="string">&quot;8080&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">protocol</span>=<span class="string">&quot;org.apache.coyote.http11.Http11Nio2Protocol&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">...</span>/&gt;</span></span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>Java Web</category>
-        <category>中间件</category>
-        <category>Tomcat</category>
-      </categories>
-      <tags>
-        <tag>Tomcat IO模型</tag>
-        <tag>Linux IO模型</tag>
-        <tag>Reactor线程模型</tag>
-        <tag>Tomcat性能调优</tag>
-        <tag>NIO</tag>
-        <tag>APR</tag>
-        <tag>Tomcat线程池参数</tag>
-        <tag>JConsole监控</tag>
       </tags>
   </entry>
   <entry>
