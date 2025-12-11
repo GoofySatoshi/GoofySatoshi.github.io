@@ -1164,40 +1164,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title>LeetCode32.最长有效括号</title>
-    <url>/2025/11/22/LeetCode32-%E6%9C%80%E9%95%BF%E6%9C%89%E6%95%88%E6%8B%AC%E5%8F%B7/</url>
-    <content><![CDATA[<h1 id="LeetCode32-最长有效括号"><a href="#LeetCode32-最长有效括号" class="headerlink" title="LeetCode32.最长有效括号"></a><a href="https://leetcode.cn/problems/longest-valid-parentheses/description/">LeetCode32.最长有效括号</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给你一个只包含 <code>(</code> 和 <code>)</code> 的字符串，找出最长有效（格式正确且连续）括号 子串 的长度。<br></p>
-<p>左右括号匹配，即每个左括号都有对应的右括号将其闭合的字符串是格式正确的，比如 <code>(()())</code>。<br></p>
-<h2 id="示例-1"><a href="#示例-1" class="headerlink" title="示例 1:"></a>示例 1:</h2><blockquote>
-<p><strong>输入:</strong> s &#x3D; “(()” <br><br><strong>输出:</strong> 2 <br><br><strong>解释:</strong> 最长有效括号子串是 “()”<br></p>
-</blockquote>
-<h2 id="示例-2"><a href="#示例-2" class="headerlink" title="示例 2:"></a>示例 2:</h2><blockquote>
-<p><strong>输入:</strong> s &#x3D; “)()())”<br><br><strong>输出:</strong> 4<br><br><strong>解释：</strong>最长有效括号子串是 “()()”</p>
-</blockquote>
-<h2 id="示例-3"><a href="#示例-3" class="headerlink" title="示例 3:"></a>示例 3:</h2><blockquote>
-<p><strong>输入:</strong> s &#x3D; “”<br><br><strong>输出:</strong> 0<br></p>
-</blockquote>
-<h2 id="提示"><a href="#提示" class="headerlink" title="提示:"></a>提示:</h2><ul>
-<li><code>0 &lt;= s.length &lt;= 3 * 104</code></li>
-<li><code>s[i]</code> 为 <code>(</code> 或 <code>)</code></li>
-</ul>
-<h2 id="思路："><a href="#思路：" class="headerlink" title="思路："></a>思路：</h2><blockquote>
-<p>栈存下标，每次入栈取栈顶元素看当前待入栈元素是否为<code>)</code>,且栈顶元素为<code>(</code>，若满足条件则先弹出元素，然后取<code>ans = Math.max(i-stack(top),ans)</code><br>需要注意下边界条件，即栈为空边界</p>
-</blockquote>
-<h2 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">longestValidParentheses</span><span class="params">(String s)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">ans</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">        Deque&lt;Integer&gt; stack = <span class="keyword">new</span> <span class="title class_">ArrayDeque</span>&lt;&gt;();</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; s.length(); i++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!stack.isEmpty() &amp;&amp; s.charAt(i) == <span class="string">&#x27;)&#x27;</span> &amp;&amp; s.charAt(stack.peekFirst()) == <span class="string">&#x27;(&#x27;</span>) &#123;</span><br><span class="line">                stack.pop();</span><br><span class="line">                <span class="keyword">if</span> (stack.isEmpty()) &#123;</span><br><span class="line">                    ans = i + <span class="number">1</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="type">Integer</span> <span class="variable">index</span> <span class="operator">=</span> stack.peekFirst();</span><br><span class="line">                    ans = Math.max(i - index, ans);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            stack.push(i);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> ans;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>LeetCode</category>
-        <category>算法</category>
-      </categories>
-      <tags>
-        <tag>LeetCode</tag>
-        <tag>算法</tag>
-        <tag>字符串</tag>
-        <tag>栈</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>LeetCode3190.使所有元素都可以被3整除的最少操作数</title>
     <url>/2025/11/22/LeetCode3190-%E4%BD%BF%E6%89%80%E6%9C%89%E5%85%83%E7%B4%A0%E9%83%BD%E5%8F%AF%E4%BB%A5%E8%A2%AB3%E6%95%B4%E9%99%A4%E7%9A%84%E6%9C%80%E5%B0%91%E6%93%8D%E4%BD%9C%E6%95%B0/</url>
     <content><![CDATA[<h1 id="3190-使所有元素都可以被3整除的最少操作数"><a href="#3190-使所有元素都可以被3整除的最少操作数" class="headerlink" title="3190.使所有元素都可以被3整除的最少操作数"></a><a href="https://leetcode.cn/problems/find-minimum-operations-to-make-all-elements-divisible-by-three/description/">3190.使所有元素都可以被3整除的最少操作数</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给你一个整数数组 <code>nums</code> 。一次操作中，你可以将 <code>nums</code> 中的 任意 一个元素增加或者减少 <code>1</code> 。</p>
@@ -1230,6 +1196,40 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>LeetCode</tag>
         <tag>算法</tag>
         <tag>数组</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>LeetCode32.最长有效括号</title>
+    <url>/2025/11/22/LeetCode32-%E6%9C%80%E9%95%BF%E6%9C%89%E6%95%88%E6%8B%AC%E5%8F%B7/</url>
+    <content><![CDATA[<h1 id="LeetCode32-最长有效括号"><a href="#LeetCode32-最长有效括号" class="headerlink" title="LeetCode32.最长有效括号"></a><a href="https://leetcode.cn/problems/longest-valid-parentheses/description/">LeetCode32.最长有效括号</a></h1><h2 id="题目描述："><a href="#题目描述：" class="headerlink" title="题目描述："></a>题目描述：</h2><p>给你一个只包含 <code>(</code> 和 <code>)</code> 的字符串，找出最长有效（格式正确且连续）括号 子串 的长度。<br></p>
+<p>左右括号匹配，即每个左括号都有对应的右括号将其闭合的字符串是格式正确的，比如 <code>(()())</code>。<br></p>
+<h2 id="示例-1"><a href="#示例-1" class="headerlink" title="示例 1:"></a>示例 1:</h2><blockquote>
+<p><strong>输入:</strong> s &#x3D; “(()” <br><br><strong>输出:</strong> 2 <br><br><strong>解释:</strong> 最长有效括号子串是 “()”<br></p>
+</blockquote>
+<h2 id="示例-2"><a href="#示例-2" class="headerlink" title="示例 2:"></a>示例 2:</h2><blockquote>
+<p><strong>输入:</strong> s &#x3D; “)()())”<br><br><strong>输出:</strong> 4<br><br><strong>解释：</strong>最长有效括号子串是 “()()”</p>
+</blockquote>
+<h2 id="示例-3"><a href="#示例-3" class="headerlink" title="示例 3:"></a>示例 3:</h2><blockquote>
+<p><strong>输入:</strong> s &#x3D; “”<br><br><strong>输出:</strong> 0<br></p>
+</blockquote>
+<h2 id="提示"><a href="#提示" class="headerlink" title="提示:"></a>提示:</h2><ul>
+<li><code>0 &lt;= s.length &lt;= 3 * 104</code></li>
+<li><code>s[i]</code> 为 <code>(</code> 或 <code>)</code></li>
+</ul>
+<h2 id="思路："><a href="#思路：" class="headerlink" title="思路："></a>思路：</h2><blockquote>
+<p>栈存下标，每次入栈取栈顶元素看当前待入栈元素是否为<code>)</code>,且栈顶元素为<code>(</code>，若满足条件则先弹出元素，然后取<code>ans = Math.max(i-stack(top),ans)</code><br>需要注意下边界条件，即栈为空边界</p>
+</blockquote>
+<h2 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">longestValidParentheses</span><span class="params">(String s)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">ans</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">        Deque&lt;Integer&gt; stack = <span class="keyword">new</span> <span class="title class_">ArrayDeque</span>&lt;&gt;();</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; s.length(); i++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!stack.isEmpty() &amp;&amp; s.charAt(i) == <span class="string">&#x27;)&#x27;</span> &amp;&amp; s.charAt(stack.peekFirst()) == <span class="string">&#x27;(&#x27;</span>) &#123;</span><br><span class="line">                stack.pop();</span><br><span class="line">                <span class="keyword">if</span> (stack.isEmpty()) &#123;</span><br><span class="line">                    ans = i + <span class="number">1</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="type">Integer</span> <span class="variable">index</span> <span class="operator">=</span> stack.peekFirst();</span><br><span class="line">                    ans = Math.max(i - index, ans);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            stack.push(i);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> ans;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>LeetCode</category>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>LeetCode</tag>
+        <tag>算法</tag>
+        <tag>字符串</tag>
+        <tag>栈</tag>
       </tags>
   </entry>
   <entry>
@@ -1971,6 +1971,87 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
+    <title>ThreadLocal、CAS、Atomic及并发安全</title>
+    <url>/2025/10/23/ThreadLocal%E3%80%81CAS%E3%80%81Atomic%E5%8F%8A%E5%B9%B6%E5%8F%91%E5%AE%89%E5%85%A8/</url>
+    <content><![CDATA[<h1 id="一、ThreadLocal"><a href="#一、ThreadLocal" class="headerlink" title="一、ThreadLocal"></a>一、ThreadLocal</h1><h2 id="1-为什么要有ThreadLocal"><a href="#1-为什么要有ThreadLocal" class="headerlink" title="1. 为什么要有ThreadLocal ?"></a>1. 为什么要有ThreadLocal ?</h2><p>ThreadLocal的核心作用是：让变量成为“线程私有”的副本，每个线程操作自己的那份，互不干扰，以此避免多线程共享变量的安全问题；同时，线程内的变量能在任意方法里直接获取，不用一层层传参数，简化代码。</p>
+<h2 id="2-ThreadLocal的使用"><a href="#2-ThreadLocal的使用" class="headerlink" title="2. ThreadLocal的使用"></a>2. ThreadLocal的使用</h2><p>ThreadLocal的使用非常简单，只有下面四个方法：<br>为了性能上的优化，Thread内部设置了一个ThreadLocal.ThreadLocalMap的成员变量。这样每个线程访问自己内部的变量可以无需传参即可跨方法传递使用。</p>
+<ul>
+<li>void set(Object value)</li>
+<li>public Object get()</li>
+<li>public void remove()</li>
+<li>protected Object initialValue()</li>
+</ul>
+<h2 id="3-ThreadLocal的实现"><a href="#3-ThreadLocal的实现" class="headerlink" title="3. ThreadLocal的实现"></a>3. ThreadLocal的实现</h2><h3 id="1-结构设计"><a href="#1-结构设计" class="headerlink" title="1.结构设计"></a>1.结构设计</h3><p>ThreadLocal的内部实现非常有意思，每个Thread内部设置了一个ThreadLocal.ThreadLocalMap的成员变量。ThreadLocalMap内部用来存储值是一个Entry数组，可以看作是一个基于数组结构实现的哈希表,Key值为ThreadLocal,Value值为具体存储的值，下标值的计算是根据计算出的哈希值对数组长度取余</p>
+<h3 id="2-哈希冲突"><a href="#2-哈希冲突" class="headerlink" title="2.哈希冲突"></a>2.哈希冲突</h3><p>HashMap在面对哈希冲突时，使用链表+红黑树的方式来解决哈希冲突。但是ThreadLcoal在面对哈希冲突时,使用开放线性寻址法来解决哈希冲突（其实源码是加一个固定的偏移量）,哈希冲突比较频繁的时候，会进行扩容来减少哈希冲突，并且重新根据哈希值计算每个元素的坐标。初始容量为16，扩容的阈值为内部存储元素占据Entry数组的2&#x2F;3，每次扩容后数组长度都会翻倍</p>
+<h3 id="3-内存泄漏"><a href="#3-内存泄漏" class="headerlink" title="3.内存泄漏"></a>3.内存泄漏</h3><p>内存泄漏是指程序运行过程中，由于程序代码的bug出现了无法被回收的内存区域,由于无法回收这部分内存空间。这种情况被称为内存泄漏。<br>使用ThreadLocal的时候,必须要提防一个内存泄漏的问题,实际上正常使用ThreadLocal（将ThreadLocal作为类中静态常量使用的时候）的时候,是不会产生内存泄漏的问题的。只有将ThreadLocal作为局部变量使用时,会出现无法回收内存空间的内存泄漏现象。这还和JVM的垃圾回收机制有关系。<br>在局部变量的使用场景下，每个value都会被设置到Entry,放到Entry数组中,虽然key是弱引用指向,每次垃圾回收都会回收掉Key值(弱引用特质，每次gc会回收内存空间),由于Java项目中都会使用线程池(天生多线程),线程对象会一直存活,JVM在进行垃圾回收时,由于有强引用指向ThreadLocalMap的value值(key回收掉了,value还在)<br>那value可以每次gc都回收掉吗？这样不就不会产生内存泄漏了么？我们需要站在设计者的角度进行考虑.如果把value值也设计成弱引用,java程序中发生gc是非常高频的,如果业务执行中,发生gc后使这个存储的value值失效,就会出现空指针异常。<br>为什么Key值设置成弱引用呢？<br>ThreadLocal的正确使用方式是调用完成后在可靠的代码区域进行remove回收内存，但肯定会存在有部分程序在编写时，不正常调用remove或者在安全代码区域外调用remove,进而导致remove代码失效，如果Key值设置为强引用,会导致key和value的双重泄漏，所以设置成弱引用本质上是一种防御性编程（xswl,想的太深了）</p>
+<blockquote>
+<p>弱引用使用场景一般是用来做本地的缓存实现（GC后自动回收）</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ThreadLocal</span>&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">class</span> <span class="title class_">Entry</span> <span class="keyword">extends</span> <span class="title class_">WeakReference</span>&lt;ThreadLocal&lt;?&gt;&gt; &#123;</span><br><span class="line">        <span class="comment">// 存储当前ThreadLocal对应的值（线程私有副本）</span></span><br><span class="line">        Object value;</span><br><span class="line">        <span class="comment">// 构造方法：key是ThreadLocal实例，用弱引用存储；value是具体值</span></span><br><span class="line">        Entry(ThreadLocal&lt;?&gt; k, Object v) &#123;</span><br><span class="line">            <span class="built_in">super</span>(k); <span class="comment">// 调用WeakReference的构造方法，将k包装为弱引用</span></span><br><span class="line">            value = v;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="二、CAS-Atomic原子操作详解"><a href="#二、CAS-Atomic原子操作详解" class="headerlink" title="二、CAS &amp; Atomic原子操作详解"></a>二、CAS &amp; Atomic原子操作详解</h1><h2 id="什么是原子操作？如何实现原子操作？"><a href="#什么是原子操作？如何实现原子操作？" class="headerlink" title="什么是原子操作？如何实现原子操作？"></a>什么是原子操作？如何实现原子操作？</h2><blockquote>
+<p>原子性：实际上是事务的概念，指的是多个操作不可分割的特性，要么全部执行，要么全部不执行，这种特性叫做原子性。</p>
+</blockquote>
+<blockquote>
+<p>CAS机制(Compare and swap)：CAS基本思想是比较并替换</p>
+</blockquote>
+<p>内存地址V,预期值A,新值B,具体执行逻辑只有两步：</p>
+<ul>
+<li>1.比较：判断内存地址V中存储值是否为预期值A </li>
+<li>2.替换：<ul>
+<li>若相等，将V中的值更新为B</li>
+<li>若不等，不做任何操作或重试</li>
+</ul>
+</li>
+</ul>
+<p>一般实现原子操作都会使用锁机制,虽然锁机制可以满足简单基本的业务需求,但是有的时候我们需要更有效、灵活的机制。sychronized这种基于阻塞的锁机制，持有锁的时候，其他线程会被全部阻塞，直到持有锁的线程释放锁。为了解决这个问题，Java提供了Atomic的原子工具类。</p>
+<p>在JDK早期版本：Aotmic内部机制一般均为循环CAS重试来实现的,CAS这种无锁无阻塞循环尝试更新的操作，在性能上通常比sychronized锁机制更良好。<br>但是JDK不断对sychronized锁进行优化，现在两者性能上差距基本上没什么区别了。<br>虽然CAS在锁竞争弱的情况下性能上比阻塞锁机制要优秀，但是这是有代价的。CAS有下面三个缺陷</p>
+<h3 id="ABA问题"><a href="#ABA问题" class="headerlink" title="ABA问题"></a>ABA问题</h3><p>ABA问题是CAS操作的弊病之一，在多线程并发的条件下，虽然期望值是A,但可能已经被其他线程修改成A了,如果此时进行更新操作，就会因为这种ABA问题发生并发条件下的数据脏写。ABA问题的解决方案一般是使用版本号进行记录数据版本,来根据版本号+期望值 双期望值来决定要不要更新数据。</p>
+<h3 id="循环开销问题"><a href="#循环开销问题" class="headerlink" title="循环开销问题"></a>循环开销问题</h3><p>虽然CAS是无锁不阻塞的方式进行尝试更新数据，但是高并发环境下大量线程竞争，循环导致的额外开销会非常大，导致CPU的空转开销，造成性能上的浪费，这种情况下更适合使用sychronized阻塞锁来保证数据的原子性、安全性。</p>
+<h3 id="只能保证一个共享变量的原子操作"><a href="#只能保证一个共享变量的原子操作" class="headerlink" title="只能保证一个共享变量的原子操作"></a>只能保证一个共享变量的原子操作</h3><p>CAS的机制决定了只能保证对一个共享变量进行原子操作。但并不是绝对的，我们可以把多个共享变量合并成一个共享变量的对象进行操作（但是这种情况下又会导致锁竞争加剧，性能下降严重）</p>
+<h2 id="AtomicInteger"><a href="#AtomicInteger" class="headerlink" title="AtomicInteger"></a>AtomicInteger</h2><ul>
+<li>int addAndGet()：CAS原子加操作，并返回结果</li>
+<li>boolean compareAndSet(int expect,int update)：如果输入的数值等于预期值，则以原子方式设置该值</li>
+<li>int getAndIncrement()：原子方式加1</li>
+<li>int getAndSet(int newValue)：原子方式设置新值</li>
+</ul>
+<h2 id="解决ABA问题的Atomic原子类"><a href="#解决ABA问题的Atomic原子类" class="headerlink" title="解决ABA问题的Atomic原子类"></a>解决ABA问题的Atomic原子类</h2><p>AtomicMarkableReference和AtomicStampedReference<br>为了解决ABA问题,Java提供了两个原子类，这两者的区别是前者只关心有没有被修改过，不关心具体被修改过几次。后者会记录修改次数<br>由于原子类对高并发的写入性能开销比较大,所以jdk1.8之后引入了LongAdder类来解决写热点的问题，其内部用一个base的long类型，和一个Cell[]数组，使用数组来分散写热点事件。</p>
+<h1 id="三、线程安全问题"><a href="#三、线程安全问题" class="headerlink" title="三、线程安全问题"></a>三、线程安全问题</h1><h2 id="线程安全性"><a href="#线程安全性" class="headerlink" title="线程安全性"></a>线程安全性</h2><p>所谓线程安全，即所写代码在并发情况下使用时，总是能表现出正确的行为。反之，未实现线程安全的代码，表现的行为是不可预知的。</p>
+<h2 id="线程封闭"><a href="#线程封闭" class="headerlink" title="线程封闭"></a>线程封闭</h2><p>实现好的并发是一件非常困难的事情，所以很多时候我们都想躲避并发。避免并发最简单的方法就是线程封闭。就是把对象封装到一个线程里，只有这一个线程能看到这个对象。这个对象就算不是线程安全的也不会出现任何安全问题。</p>
+<h3 id="栈封闭"><a href="#栈封闭" class="headerlink" title="栈封闭"></a>栈封闭</h3><p>栈封闭是我们编程中遇到的最多的线程封闭。最常见的就是局部变量，由于局部变量不是被多个线程共享，所以不会出现并发问题。所以使用局部变量不使用全局变量，能在一定程度上避免并发带来的安全问题，比如ThreadLocal就是一个实现线程封闭的很好的数据结构。</p>
+<h3 id="无状态的对象"><a href="#无状态的对象" class="headerlink" title="无状态的对象"></a>无状态的对象</h3><p>没有任何成员变量的类，就叫做无状态的类，这种类一定是线程安全的。但其内部对于其他对象进行操作并不一定是线程安全的（类本身线程安全，但是内部行为不一定对操作对象是线程安全的）。</p>
+<h2 id="加锁和CAS"><a href="#加锁和CAS" class="headerlink" title="加锁和CAS"></a>加锁和CAS</h2><p>我们最常用保证线程安全的手段，是使用synchronized关键字，使用显式锁以及各种原子变量，修改数据时使用CAS机制等</p>
+<h2 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h2><p>死锁是指两个或两个以上的进程在执行过程中，互相持有其他线程所需要的锁资源，并且等待其他线程释放锁资源，又不会释放自己已经持有的锁资源，而造成的一种阻塞现象，若无外力作用，它们都将无法推进下去。此时系统就处于死锁状态。<br>学术上死锁发生死锁必须具备四个条件:</p>
+<ul>
+<li>互斥条件:资源具有独占性，同一时间只能被一个进程占用。例如，打印机同一时间只能处理一个打印任务。</li>
+<li>请求与保持条件:进程已持有至少一个资源，同时又向其他进程请求新的资源，且该资源正被其他进程占用。例如，进程 A 持有打印机，又请求进程 B 正在使用的扫描仪。</li>
+<li>不可剥夺条件:进程已获得的资源，在未主动释放前，不能被其他进程强制剥夺。例如，进程 B 正在使用的扫描仪，不能被系统强制收回分配给进程 A。</li>
+<li>循环等待条件:多个进程之间形成闭环的资源等待链，每个进程都在等待下一个进程所持有的资源。例如，进程 A 等待进程 B 的资源，进程 B 等待进程 C 的资源，进程 C 等待进程 A 的资源。</li>
+</ul>
+<h3 id="死锁的预防核心"><a href="#死锁的预防核心" class="headerlink" title="死锁的预防核心"></a>死锁的预防核心</h3><p>预防死锁的本质的就是破坏四个条件中的任意一个，即可从根本上避免死锁发生。常见思路包括：采用资源预先分配策略（破坏请求与保持条件）、允许资源强制回收（破坏不可剥夺条件）、终止死锁中的线程（破坏循环等待）等。一般情况下互斥性是无法避免的。避免死锁还有一些常见算法：有序资源分配法和银行家算法等。</p>
+<h2 id="线程安全的单例模式"><a href="#线程安全的单例模式" class="headerlink" title="线程安全的单例模式"></a>线程安全的单例模式</h2><p>单例模式是一种比较常见的设计模式，最常见的是DCL(double check lock)单例实现，下面是说明和代码实现：</p>
+<ol>
+<li>volatile 关键字：防止instance &#x3D; new Singleton()这句代码的指令重排序（分配内存→初始化对象→引用指向内存）。如果没有 volatile，可能导致其他线程获取到 “未完全初始化” 的实例（引用已指向内存，但对象还没初始化完）。</li>
+<li>双重检查：<ul>
+<li>第一次检查（同步块外）：避免每次调用getInstance()都进入同步块，减少性能损耗（多数情况下实例已初始化，直接返回）。</li>
+<li>第二次检查（同步块内）：防止多线程同时通过第一次检查后，在同步块内重复创建实例。</li>
+</ul>
+</li>
+<li>私有构造方法：禁止外部通过new Singleton()创建实例，确保唯一实例由getInstance()控制。<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Singleton</span> &#123;</span><br><span class="line">    <span class="comment">// 1. 私有静态实例变量，用volatile修饰（关键！防止指令重排序）</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">volatile</span> Singleton instance;</span><br><span class="line">    <span class="comment">// 2. 私有构造方法，禁止外部通过new创建实例</span></span><br><span class="line">    <span class="keyword">private</span> <span class="title function_">Singleton</span><span class="params">()</span> &#123;&#125;</span><br><span class="line">    <span class="comment">// 3. 公共静态方法，提供全局访问点</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title function_">getInstance</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="comment">// 第一次检查：未初始化时才进入同步块（减少同步开销）</span></span><br><span class="line">        <span class="keyword">if</span> (instance == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="comment">// 同步块：保证多线程下的原子性</span></span><br><span class="line">            <span class="keyword">synchronized</span> (Singleton.class) &#123;</span><br><span class="line">                <span class="comment">// 第二次检查：防止多个线程同时通过第一次检查后重复创建实例</span></span><br><span class="line">                <span class="keyword">if</span> (instance == <span class="literal">null</span>) &#123;</span><br><span class="line">                    instance = <span class="keyword">new</span> <span class="title class_">Singleton</span>();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+]]></content>
+      <categories>
+        <category>并发编程</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>并发</tag>
+        <tag>ThreadLocal</tag>
+        <tag>CAS</tag>
+        <tag>Atomic</tag>
+        <tag>线程安全</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Tomcat 整体结构以及设计源码分析</title>
     <url>/2025/10/10/TomCat%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E4%BB%A5%E5%8F%8A%E8%AE%BE%E8%AE%A1%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</url>
     <content><![CDATA[<h1 id="1-Tomcat是什么？"><a href="#1-Tomcat是什么？" class="headerlink" title="1. Tomcat是什么？"></a>1. Tomcat是什么？</h1><p>Tomcat 是一款<strong>开源的 Java Web 服务器 + Servlet 容器</strong>，由 Apache 软件基金会开发维护，主要用于部署和运行 Java Web 应用程序（如基于 Servlet、JSP、Spring MVC 等技术的应用）。它是 Java 生态中最流行的 Web 容器之一，兼具轻量性、稳定性和易扩展性，广泛用于开发和生产环境。</p>
@@ -2261,87 +2342,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
       </tags>
   </entry>
   <entry>
-    <title>ThreadLocal、CAS、Atomic及并发安全</title>
-    <url>/2025/10/23/ThreadLocal%E3%80%81CAS%E3%80%81Atomic%E5%8F%8A%E5%B9%B6%E5%8F%91%E5%AE%89%E5%85%A8/</url>
-    <content><![CDATA[<h1 id="一、ThreadLocal"><a href="#一、ThreadLocal" class="headerlink" title="一、ThreadLocal"></a>一、ThreadLocal</h1><h2 id="1-为什么要有ThreadLocal"><a href="#1-为什么要有ThreadLocal" class="headerlink" title="1. 为什么要有ThreadLocal ?"></a>1. 为什么要有ThreadLocal ?</h2><p>ThreadLocal的核心作用是：让变量成为“线程私有”的副本，每个线程操作自己的那份，互不干扰，以此避免多线程共享变量的安全问题；同时，线程内的变量能在任意方法里直接获取，不用一层层传参数，简化代码。</p>
-<h2 id="2-ThreadLocal的使用"><a href="#2-ThreadLocal的使用" class="headerlink" title="2. ThreadLocal的使用"></a>2. ThreadLocal的使用</h2><p>ThreadLocal的使用非常简单，只有下面四个方法：<br>为了性能上的优化，Thread内部设置了一个ThreadLocal.ThreadLocalMap的成员变量。这样每个线程访问自己内部的变量可以无需传参即可跨方法传递使用。</p>
-<ul>
-<li>void set(Object value)</li>
-<li>public Object get()</li>
-<li>public void remove()</li>
-<li>protected Object initialValue()</li>
-</ul>
-<h2 id="3-ThreadLocal的实现"><a href="#3-ThreadLocal的实现" class="headerlink" title="3. ThreadLocal的实现"></a>3. ThreadLocal的实现</h2><h3 id="1-结构设计"><a href="#1-结构设计" class="headerlink" title="1.结构设计"></a>1.结构设计</h3><p>ThreadLocal的内部实现非常有意思，每个Thread内部设置了一个ThreadLocal.ThreadLocalMap的成员变量。ThreadLocalMap内部用来存储值是一个Entry数组，可以看作是一个基于数组结构实现的哈希表,Key值为ThreadLocal,Value值为具体存储的值，下标值的计算是根据计算出的哈希值对数组长度取余</p>
-<h3 id="2-哈希冲突"><a href="#2-哈希冲突" class="headerlink" title="2.哈希冲突"></a>2.哈希冲突</h3><p>HashMap在面对哈希冲突时，使用链表+红黑树的方式来解决哈希冲突。但是ThreadLcoal在面对哈希冲突时,使用开放线性寻址法来解决哈希冲突（其实源码是加一个固定的偏移量）,哈希冲突比较频繁的时候，会进行扩容来减少哈希冲突，并且重新根据哈希值计算每个元素的坐标。初始容量为16，扩容的阈值为内部存储元素占据Entry数组的2&#x2F;3，每次扩容后数组长度都会翻倍</p>
-<h3 id="3-内存泄漏"><a href="#3-内存泄漏" class="headerlink" title="3.内存泄漏"></a>3.内存泄漏</h3><p>内存泄漏是指程序运行过程中，由于程序代码的bug出现了无法被回收的内存区域,由于无法回收这部分内存空间。这种情况被称为内存泄漏。<br>使用ThreadLocal的时候,必须要提防一个内存泄漏的问题,实际上正常使用ThreadLocal（将ThreadLocal作为类中静态常量使用的时候）的时候,是不会产生内存泄漏的问题的。只有将ThreadLocal作为局部变量使用时,会出现无法回收内存空间的内存泄漏现象。这还和JVM的垃圾回收机制有关系。<br>在局部变量的使用场景下，每个value都会被设置到Entry,放到Entry数组中,虽然key是弱引用指向,每次垃圾回收都会回收掉Key值(弱引用特质，每次gc会回收内存空间),由于Java项目中都会使用线程池(天生多线程),线程对象会一直存活,JVM在进行垃圾回收时,由于有强引用指向ThreadLocalMap的value值(key回收掉了,value还在)<br>那value可以每次gc都回收掉吗？这样不就不会产生内存泄漏了么？我们需要站在设计者的角度进行考虑.如果把value值也设计成弱引用,java程序中发生gc是非常高频的,如果业务执行中,发生gc后使这个存储的value值失效,就会出现空指针异常。<br>为什么Key值设置成弱引用呢？<br>ThreadLocal的正确使用方式是调用完成后在可靠的代码区域进行remove回收内存，但肯定会存在有部分程序在编写时，不正常调用remove或者在安全代码区域外调用remove,进而导致remove代码失效，如果Key值设置为强引用,会导致key和value的双重泄漏，所以设置成弱引用本质上是一种防御性编程（xswl,想的太深了）</p>
-<blockquote>
-<p>弱引用使用场景一般是用来做本地的缓存实现（GC后自动回收）</p>
-</blockquote>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ThreadLocal</span>&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">class</span> <span class="title class_">Entry</span> <span class="keyword">extends</span> <span class="title class_">WeakReference</span>&lt;ThreadLocal&lt;?&gt;&gt; &#123;</span><br><span class="line">        <span class="comment">// 存储当前ThreadLocal对应的值（线程私有副本）</span></span><br><span class="line">        Object value;</span><br><span class="line">        <span class="comment">// 构造方法：key是ThreadLocal实例，用弱引用存储；value是具体值</span></span><br><span class="line">        Entry(ThreadLocal&lt;?&gt; k, Object v) &#123;</span><br><span class="line">            <span class="built_in">super</span>(k); <span class="comment">// 调用WeakReference的构造方法，将k包装为弱引用</span></span><br><span class="line">            value = v;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h1 id="二、CAS-Atomic原子操作详解"><a href="#二、CAS-Atomic原子操作详解" class="headerlink" title="二、CAS &amp; Atomic原子操作详解"></a>二、CAS &amp; Atomic原子操作详解</h1><h2 id="什么是原子操作？如何实现原子操作？"><a href="#什么是原子操作？如何实现原子操作？" class="headerlink" title="什么是原子操作？如何实现原子操作？"></a>什么是原子操作？如何实现原子操作？</h2><blockquote>
-<p>原子性：实际上是事务的概念，指的是多个操作不可分割的特性，要么全部执行，要么全部不执行，这种特性叫做原子性。</p>
-</blockquote>
-<blockquote>
-<p>CAS机制(Compare and swap)：CAS基本思想是比较并替换</p>
-</blockquote>
-<p>内存地址V,预期值A,新值B,具体执行逻辑只有两步：</p>
-<ul>
-<li>1.比较：判断内存地址V中存储值是否为预期值A </li>
-<li>2.替换：<ul>
-<li>若相等，将V中的值更新为B</li>
-<li>若不等，不做任何操作或重试</li>
-</ul>
-</li>
-</ul>
-<p>一般实现原子操作都会使用锁机制,虽然锁机制可以满足简单基本的业务需求,但是有的时候我们需要更有效、灵活的机制。sychronized这种基于阻塞的锁机制，持有锁的时候，其他线程会被全部阻塞，直到持有锁的线程释放锁。为了解决这个问题，Java提供了Atomic的原子工具类。</p>
-<p>在JDK早期版本：Aotmic内部机制一般均为循环CAS重试来实现的,CAS这种无锁无阻塞循环尝试更新的操作，在性能上通常比sychronized锁机制更良好。<br>但是JDK不断对sychronized锁进行优化，现在两者性能上差距基本上没什么区别了。<br>虽然CAS在锁竞争弱的情况下性能上比阻塞锁机制要优秀，但是这是有代价的。CAS有下面三个缺陷</p>
-<h3 id="ABA问题"><a href="#ABA问题" class="headerlink" title="ABA问题"></a>ABA问题</h3><p>ABA问题是CAS操作的弊病之一，在多线程并发的条件下，虽然期望值是A,但可能已经被其他线程修改成A了,如果此时进行更新操作，就会因为这种ABA问题发生并发条件下的数据脏写。ABA问题的解决方案一般是使用版本号进行记录数据版本,来根据版本号+期望值 双期望值来决定要不要更新数据。</p>
-<h3 id="循环开销问题"><a href="#循环开销问题" class="headerlink" title="循环开销问题"></a>循环开销问题</h3><p>虽然CAS是无锁不阻塞的方式进行尝试更新数据，但是高并发环境下大量线程竞争，循环导致的额外开销会非常大，导致CPU的空转开销，造成性能上的浪费，这种情况下更适合使用sychronized阻塞锁来保证数据的原子性、安全性。</p>
-<h3 id="只能保证一个共享变量的原子操作"><a href="#只能保证一个共享变量的原子操作" class="headerlink" title="只能保证一个共享变量的原子操作"></a>只能保证一个共享变量的原子操作</h3><p>CAS的机制决定了只能保证对一个共享变量进行原子操作。但并不是绝对的，我们可以把多个共享变量合并成一个共享变量的对象进行操作（但是这种情况下又会导致锁竞争加剧，性能下降严重）</p>
-<h2 id="AtomicInteger"><a href="#AtomicInteger" class="headerlink" title="AtomicInteger"></a>AtomicInteger</h2><ul>
-<li>int addAndGet()：CAS原子加操作，并返回结果</li>
-<li>boolean compareAndSet(int expect,int update)：如果输入的数值等于预期值，则以原子方式设置该值</li>
-<li>int getAndIncrement()：原子方式加1</li>
-<li>int getAndSet(int newValue)：原子方式设置新值</li>
-</ul>
-<h2 id="解决ABA问题的Atomic原子类"><a href="#解决ABA问题的Atomic原子类" class="headerlink" title="解决ABA问题的Atomic原子类"></a>解决ABA问题的Atomic原子类</h2><p>AtomicMarkableReference和AtomicStampedReference<br>为了解决ABA问题,Java提供了两个原子类，这两者的区别是前者只关心有没有被修改过，不关心具体被修改过几次。后者会记录修改次数<br>由于原子类对高并发的写入性能开销比较大,所以jdk1.8之后引入了LongAdder类来解决写热点的问题，其内部用一个base的long类型，和一个Cell[]数组，使用数组来分散写热点事件。</p>
-<h1 id="三、线程安全问题"><a href="#三、线程安全问题" class="headerlink" title="三、线程安全问题"></a>三、线程安全问题</h1><h2 id="线程安全性"><a href="#线程安全性" class="headerlink" title="线程安全性"></a>线程安全性</h2><p>所谓线程安全，即所写代码在并发情况下使用时，总是能表现出正确的行为。反之，未实现线程安全的代码，表现的行为是不可预知的。</p>
-<h2 id="线程封闭"><a href="#线程封闭" class="headerlink" title="线程封闭"></a>线程封闭</h2><p>实现好的并发是一件非常困难的事情，所以很多时候我们都想躲避并发。避免并发最简单的方法就是线程封闭。就是把对象封装到一个线程里，只有这一个线程能看到这个对象。这个对象就算不是线程安全的也不会出现任何安全问题。</p>
-<h3 id="栈封闭"><a href="#栈封闭" class="headerlink" title="栈封闭"></a>栈封闭</h3><p>栈封闭是我们编程中遇到的最多的线程封闭。最常见的就是局部变量，由于局部变量不是被多个线程共享，所以不会出现并发问题。所以使用局部变量不使用全局变量，能在一定程度上避免并发带来的安全问题，比如ThreadLocal就是一个实现线程封闭的很好的数据结构。</p>
-<h3 id="无状态的对象"><a href="#无状态的对象" class="headerlink" title="无状态的对象"></a>无状态的对象</h3><p>没有任何成员变量的类，就叫做无状态的类，这种类一定是线程安全的。但其内部对于其他对象进行操作并不一定是线程安全的（类本身线程安全，但是内部行为不一定对操作对象是线程安全的）。</p>
-<h2 id="加锁和CAS"><a href="#加锁和CAS" class="headerlink" title="加锁和CAS"></a>加锁和CAS</h2><p>我们最常用保证线程安全的手段，是使用synchronized关键字，使用显式锁以及各种原子变量，修改数据时使用CAS机制等</p>
-<h2 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h2><p>死锁是指两个或两个以上的进程在执行过程中，互相持有其他线程所需要的锁资源，并且等待其他线程释放锁资源，又不会释放自己已经持有的锁资源，而造成的一种阻塞现象，若无外力作用，它们都将无法推进下去。此时系统就处于死锁状态。<br>学术上死锁发生死锁必须具备四个条件:</p>
-<ul>
-<li>互斥条件:资源具有独占性，同一时间只能被一个进程占用。例如，打印机同一时间只能处理一个打印任务。</li>
-<li>请求与保持条件:进程已持有至少一个资源，同时又向其他进程请求新的资源，且该资源正被其他进程占用。例如，进程 A 持有打印机，又请求进程 B 正在使用的扫描仪。</li>
-<li>不可剥夺条件:进程已获得的资源，在未主动释放前，不能被其他进程强制剥夺。例如，进程 B 正在使用的扫描仪，不能被系统强制收回分配给进程 A。</li>
-<li>循环等待条件:多个进程之间形成闭环的资源等待链，每个进程都在等待下一个进程所持有的资源。例如，进程 A 等待进程 B 的资源，进程 B 等待进程 C 的资源，进程 C 等待进程 A 的资源。</li>
-</ul>
-<h3 id="死锁的预防核心"><a href="#死锁的预防核心" class="headerlink" title="死锁的预防核心"></a>死锁的预防核心</h3><p>预防死锁的本质的就是破坏四个条件中的任意一个，即可从根本上避免死锁发生。常见思路包括：采用资源预先分配策略（破坏请求与保持条件）、允许资源强制回收（破坏不可剥夺条件）、终止死锁中的线程（破坏循环等待）等。一般情况下互斥性是无法避免的。避免死锁还有一些常见算法：有序资源分配法和银行家算法等。</p>
-<h2 id="线程安全的单例模式"><a href="#线程安全的单例模式" class="headerlink" title="线程安全的单例模式"></a>线程安全的单例模式</h2><p>单例模式是一种比较常见的设计模式，最常见的是DCL(double check lock)单例实现，下面是说明和代码实现：</p>
-<ol>
-<li>volatile 关键字：防止instance &#x3D; new Singleton()这句代码的指令重排序（分配内存→初始化对象→引用指向内存）。如果没有 volatile，可能导致其他线程获取到 “未完全初始化” 的实例（引用已指向内存，但对象还没初始化完）。</li>
-<li>双重检查：<ul>
-<li>第一次检查（同步块外）：避免每次调用getInstance()都进入同步块，减少性能损耗（多数情况下实例已初始化，直接返回）。</li>
-<li>第二次检查（同步块内）：防止多线程同时通过第一次检查后，在同步块内重复创建实例。</li>
-</ul>
-</li>
-<li>私有构造方法：禁止外部通过new Singleton()创建实例，确保唯一实例由getInstance()控制。<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Singleton</span> &#123;</span><br><span class="line">    <span class="comment">// 1. 私有静态实例变量，用volatile修饰（关键！防止指令重排序）</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">volatile</span> Singleton instance;</span><br><span class="line">    <span class="comment">// 2. 私有构造方法，禁止外部通过new创建实例</span></span><br><span class="line">    <span class="keyword">private</span> <span class="title function_">Singleton</span><span class="params">()</span> &#123;&#125;</span><br><span class="line">    <span class="comment">// 3. 公共静态方法，提供全局访问点</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title function_">getInstance</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="comment">// 第一次检查：未初始化时才进入同步块（减少同步开销）</span></span><br><span class="line">        <span class="keyword">if</span> (instance == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="comment">// 同步块：保证多线程下的原子性</span></span><br><span class="line">            <span class="keyword">synchronized</span> (Singleton.class) &#123;</span><br><span class="line">                <span class="comment">// 第二次检查：防止多个线程同时通过第一次检查后重复创建实例</span></span><br><span class="line">                <span class="keyword">if</span> (instance == <span class="literal">null</span>) &#123;</span><br><span class="line">                    instance = <span class="keyword">new</span> <span class="title class_">Singleton</span>();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
-</ol>
-]]></content>
-      <categories>
-        <category>并发编程</category>
-      </categories>
-      <tags>
-        <tag>Java</tag>
-        <tag>并发</tag>
-        <tag>ThreadLocal</tag>
-        <tag>CAS</tag>
-        <tag>Atomic</tag>
-        <tag>线程安全</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Tomcat的IO模型与性能调优</title>
     <url>/2025/10/13/Tomcat%E7%9A%84IO%E6%A8%A1%E5%9E%8B/</url>
     <content><![CDATA[<h1 id="1-Tomcat的I-O模型"><a href="#1-Tomcat的I-O模型" class="headerlink" title="1. Tomcat的I&#x2F;O模型"></a>1. Tomcat的I&#x2F;O模型</h1><h2 id="1-1-Linux-I-O模型"><a href="#1-1-Linux-I-O模型" class="headerlink" title="1.1 Linux I&#x2F;O模型"></a>1.1 Linux I&#x2F;O模型</h2><h3 id="I-O要解决什么问题？"><a href="#I-O要解决什么问题？" class="headerlink" title="I&#x2F;O要解决什么问题？"></a>I&#x2F;O要解决什么问题？</h3><p>I&#x2F;O本质上是在解决在计算机内存与外部设备之间拷贝数据的过程</p>
@@ -2442,7 +2442,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
 ]]></content>
       <categories>
         <category>Java Web</category>
-        <category>中间件</category>
         <category>Tomcat</category>
       </categories>
       <tags>
@@ -2454,140 +2453,6 @@ LoadBalancer 3.2.0+ 2023.0.3+
         <tag>APR</tag>
         <tag>Tomcat线程池参数</tag>
         <tag>JConsole监控</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Sentinel 拉模式实现详解</title>
-    <url>/2025/09/04/sentinel%E6%8B%89%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/</url>
-    <content><![CDATA[<h2 id="一、为什么需要-Sentinel-拉模式？"><a href="#一、为什么需要-Sentinel-拉模式？" class="headerlink" title="一、为什么需要 Sentinel 拉模式？"></a>一、为什么需要 Sentinel 拉模式？</h2><p>Sentinel 默认的内存模式存在明显缺陷：限流规则仅存储在客户端内存中，应用重启后规则全部丢失，无法满足生产环境的规则持久化与统一管理需求。</p>
-<p>拉模式是 Sentinel 规则持久化的核心方案之一，其核心逻辑是客户端主动通过定时轮询，从外部存储（如 MySQL、本地文件）拉取规则，并结合 SPI 扩展机制实现自定义数据源，彻底解决“重启失效”问题。本文将完整拆解拉模式的实现流程，基于 MySQL 存储规则，适配 Spring Boot 场景。</p>
-<h2 id="二、拉模式与-SPI-的关系"><a href="#二、拉模式与-SPI-的关系" class="headerlink" title="二、拉模式与 SPI 的关系"></a>二、拉模式与 SPI 的关系</h2><p>在动手实现前，先理清两个关键概念，避免与推模式混淆：</p>
-<p>概念 作用说明<br>拉模式 客户端通过定时任务主动轮询外部存储（如 MySQL），获取最新规则并加载到 Sentinel，实时性取决于轮询间隔。<br>SPI 扩展机制 Sentinel 提供  ReadableDataSource  接口作为 SPI 扩展点，允许自定义“规则读取逻辑”，框架启动时自动扫描加载。 </p>
-<h2 id="三、完整实现步骤（基于-MySQL-Spring-Boot）"><a href="#三、完整实现步骤（基于-MySQL-Spring-Boot）" class="headerlink" title="三、完整实现步骤（基于 MySQL + Spring Boot）"></a>三、完整实现步骤（基于 MySQL + Spring Boot）</h2><h3 id="1-环境准备：引入依赖"><a href="#1-环境准备：引入依赖" class="headerlink" title="1. 环境准备：引入依赖"></a>1. 环境准备：引入依赖</h3><p>在  pom.xml  中添加 Sentinel 核心依赖、SPI 扩展依赖及 MySQL 连接依赖（使用 Druid 连接池简化操作）：</p>
-<!-- 1. Sentinel 核心依赖 -->
-<dependency>
-    <groupId>com.alibaba.csp</groupId>
-    <artifactId>sentinel-core</artifactId>
-    <version>1.8.6</version>
-</dependency>
-
-<!-- 2. Sentinel DataSource 扩展（SPI 扩展基础） -->
-<dependency>
-    <groupId>com.alibaba.csp</groupId>
-    <artifactId>sentinel-datasource-extension</artifactId>
-    <version>1.8.6</version>
-</dependency>
-
-<!-- 3. MySQL 连接依赖 -->
-<dependency>
-    <groupId>mysql</groupId>
-    <artifactId>mysql-connector-java</artifactId>
-    <version>8.0.33</version>
-</dependency>
-
-<!-- 4. Druid 连接池 -->
-<dependency>
-    <groupId>com.alibaba</groupId>
-    <artifactId>druid</artifactId>
-    <version>1.2.16</version>
-</dependency>
-
-<!-- 5. Spring Boot 基础（已引入可忽略） -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter</artifactId>
-    <version>2.7.15</version>
-</dependency>
- 
- 
-<h3 id="2-存储设计：创建-MySQL-规则表"><a href="#2-存储设计：创建-MySQL-规则表" class="headerlink" title="2. 存储设计：创建 MySQL 规则表"></a>2. 存储设计：创建 MySQL 规则表</h3><p>在 MySQL 中创建 Sentinel 限流规则表，用于持久化存储规则配置（支持后续扩展降级、热点规则等）：</p>
-<p>– 数据库：sentinel_db（可自定义）<br>CREATE DATABASE IF NOT EXISTS sentinel_db DEFAULT CHARSET utf8mb4;<br>USE sentinel_db;</p>
-<p>– 限流规则表<br>CREATE TABLE IF NOT EXISTS sentinel_flow_rule (<br>  <code>id</code> bigint(20) NOT NULL AUTO_INCREMENT COMMENT ‘主键ID’,<br>  <code>resource</code> varchar(255) NOT NULL COMMENT ‘限流资源名（如接口路径 &#x2F;order&#x2F;create）’,<br>  <code>limit_app</code> varchar(64) DEFAULT ‘default’ COMMENT ‘限制来源（默认所有来源）’,<br>  <code>grade</code> tinyint(1) NOT NULL COMMENT ‘限流类型：1&#x3D;QPS，0&#x3D;线程数’,<br>  <code>count</code> double NOT NULL COMMENT ‘限流阈值（如 QPS&#x3D;10）’,<br>  <code>strategy</code> tinyint(1) DEFAULT 0 COMMENT ‘流控策略：0&#x3D;直接模式，1&#x3D;关联模式，2&#x3D;链路模式’,<br>  <code>control_behavior</code> tinyint(1) DEFAULT 0 COMMENT ‘流控效果：0&#x3D;快速失败，1&#x3D;预热，2&#x3D;排队’,<br>  PRIMARY KEY (<code>id</code>)<br>) ENGINE&#x3D;InnoDB DEFAULT CHARSET&#x3D;utf8mb4 COMMENT ‘Sentinel 限流规则表’;</p>
-<p>– 插入测试数据：对 &#x2F;order&#x2F;create 接口限制 QPS&#x3D;10<br>INSERT INTO sentinel_flow_rule (resource, limit_app, grade, count, strategy, control_behavior)<br>VALUES (‘&#x2F;order&#x2F;create’, ‘default’, 1, 10, 0, 0);
- </p>
-<h3 id="3-核心实现：自定义-SPI-数据源（DataSource）"><a href="#3-核心实现：自定义-SPI-数据源（DataSource）" class="headerlink" title="3. 核心实现：自定义 SPI 数据源（DataSource）"></a>3. 核心实现：自定义 SPI 数据源（DataSource）</h3><p>拉模式的核心是实现  ReadableDataSource  接口（Sentinel 的 SPI 扩展点），在类中封装“定时轮询逻辑”与“MySQL 规则读取逻辑”。</p>
-<h4 id="自定义-DataSource-代码"><a href="#自定义-DataSource-代码" class="headerlink" title="自定义 DataSource 代码"></a>自定义 DataSource 代码</h4><p>package com.example.sentinel.datasource;</p>
-<p>import com.alibaba.csp.sentinel.datasource.ReadableDataSource;<br>import com.alibaba.csp.sentinel.slots.block.flow.FlowRule;<br>import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;<br>import com.alibaba.druid.pool.DruidDataSource;</p>
-<p>import java.sql.Connection;<br>import java.sql.PreparedStatement;<br>import java.sql.ResultSet;<br>import java.util.ArrayList;<br>import java.util.List;<br>import java.util.concurrent.Executors;<br>import java.util.concurrent.ScheduledExecutorService;<br>import java.util.concurrent.TimeUnit;</p>
-<p>&#x2F;**</p>
-<ul>
-<li><p>Sentinel 拉模式数据源：从 MySQL 定时拉取限流规则</p>
-</li>
-<li><p>实现 ReadableDataSource 接口，通过 SPI 被 Sentinel 自动加载<br> *&#x2F;<br>public class MysqlPullFlowRuleDataSource implements ReadableDataSource&lt;Void, List<FlowRule>&gt; {</p>
-<p> &#x2F;&#x2F; 1. 配置参数（生产环境建议从配置文件注入，此处简化为硬编码）<br> private final String jdbcUrl &#x3D; “jdbc:mysql:&#x2F;&#x2F;127.0.0.1:3306&#x2F;sentinel_db?useSSL&#x3D;false&amp;serverTimezone&#x3D;UTC”;<br> private final String dbUsername &#x3D; “root”; &#x2F;&#x2F; 替换为你的 MySQL 账号<br> private final String dbPassword &#x3D; “123456”; &#x2F;&#x2F; 替换为你的 MySQL 密码<br> private final long pullInterval &#x3D; 5000; &#x2F;&#x2F; 定时轮询间隔：5秒（可根据需求调整）</p>
-<p> &#x2F;&#x2F; 2. 数据库连接池（复用连接，避免频繁创建销毁）<br> private final DruidDataSource druidDataSource;<br> &#x2F;&#x2F; 3. 定时任务线程池（执行规则拉取任务）<br> private final ScheduledExecutorService scheduler;</p>
-<p> &#x2F;**</p>
-<ul>
-<li>构造方法：初始化连接池 + 启动定时轮询<br>  *&#x2F;<br> public MysqlPullFlowRuleDataSource() {<br> &#x2F;&#x2F; 初始化 Druid 连接池<br> this.druidDataSource &#x3D; initDruidDataSource();<br> &#x2F;&#x2F; 初始化定时任务：项目启动立即拉取一次，之后每 5 秒拉取<br> this.scheduler &#x3D; Executors.newSingleThreadScheduledExecutor();<br> this.scheduler.scheduleAtFixedRate(<br>     this::loadRuleToSentinel, &#x2F;&#x2F; 轮询执行的方法：拉取并加载规则<br>     0, &#x2F;&#x2F; 初始延迟：0秒（立即执行）<br>     pullInterval, &#x2F;&#x2F; 轮询间隔<br>     TimeUnit.MILLISECONDS<br> );<br> }</li>
-</ul>
-<p> &#x2F;**</p>
-<ul>
-<li><p>核心1：从 MySQL 读取最新规则<br>  *&#x2F;<br> private List<FlowRule> readRuleFromMysql() {<br> List<FlowRule> flowRules &#x3D; new ArrayList&lt;&gt;();<br> String sql &#x3D; “SELECT resource, limit_app, grade, count, strategy, control_behavior FROM sentinel_flow_rule”;</p>
-<p> &#x2F;&#x2F; try-with-resources 自动关闭连接、Statement<br> try (Connection conn &#x3D; druidDataSource.getConnection();<br>  PreparedStatement pstmt &#x3D; conn.prepareStatement(sql);<br>  ResultSet rs &#x3D; pstmt.executeQuery()) {<br><br> &#x2F;&#x2F; 遍历结果集，转换为 Sentinel 识别的 FlowRule 对象<br> while (rs.next()) {<br>     FlowRule rule &#x3D; new FlowRule();<br>     rule.setResource(rs.getString(“resource”));       &#x2F;&#x2F; 限流资源（接口&#x2F;方法名）<br>     rule.setLimitApp(rs.getString(“limit_app”));     &#x2F;&#x2F; 限制来源<br>     rule.setGrade(rs.getInt(“grade”));               &#x2F;&#x2F; 限流类型（QPS&#x2F;线程数）<br>     rule.setCount(rs.getDouble(“count”));            &#x2F;&#x2F; 限流阈值<br>     rule.setStrategy(rs.getInt(“strategy”));         &#x2F;&#x2F; 流控策略<br>     rule.setControlBehavior(rs.getInt(“control_behavior”)); &#x2F;&#x2F; 流控效果<br>     flowRules.add(rule);<br> }<br> } catch (Exception e) {<br> throw new RuntimeException(“从 MySQL 拉取 Sentinel 规则失败”, e);<br> }<br> return flowRules;</p>
-</li>
-</ul>
-<p> }</p>
-<p> &#x2F;**</p>
-<ul>
-<li>核心2：将 MySQL 中的规则加载到 Sentinel 核心<br>  *&#x2F;<br> private void loadRuleToSentinel() {<br> List<FlowRule> rules &#x3D; readRuleFromMysql();<br> FlowRuleManager.loadRules(rules); &#x2F;&#x2F; 覆盖 Sentinel 本地规则<br> System.out.printf(“[Sentinel 拉模式] 规则加载完成：共 %d 条规则%n”, rules.size());<br> }</li>
-</ul>
-<p> &#x2F;**</p>
-<ul>
-<li>初始化 Druid 连接池（配置基础参数，生产环境需优化）<br>  *&#x2F;<br> private DruidDataSource initDruidDataSource() {<br> DruidDataSource dataSource &#x3D; new DruidDataSource();<br> dataSource.setUrl(jdbcUrl);<br> dataSource.setUsername(dbUsername);<br> dataSource.setPassword(dbPassword);<br> dataSource.setInitialSize(5); &#x2F;&#x2F; 初始连接数<br> dataSource.setMaxActive(20);  &#x2F;&#x2F; 最大连接数<br> dataSource.setMinIdle(3);     &#x2F;&#x2F; 最小空闲连接数<br> return dataSource;<br> }</li>
-</ul>
-<p> &#x2F;&#x2F; ——————- 实现 ReadableDataSource 接口（SPI 强制要求） ——————-<br> @Override<br> public List<FlowRule> readSource() throws Exception {<br>     &#x2F;&#x2F; SPI 机制会调用此方法获取最新规则，直接复用 MySQL 读取逻辑<br>     return readRuleFromMysql();<br> }</p>
-<p> @Override<br> public void close() throws Exception {<br>     &#x2F;&#x2F; 资源销毁：关闭连接池 + 停止定时任务<br>     if (druidDataSource !&#x3D; null) {<br>         druidDataSource.close();<br>     }<br>     if (scheduler !&#x3D; null &amp;&amp; !scheduler.isShutdown()) {<br>         scheduler.shutdown();<br>     }<br> }</p>
-</li>
-</ul>
-<p>}
- </p>
-<h3 id="4-SPI-注册：让-Sentinel-识别自定义数据源"><a href="#4-SPI-注册：让-Sentinel-识别自定义数据源" class="headerlink" title="4. SPI 注册：让 Sentinel 识别自定义数据源"></a>4. SPI 注册：让 Sentinel 识别自定义数据源</h3><p>Sentinel 启动时会扫描  META-INF&#x2F;services  目录下的 SPI 配置文件，自动加载  ReadableDataSource  的实现类。需手动创建配置文件：</p>
-<p>1. 创建 SPI 配置文件路径：在项目的  src&#x2F;main&#x2F;resources  目录下，新建路径  META-INF&#x2F;services 。<br>2. 创建 SPI 配置文件：在上述路径下创建文件，文件名必须为  com.alibaba.csp.sentinel.datasource.ReadableDataSource （即  ReadableDataSource  接口的全路径）。<br>3. 写入自定义 DataSource 全类名：在配置文件中添加自定义 DataSource 的完整包名+类名（确保 Sentinel 能扫描到）：</p>
-<p>com.example.sentinel.datasource.MysqlPullFlowRuleDataSource
- </p>
-<h3 id="5-Spring-Boot-集成：初始化数据源"><a href="#5-Spring-Boot-集成：初始化数据源" class="headerlink" title="5. Spring Boot 集成：初始化数据源"></a>5. Spring Boot 集成：初始化数据源</h3><p>将自定义 DataSource 注册为 Spring Bean，确保项目启动时自动执行构造方法（初始化连接池与定时任务）：</p>
-<p>package com.example.sentinel.config;</p>
-<p>import com.example.sentinel.datasource.MysqlPullFlowRuleDataSource;<br>import org.springframework.context.annotation.Bean;<br>import org.springframework.context.annotation.Configuration;</p>
-<p>@Configuration<br>public class SentinelPullConfig {</p>
-<pre><code>/**
- * 注册拉模式数据源为 Spring Bean
- * - initMethod：启动时执行规则加载
- * - destroyMethod：关闭时销毁资源（连接池、定时任务）
- */
-@Bean(initMethod = &quot;loadRuleToSentinel&quot;, destroyMethod = &quot;close&quot;)
-public MysqlPullFlowRuleDataSource mysqlPullFlowRuleDataSource() &#123;
-    return new MysqlPullFlowRuleDataSource();
-&#125;
-</code></pre>
-<p>}
- </p>
-<h3 id="6-验证：拉模式是否生效"><a href="#6-验证：拉模式是否生效" class="headerlink" title="6. 验证：拉模式是否生效"></a>6. 验证：拉模式是否生效</h3><p>1. 启动 Spring Boot 项目：控制台会打印  [Sentinel 拉模式] 规则加载完成：共 1 条规则 ，说明定时任务已启动，首次拉取规则成功。<br>2. 修改 MySQL 规则：执行 SQL 语句修改阈值（如将 QPS 从 10 改为 5）：<br>UPDATE sentinel_flow_rule SET count &#x3D; 5 WHERE resource &#x3D; ‘&#x2F;order&#x2F;create’;<br> <br>3. 等待轮询间隔：5 秒后，控制台会再次打印规则加载日志，说明规则已自动更新。<br>4. 测试接口限流：用 Postman 或 JMeter 压测  &#x2F;order&#x2F;create  接口，当 QPS 超过 5 时，接口会返回 Sentinel 限流提示（如  Blocked by Sentinel (flow limiting) ），验证规则生效。</p>
-<h2 id="四、拉模式的优势与注意事项"><a href="#四、拉模式的优势与注意事项" class="headerlink" title="四、拉模式的优势与注意事项"></a>四、拉模式的优势与注意事项</h2><p>优势</p>
-<ul>
-<li>规则持久化：规则存储在 MySQL 中，应用重启后自动拉取，解决默认内存模式的痛点。</li>
-<li>实现成本低：无需依赖配置中心（如 Nacos、ZooKeeper），仅需定时轮询，适合中小项目。</li>
-<li>扩展灵活：可替换存储介质（如本地文件、Redis），只需修改  readRuleFromMysql()  中的读取逻辑。</li>
-</ul>
-<h2 id="注意事项"><a href="#注意事项" class="headerlink" title="注意事项"></a>注意事项</h2><ul>
-<li>实时性平衡：轮询间隔越小，实时性越高，但会增加数据库压力（建议设置 3-10 秒）。</li>
-<li>避免重复加载：确保 DataSource 仅初始化一次（如 Spring Bean 单例），避免多定时任务冲突。</li>
-<li>生产环境优化：</li>
-<li>数据库连接池参数需根据并发量调整（如最大连接数、超时时间）。</li>
-<li>增加规则缓存，减少数据库查询次数。</li>
-<li>对 SQL 执行异常添加重试机制。</li>
-</ul>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Sentinel 拉模式的核心是“SPI 扩展自定义 DataSource + 客户端定时轮询”：</p>
-<p>1. 通过 SPI 机制让 Sentinel 加载自定义的“MySQL 规则读取逻辑”；<br>2. 通过定时任务主动拉取规则并注入 Sentinel 核心；<br>3. 最终实现规则的持久化与自动更新，解决默认内存模式的缺陷。</p>
-<p>拉模式适合对规则实时性要求不高、不想依赖配置中心的场景，是中小项目实现 Sentinel 规则持久化的优选方案。</p>
-]]></content>
-      <categories>
-        <category>技术</category>
-        <category>微服务</category>
-      </categories>
-      <tags>
-        <tag>Sentinel</tag>
-        <tag>流量控制</tag>
-        <tag>拉模式</tag>
       </tags>
   </entry>
   <entry>
@@ -2753,6 +2618,140 @@ public MysqlPullFlowRuleDataSource mysqlPullFlowRuleDataSource() &#123;
         <tag>推模式</tag>
         <tag>Spring生态</tag>
         <tag>分布式流量控制</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Sentinel 拉模式实现详解</title>
+    <url>/2025/09/04/sentinel%E6%8B%89%E6%A8%A1%E5%BC%8F%E5%AE%9E%E7%8E%B0%E6%B5%81%E6%8E%A7%E8%A7%84%E5%88%99%E6%8C%81%E4%B9%85%E5%8C%96/</url>
+    <content><![CDATA[<h2 id="一、为什么需要-Sentinel-拉模式？"><a href="#一、为什么需要-Sentinel-拉模式？" class="headerlink" title="一、为什么需要 Sentinel 拉模式？"></a>一、为什么需要 Sentinel 拉模式？</h2><p>Sentinel 默认的内存模式存在明显缺陷：限流规则仅存储在客户端内存中，应用重启后规则全部丢失，无法满足生产环境的规则持久化与统一管理需求。</p>
+<p>拉模式是 Sentinel 规则持久化的核心方案之一，其核心逻辑是客户端主动通过定时轮询，从外部存储（如 MySQL、本地文件）拉取规则，并结合 SPI 扩展机制实现自定义数据源，彻底解决“重启失效”问题。本文将完整拆解拉模式的实现流程，基于 MySQL 存储规则，适配 Spring Boot 场景。</p>
+<h2 id="二、拉模式与-SPI-的关系"><a href="#二、拉模式与-SPI-的关系" class="headerlink" title="二、拉模式与 SPI 的关系"></a>二、拉模式与 SPI 的关系</h2><p>在动手实现前，先理清两个关键概念，避免与推模式混淆：</p>
+<p>概念 作用说明<br>拉模式 客户端通过定时任务主动轮询外部存储（如 MySQL），获取最新规则并加载到 Sentinel，实时性取决于轮询间隔。<br>SPI 扩展机制 Sentinel 提供  ReadableDataSource  接口作为 SPI 扩展点，允许自定义“规则读取逻辑”，框架启动时自动扫描加载。 </p>
+<h2 id="三、完整实现步骤（基于-MySQL-Spring-Boot）"><a href="#三、完整实现步骤（基于-MySQL-Spring-Boot）" class="headerlink" title="三、完整实现步骤（基于 MySQL + Spring Boot）"></a>三、完整实现步骤（基于 MySQL + Spring Boot）</h2><h3 id="1-环境准备：引入依赖"><a href="#1-环境准备：引入依赖" class="headerlink" title="1. 环境准备：引入依赖"></a>1. 环境准备：引入依赖</h3><p>在  pom.xml  中添加 Sentinel 核心依赖、SPI 扩展依赖及 MySQL 连接依赖（使用 Druid 连接池简化操作）：</p>
+<!-- 1. Sentinel 核心依赖 -->
+<dependency>
+    <groupId>com.alibaba.csp</groupId>
+    <artifactId>sentinel-core</artifactId>
+    <version>1.8.6</version>
+</dependency>
+
+<!-- 2. Sentinel DataSource 扩展（SPI 扩展基础） -->
+<dependency>
+    <groupId>com.alibaba.csp</groupId>
+    <artifactId>sentinel-datasource-extension</artifactId>
+    <version>1.8.6</version>
+</dependency>
+
+<!-- 3. MySQL 连接依赖 -->
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <version>8.0.33</version>
+</dependency>
+
+<!-- 4. Druid 连接池 -->
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>druid</artifactId>
+    <version>1.2.16</version>
+</dependency>
+
+<!-- 5. Spring Boot 基础（已引入可忽略） -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter</artifactId>
+    <version>2.7.15</version>
+</dependency>
+ 
+ 
+<h3 id="2-存储设计：创建-MySQL-规则表"><a href="#2-存储设计：创建-MySQL-规则表" class="headerlink" title="2. 存储设计：创建 MySQL 规则表"></a>2. 存储设计：创建 MySQL 规则表</h3><p>在 MySQL 中创建 Sentinel 限流规则表，用于持久化存储规则配置（支持后续扩展降级、热点规则等）：</p>
+<p>– 数据库：sentinel_db（可自定义）<br>CREATE DATABASE IF NOT EXISTS sentinel_db DEFAULT CHARSET utf8mb4;<br>USE sentinel_db;</p>
+<p>– 限流规则表<br>CREATE TABLE IF NOT EXISTS sentinel_flow_rule (<br>  <code>id</code> bigint(20) NOT NULL AUTO_INCREMENT COMMENT ‘主键ID’,<br>  <code>resource</code> varchar(255) NOT NULL COMMENT ‘限流资源名（如接口路径 &#x2F;order&#x2F;create）’,<br>  <code>limit_app</code> varchar(64) DEFAULT ‘default’ COMMENT ‘限制来源（默认所有来源）’,<br>  <code>grade</code> tinyint(1) NOT NULL COMMENT ‘限流类型：1&#x3D;QPS，0&#x3D;线程数’,<br>  <code>count</code> double NOT NULL COMMENT ‘限流阈值（如 QPS&#x3D;10）’,<br>  <code>strategy</code> tinyint(1) DEFAULT 0 COMMENT ‘流控策略：0&#x3D;直接模式，1&#x3D;关联模式，2&#x3D;链路模式’,<br>  <code>control_behavior</code> tinyint(1) DEFAULT 0 COMMENT ‘流控效果：0&#x3D;快速失败，1&#x3D;预热，2&#x3D;排队’,<br>  PRIMARY KEY (<code>id</code>)<br>) ENGINE&#x3D;InnoDB DEFAULT CHARSET&#x3D;utf8mb4 COMMENT ‘Sentinel 限流规则表’;</p>
+<p>– 插入测试数据：对 &#x2F;order&#x2F;create 接口限制 QPS&#x3D;10<br>INSERT INTO sentinel_flow_rule (resource, limit_app, grade, count, strategy, control_behavior)<br>VALUES (‘&#x2F;order&#x2F;create’, ‘default’, 1, 10, 0, 0);
+ </p>
+<h3 id="3-核心实现：自定义-SPI-数据源（DataSource）"><a href="#3-核心实现：自定义-SPI-数据源（DataSource）" class="headerlink" title="3. 核心实现：自定义 SPI 数据源（DataSource）"></a>3. 核心实现：自定义 SPI 数据源（DataSource）</h3><p>拉模式的核心是实现  ReadableDataSource  接口（Sentinel 的 SPI 扩展点），在类中封装“定时轮询逻辑”与“MySQL 规则读取逻辑”。</p>
+<h4 id="自定义-DataSource-代码"><a href="#自定义-DataSource-代码" class="headerlink" title="自定义 DataSource 代码"></a>自定义 DataSource 代码</h4><p>package com.example.sentinel.datasource;</p>
+<p>import com.alibaba.csp.sentinel.datasource.ReadableDataSource;<br>import com.alibaba.csp.sentinel.slots.block.flow.FlowRule;<br>import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;<br>import com.alibaba.druid.pool.DruidDataSource;</p>
+<p>import java.sql.Connection;<br>import java.sql.PreparedStatement;<br>import java.sql.ResultSet;<br>import java.util.ArrayList;<br>import java.util.List;<br>import java.util.concurrent.Executors;<br>import java.util.concurrent.ScheduledExecutorService;<br>import java.util.concurrent.TimeUnit;</p>
+<p>&#x2F;**</p>
+<ul>
+<li><p>Sentinel 拉模式数据源：从 MySQL 定时拉取限流规则</p>
+</li>
+<li><p>实现 ReadableDataSource 接口，通过 SPI 被 Sentinel 自动加载<br> *&#x2F;<br>public class MysqlPullFlowRuleDataSource implements ReadableDataSource&lt;Void, List<FlowRule>&gt; {</p>
+<p> &#x2F;&#x2F; 1. 配置参数（生产环境建议从配置文件注入，此处简化为硬编码）<br> private final String jdbcUrl &#x3D; “jdbc:mysql:&#x2F;&#x2F;127.0.0.1:3306&#x2F;sentinel_db?useSSL&#x3D;false&amp;serverTimezone&#x3D;UTC”;<br> private final String dbUsername &#x3D; “root”; &#x2F;&#x2F; 替换为你的 MySQL 账号<br> private final String dbPassword &#x3D; “123456”; &#x2F;&#x2F; 替换为你的 MySQL 密码<br> private final long pullInterval &#x3D; 5000; &#x2F;&#x2F; 定时轮询间隔：5秒（可根据需求调整）</p>
+<p> &#x2F;&#x2F; 2. 数据库连接池（复用连接，避免频繁创建销毁）<br> private final DruidDataSource druidDataSource;<br> &#x2F;&#x2F; 3. 定时任务线程池（执行规则拉取任务）<br> private final ScheduledExecutorService scheduler;</p>
+<p> &#x2F;**</p>
+<ul>
+<li>构造方法：初始化连接池 + 启动定时轮询<br>  *&#x2F;<br> public MysqlPullFlowRuleDataSource() {<br> &#x2F;&#x2F; 初始化 Druid 连接池<br> this.druidDataSource &#x3D; initDruidDataSource();<br> &#x2F;&#x2F; 初始化定时任务：项目启动立即拉取一次，之后每 5 秒拉取<br> this.scheduler &#x3D; Executors.newSingleThreadScheduledExecutor();<br> this.scheduler.scheduleAtFixedRate(<br>     this::loadRuleToSentinel, &#x2F;&#x2F; 轮询执行的方法：拉取并加载规则<br>     0, &#x2F;&#x2F; 初始延迟：0秒（立即执行）<br>     pullInterval, &#x2F;&#x2F; 轮询间隔<br>     TimeUnit.MILLISECONDS<br> );<br> }</li>
+</ul>
+<p> &#x2F;**</p>
+<ul>
+<li><p>核心1：从 MySQL 读取最新规则<br>  *&#x2F;<br> private List<FlowRule> readRuleFromMysql() {<br> List<FlowRule> flowRules &#x3D; new ArrayList&lt;&gt;();<br> String sql &#x3D; “SELECT resource, limit_app, grade, count, strategy, control_behavior FROM sentinel_flow_rule”;</p>
+<p> &#x2F;&#x2F; try-with-resources 自动关闭连接、Statement<br> try (Connection conn &#x3D; druidDataSource.getConnection();<br>  PreparedStatement pstmt &#x3D; conn.prepareStatement(sql);<br>  ResultSet rs &#x3D; pstmt.executeQuery()) {<br><br> &#x2F;&#x2F; 遍历结果集，转换为 Sentinel 识别的 FlowRule 对象<br> while (rs.next()) {<br>     FlowRule rule &#x3D; new FlowRule();<br>     rule.setResource(rs.getString(“resource”));       &#x2F;&#x2F; 限流资源（接口&#x2F;方法名）<br>     rule.setLimitApp(rs.getString(“limit_app”));     &#x2F;&#x2F; 限制来源<br>     rule.setGrade(rs.getInt(“grade”));               &#x2F;&#x2F; 限流类型（QPS&#x2F;线程数）<br>     rule.setCount(rs.getDouble(“count”));            &#x2F;&#x2F; 限流阈值<br>     rule.setStrategy(rs.getInt(“strategy”));         &#x2F;&#x2F; 流控策略<br>     rule.setControlBehavior(rs.getInt(“control_behavior”)); &#x2F;&#x2F; 流控效果<br>     flowRules.add(rule);<br> }<br> } catch (Exception e) {<br> throw new RuntimeException(“从 MySQL 拉取 Sentinel 规则失败”, e);<br> }<br> return flowRules;</p>
+</li>
+</ul>
+<p> }</p>
+<p> &#x2F;**</p>
+<ul>
+<li>核心2：将 MySQL 中的规则加载到 Sentinel 核心<br>  *&#x2F;<br> private void loadRuleToSentinel() {<br> List<FlowRule> rules &#x3D; readRuleFromMysql();<br> FlowRuleManager.loadRules(rules); &#x2F;&#x2F; 覆盖 Sentinel 本地规则<br> System.out.printf(“[Sentinel 拉模式] 规则加载完成：共 %d 条规则%n”, rules.size());<br> }</li>
+</ul>
+<p> &#x2F;**</p>
+<ul>
+<li>初始化 Druid 连接池（配置基础参数，生产环境需优化）<br>  *&#x2F;<br> private DruidDataSource initDruidDataSource() {<br> DruidDataSource dataSource &#x3D; new DruidDataSource();<br> dataSource.setUrl(jdbcUrl);<br> dataSource.setUsername(dbUsername);<br> dataSource.setPassword(dbPassword);<br> dataSource.setInitialSize(5); &#x2F;&#x2F; 初始连接数<br> dataSource.setMaxActive(20);  &#x2F;&#x2F; 最大连接数<br> dataSource.setMinIdle(3);     &#x2F;&#x2F; 最小空闲连接数<br> return dataSource;<br> }</li>
+</ul>
+<p> &#x2F;&#x2F; ——————- 实现 ReadableDataSource 接口（SPI 强制要求） ——————-<br> @Override<br> public List<FlowRule> readSource() throws Exception {<br>     &#x2F;&#x2F; SPI 机制会调用此方法获取最新规则，直接复用 MySQL 读取逻辑<br>     return readRuleFromMysql();<br> }</p>
+<p> @Override<br> public void close() throws Exception {<br>     &#x2F;&#x2F; 资源销毁：关闭连接池 + 停止定时任务<br>     if (druidDataSource !&#x3D; null) {<br>         druidDataSource.close();<br>     }<br>     if (scheduler !&#x3D; null &amp;&amp; !scheduler.isShutdown()) {<br>         scheduler.shutdown();<br>     }<br> }</p>
+</li>
+</ul>
+<p>}
+ </p>
+<h3 id="4-SPI-注册：让-Sentinel-识别自定义数据源"><a href="#4-SPI-注册：让-Sentinel-识别自定义数据源" class="headerlink" title="4. SPI 注册：让 Sentinel 识别自定义数据源"></a>4. SPI 注册：让 Sentinel 识别自定义数据源</h3><p>Sentinel 启动时会扫描  META-INF&#x2F;services  目录下的 SPI 配置文件，自动加载  ReadableDataSource  的实现类。需手动创建配置文件：</p>
+<p>1. 创建 SPI 配置文件路径：在项目的  src&#x2F;main&#x2F;resources  目录下，新建路径  META-INF&#x2F;services 。<br>2. 创建 SPI 配置文件：在上述路径下创建文件，文件名必须为  com.alibaba.csp.sentinel.datasource.ReadableDataSource （即  ReadableDataSource  接口的全路径）。<br>3. 写入自定义 DataSource 全类名：在配置文件中添加自定义 DataSource 的完整包名+类名（确保 Sentinel 能扫描到）：</p>
+<p>com.example.sentinel.datasource.MysqlPullFlowRuleDataSource
+ </p>
+<h3 id="5-Spring-Boot-集成：初始化数据源"><a href="#5-Spring-Boot-集成：初始化数据源" class="headerlink" title="5. Spring Boot 集成：初始化数据源"></a>5. Spring Boot 集成：初始化数据源</h3><p>将自定义 DataSource 注册为 Spring Bean，确保项目启动时自动执行构造方法（初始化连接池与定时任务）：</p>
+<p>package com.example.sentinel.config;</p>
+<p>import com.example.sentinel.datasource.MysqlPullFlowRuleDataSource;<br>import org.springframework.context.annotation.Bean;<br>import org.springframework.context.annotation.Configuration;</p>
+<p>@Configuration<br>public class SentinelPullConfig {</p>
+<pre><code>/**
+ * 注册拉模式数据源为 Spring Bean
+ * - initMethod：启动时执行规则加载
+ * - destroyMethod：关闭时销毁资源（连接池、定时任务）
+ */
+@Bean(initMethod = &quot;loadRuleToSentinel&quot;, destroyMethod = &quot;close&quot;)
+public MysqlPullFlowRuleDataSource mysqlPullFlowRuleDataSource() &#123;
+    return new MysqlPullFlowRuleDataSource();
+&#125;
+</code></pre>
+<p>}
+ </p>
+<h3 id="6-验证：拉模式是否生效"><a href="#6-验证：拉模式是否生效" class="headerlink" title="6. 验证：拉模式是否生效"></a>6. 验证：拉模式是否生效</h3><p>1. 启动 Spring Boot 项目：控制台会打印  [Sentinel 拉模式] 规则加载完成：共 1 条规则 ，说明定时任务已启动，首次拉取规则成功。<br>2. 修改 MySQL 规则：执行 SQL 语句修改阈值（如将 QPS 从 10 改为 5）：<br>UPDATE sentinel_flow_rule SET count &#x3D; 5 WHERE resource &#x3D; ‘&#x2F;order&#x2F;create’;<br> <br>3. 等待轮询间隔：5 秒后，控制台会再次打印规则加载日志，说明规则已自动更新。<br>4. 测试接口限流：用 Postman 或 JMeter 压测  &#x2F;order&#x2F;create  接口，当 QPS 超过 5 时，接口会返回 Sentinel 限流提示（如  Blocked by Sentinel (flow limiting) ），验证规则生效。</p>
+<h2 id="四、拉模式的优势与注意事项"><a href="#四、拉模式的优势与注意事项" class="headerlink" title="四、拉模式的优势与注意事项"></a>四、拉模式的优势与注意事项</h2><p>优势</p>
+<ul>
+<li>规则持久化：规则存储在 MySQL 中，应用重启后自动拉取，解决默认内存模式的痛点。</li>
+<li>实现成本低：无需依赖配置中心（如 Nacos、ZooKeeper），仅需定时轮询，适合中小项目。</li>
+<li>扩展灵活：可替换存储介质（如本地文件、Redis），只需修改  readRuleFromMysql()  中的读取逻辑。</li>
+</ul>
+<h2 id="注意事项"><a href="#注意事项" class="headerlink" title="注意事项"></a>注意事项</h2><ul>
+<li>实时性平衡：轮询间隔越小，实时性越高，但会增加数据库压力（建议设置 3-10 秒）。</li>
+<li>避免重复加载：确保 DataSource 仅初始化一次（如 Spring Bean 单例），避免多定时任务冲突。</li>
+<li>生产环境优化：</li>
+<li>数据库连接池参数需根据并发量调整（如最大连接数、超时时间）。</li>
+<li>增加规则缓存，减少数据库查询次数。</li>
+<li>对 SQL 执行异常添加重试机制。</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Sentinel 拉模式的核心是“SPI 扩展自定义 DataSource + 客户端定时轮询”：</p>
+<p>1. 通过 SPI 机制让 Sentinel 加载自定义的“MySQL 规则读取逻辑”；<br>2. 通过定时任务主动拉取规则并注入 Sentinel 核心；<br>3. 最终实现规则的持久化与自动更新，解决默认内存模式的缺陷。</p>
+<p>拉模式适合对规则实时性要求不高、不想依赖配置中心的场景，是中小项目实现 Sentinel 规则持久化的优选方案。</p>
+]]></content>
+      <categories>
+        <category>技术</category>
+        <category>微服务</category>
+      </categories>
+      <tags>
+        <tag>Sentinel</tag>
+        <tag>流量控制</tag>
+        <tag>拉模式</tag>
       </tags>
   </entry>
   <entry>
