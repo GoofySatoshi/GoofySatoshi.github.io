@@ -1,0 +1,443 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>JVM核心知识点八股文 | GoofySatoshi's Blog</title><meta name="author" content="GoofySatoshi"><meta name="copyright" content="GoofySatoshi"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="JVM 核心知识点八股文（高频面试版）本文整理 JVM 面试中最常考察的核心知识点，覆盖内存结构、垃圾回收、类加载、性能调优等高频考点，适合面试复习和知识点梳理。 一、JVM 内存结构（运行时数据区）JDK 8 及以上版本的内存结构移除了永久代（PermGen），替换为元空间（Metaspace），核心分为以下区域： 1. 线程私有区域 程序计数器：记录当前线程执行的字节码行号，唯一不会抛出 OO">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JVM核心知识点八股文">
+<meta property="og:url" content="https://icarus-blog.top/jvm-interview-2025/index.html">
+<meta property="og:site_name" content="GoofySatoshi&#39;s Blog">
+<meta property="og:description" content="JVM 核心知识点八股文（高频面试版）本文整理 JVM 面试中最常考察的核心知识点，覆盖内存结构、垃圾回收、类加载、性能调优等高频考点，适合面试复习和知识点梳理。 一、JVM 内存结构（运行时数据区）JDK 8 及以上版本的内存结构移除了永久代（PermGen），替换为元空间（Metaspace），核心分为以下区域： 1. 线程私有区域 程序计数器：记录当前线程执行的字节码行号，唯一不会抛出 OO">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://icarus-blog.top/img/avatar.jpg">
+<meta property="article:published_time" content="2025-12-11T07:30:00.000Z">
+<meta property="article:modified_time" content="2025-12-11T06:48:10.627Z">
+<meta property="article:author" content="GoofySatoshi">
+<meta property="article:tag" content="JVM">
+<meta property="article:tag" content="垃圾回收">
+<meta property="article:tag" content="内存模型">
+<meta property="article:tag" content="八股文">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://icarus-blog.top/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "JVM核心知识点八股文",
+  "url": "https://icarus-blog.top/jvm-interview-2025/",
+  "image": "https://icarus-blog.top/img/avatar.jpg",
+  "datePublished": "2025-12-11T07:30:00.000Z",
+  "dateModified": "2025-12-11T06:48:10.627Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "GoofySatoshi",
+      "url": "https://icarus-blog.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/avatar.jpg"><link rel="canonical" href="https://icarus-blog.top/jvm-interview-2025/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'JVM核心知识点八股文',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><script>
+  // 强制同步执行，最早初始化pagination配置
+  const { path, top_n_per_article, unescape, languages, pagination } = GLOBAL_CONFIG.localSearch
+
+console.log('path：', path);
+console.log('top_n_per_article：', top_n_per_article);
+console.log('unescape：', unescape);
+console.log('languages：', languages);
+console.log('pagination：', pagination);
+</script>
+<style>
+  /* 1. 禁用侧边栏头像旋转（核心） */
+  .sidebar-card .card-author .author-avatar img,
+  .sidebar-card .card-author .author-avatar img:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* 2. 兼容移动端/其他头像容器 */
+  .author-avatar img,
+  .author-avatar img:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* 3. 避免主题其他样式干扰 */
+  [class*="avatar"] img,
+  [class*="avatar"] img:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* 针对id="page-header"的头部区域设置透明 */
+  #page-header {
+    background-color: transparent !important; /* 强制透明背景 */
+    background-image: none !important; /* 清除可能的背景图 */
+    box-shadow: none !important; /* 去除阴影（若有） */
+  }
+
+  /* 修复头部内部元素的背景（如导航栏） */
+  #page-header .header-inner {
+    background-color: transparent !important;
+  }
+
+  /* 调整头部文字颜色（根据你的背景图明暗度修改） */
+  #page-header .nav-item a,
+  #page-header .site-title,
+  #page-header .site-subtitle {
+    color: #333 !important; /* 深色文字，背景浅时用；反之用#fff */
+  }
+  /* 确保背景图显示样式正确 */
+  body {
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+    background-size: cover !important;
+    background-position: center !important;
+  }
+</style>
+<meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="GoofySatoshi's Blog" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/load.gif" data-lazy-src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">33</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">87</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">35</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">GoofySatoshi's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">JVM核心知识点八股文</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">JVM核心知识点八股文</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-12-11T07:30:00.000Z" title="发表于 2025-12-11 15:30:00">2025-12-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-12-11T06:48:10.627Z" title="更新于 2025-12-11 14:48:10">2025-12-11</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%90%8E%E7%AB%AF%E9%9D%A2%E8%AF%95/">后端面试</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">1.4k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>4分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="JVM-核心知识点八股文（高频面试版）"><a href="#JVM-核心知识点八股文（高频面试版）" class="headerlink" title="JVM 核心知识点八股文（高频面试版）"></a>JVM 核心知识点八股文（高频面试版）</h1><p>本文整理 JVM 面试中最常考察的核心知识点，覆盖内存结构、垃圾回收、类加载、性能调优等高频考点，适合面试复习和知识点梳理。</p>
+<h2 id="一、JVM-内存结构（运行时数据区）"><a href="#一、JVM-内存结构（运行时数据区）" class="headerlink" title="一、JVM 内存结构（运行时数据区）"></a>一、JVM 内存结构（运行时数据区）</h2><p>JDK 8 及以上版本的内存结构移除了永久代（PermGen），替换为元空间（Metaspace），核心分为以下区域：</p>
+<h3 id="1-线程私有区域"><a href="#1-线程私有区域" class="headerlink" title="1. 线程私有区域"></a>1. 线程私有区域</h3><ul>
+<li><strong>程序计数器</strong>：记录当前线程执行的字节码行号，唯一不会抛出 OOM 的区域；</li>
+<li><strong>虚拟机栈</strong>：存储方法调用的栈帧（局部变量表、操作数栈、动态链接、方法出口），栈深度溢出抛 <code>StackOverflowError</code>，内存不足抛 OOM；</li>
+<li><strong>本地方法栈</strong>：为 Native 方法服务，与虚拟机栈逻辑一致，同样会抛 <code>StackOverflowError</code>&#x2F;OOM。</li>
+</ul>
+<h3 id="2-线程共享区域"><a href="#2-线程共享区域" class="headerlink" title="2. 线程共享区域"></a>2. 线程共享区域</h3><ul>
+<li><strong>堆</strong>：JVM 最大的内存区域，存储对象实例和数组，是垃圾回收（GC）的核心区域；<ul>
+<li>分代：新生代（Eden + Survivor0 + Survivor1，比例 8:1:1）、老年代；</li>
+<li>溢出：对象无法分配内存时抛 <code>OutOfMemoryError: Java heap space</code>。</li>
+</ul>
+</li>
+<li><strong>元空间（Metaspace）</strong>：替代永久代，存储类元信息、常量池、方法字节码等，直接使用本地内存，默认无上限（可通过 <code>-XX:MetaspaceSize</code>&#x2F;<code>-XX:MaxMetaspaceSize</code> 限制），溢出抛 <code>OutOfMemoryError: Metaspace</code>。</li>
+</ul>
+<h3 id="3-直接内存（非运行时数据区）"><a href="#3-直接内存（非运行时数据区）" class="headerlink" title="3. 直接内存（非运行时数据区）"></a>3. 直接内存（非运行时数据区）</h3><ul>
+<li>基于 NIO 的堆外内存，不受 JVM 堆大小限制，但受物理内存限制，溢出抛 <code>OutOfMemoryError: Direct buffer memory</code>。</li>
+</ul>
+<h2 id="二、垃圾回收（GC）核心"><a href="#二、垃圾回收（GC）核心" class="headerlink" title="二、垃圾回收（GC）核心"></a>二、垃圾回收（GC）核心</h2><h3 id="1-如何判断对象可回收？"><a href="#1-如何判断对象可回收？" class="headerlink" title="1. 如何判断对象可回收？"></a>1. 如何判断对象可回收？</h3><ul>
+<li><strong>引用计数法</strong>：对象引用数为 0 则标记为可回收，缺点：无法解决循环引用问题；</li>
+<li><strong>可达性分析算法</strong>：以 GC Roots 为起点，遍历对象引用链，无引用链的对象标记为可回收；<ul>
+<li>GC Roots 包括：虚拟机栈中引用的对象、本地方法栈中引用的对象、方法区中类静态属性&#x2F;常量引用的对象。</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-常见-GC-算法"><a href="#2-常见-GC-算法" class="headerlink" title="2. 常见 GC 算法"></a>2. 常见 GC 算法</h3><ul>
+<li><strong>标记-清除（Mark-Sweep）</strong>：标记可回收对象 → 清除，缺点：内存碎片、效率低；</li>
+<li><strong>标记-复制（Mark-Copy）</strong>：将内存分为两块，只使用一块，回收时将存活对象复制到另一块，优点：无内存碎片，缺点：内存利用率低（仅 50%），新生代（Eden&#x2F;Survivor）采用此算法；</li>
+<li><strong>标记-整理（Mark-Compact）</strong>：标记可回收对象 → 存活对象向一端移动 → 清除端外内存，无碎片、利用率 100%，老年代采用此算法。</li>
+</ul>
+<h3 id="3-经典垃圾收集器"><a href="#3-经典垃圾收集器" class="headerlink" title="3. 经典垃圾收集器"></a>3. 经典垃圾收集器</h3><table>
+<thead>
+<tr>
+<th>收集器</th>
+<th>适用区域</th>
+<th>核心特点</th>
+<th>回收线程</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Serial</td>
+<td>新生代</td>
+<td>单线程、STW 时间长、简单高效</td>
+<td>单线程</td>
+</tr>
+<tr>
+<td>ParNew</td>
+<td>新生代</td>
+<td>Serial 多线程版本</td>
+<td>多线程</td>
+</tr>
+<tr>
+<td>Parallel Scavenge</td>
+<td>新生代</td>
+<td>关注吞吐量（运行代码时间&#x2F;总时间）</td>
+<td>多线程</td>
+</tr>
+<tr>
+<td>Serial Old</td>
+<td>老年代</td>
+<td>Serial 老年代版本</td>
+<td>单线程</td>
+</tr>
+<tr>
+<td>Parallel Old</td>
+<td>老年代</td>
+<td>Parallel Scavenge 老年代版本</td>
+<td>多线程</td>
+</tr>
+<tr>
+<td>CMS</td>
+<td>老年代</td>
+<td>低延迟、并发回收、三步 STW</td>
+<td>多线程</td>
+</tr>
+<tr>
+<td>G1</td>
+<td>整堆</td>
+<td>分区回收、兼顾吞吐量和延迟</td>
+<td>多线程</td>
+</tr>
+<tr>
+<td>ZGC&#x2F;Shenandoah</td>
+<td>整堆</td>
+<td>超低延迟（毫秒级）、大内存友好</td>
+<td>多线程</td>
+</tr>
+</tbody></table>
+<h3 id="4-GC-触发时机"><a href="#4-GC-触发时机" class="headerlink" title="4. GC 触发时机"></a>4. GC 触发时机</h3><ul>
+<li><strong>Minor GC（新生代 GC）</strong>：Eden 区满时触发，频率高、STW 时间短；</li>
+<li><strong>Major GC（老年代 GC）</strong>：老年代空间不足时触发，常伴随 Minor GC，STW 时间长；</li>
+<li><strong>Full GC</strong>：整堆回收（新生代+老年代+元空间），触发场景：老年代满、元空间满、System.gc() 显式调用、Minor GC 后老年代无法容纳晋升对象。</li>
+</ul>
+<h2 id="三、类加载机制"><a href="#三、类加载机制" class="headerlink" title="三、类加载机制"></a>三、类加载机制</h2><h3 id="1-类加载的完整流程"><a href="#1-类加载的完整流程" class="headerlink" title="1. 类加载的完整流程"></a>1. 类加载的完整流程</h3><ul>
+<li><strong>加载</strong>：将类的字节码文件（.class）加载到内存，生成 Class 对象；</li>
+<li><strong>验证</strong>：校验字节码合法性（文件格式、元数据、字节码指令、符号引用验证）；</li>
+<li><strong>准备</strong>：为类静态变量分配内存并赋默认值（如 int → 0，引用 → null）；</li>
+<li><strong>解析</strong>：将符号引用替换为直接引用（内存地址）；</li>
+<li><strong>初始化</strong>：执行静态代码块、为静态变量赋初始值（程序员定义的值）。</li>
+</ul>
+<h3 id="2-类加载器分类"><a href="#2-类加载器分类" class="headerlink" title="2. 类加载器分类"></a>2. 类加载器分类</h3><ul>
+<li><strong>启动类加载器（Bootstrap ClassLoader）</strong>：C++ 实现，加载 JRE&#x2F;lib 核心类（如 rt.jar）；</li>
+<li><strong>扩展类加载器（Extension ClassLoader）</strong>：Java 实现，加载 JRE&#x2F;lib&#x2F;ext 扩展类；</li>
+<li><strong>应用类加载器（Application ClassLoader）</strong>：Java 实现，加载用户自定义类（classpath 下）；</li>
+<li><strong>自定义类加载器</strong>：继承 ClassLoader，实现自定义加载逻辑（如热部署、加密类加载）。</li>
+</ul>
+<h3 id="3-双亲委派机制"><a href="#3-双亲委派机制" class="headerlink" title="3. 双亲委派机制"></a>3. 双亲委派机制</h3><ul>
+<li><strong>核心规则</strong>：类加载时先委托父加载器加载，父加载器无法加载时再自己加载；</li>
+<li><strong>优点</strong>：避免类重复加载、保证核心类（如 java.lang.String）不被篡改；</li>
+<li><strong>打破场景</strong>：Tomcat 类加载（为不同 Web 应用隔离类）、热部署、SPI 加载（如 JDBC）。</li>
+</ul>
+<h2 id="四、JVM-性能调优"><a href="#四、JVM-性能调优" class="headerlink" title="四、JVM 性能调优"></a>四、JVM 性能调优</h2><h3 id="1-核心调优参数"><a href="#1-核心调优参数" class="headerlink" title="1. 核心调优参数"></a>1. 核心调优参数</h3><pre><code class="bash"># 堆内存设置
+-Xms2g        # 初始堆内存（建议与-Xmx一致，避免频繁扩容）
+-Xmx2g        # 最大堆内存
+-Xmn512m      # 新生代内存（建议占堆的 1/4~1/3）
+-XX:SurvivorRatio=8  # Eden:S0:S1 = 8:1:1
+-XX:NewRatio=2       # 老年代:新生代 = 2:1（JDK8 前）
+
+# 元空间设置
+-XX:MetaspaceSize=128m  # 元空间初始大小
+-XX:MaxMetaspaceSize=256m # 元空间最大大小
+
+# GC 收集器设置
+-XX:+UseParallelGC       # 新生代使用 Parallel Scavenge
+-XX:+UseParallelOldGC    # 老年代使用 Parallel Old
+-XX:+UseG1GC             # 使用 G1 收集器
+-XX:MaxGCPauseMillis=200 # G1 最大停顿时间
+
+# 日志配置
+-XX:+PrintGCDetails      # 打印 GC 详细日志
+-XX:+PrintGCTimeStamps   # 打印 GC 时间戳
+-Xloggc:/tmp/gc.log      # GC 日志输出路径
+</code></pre>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://icarus-blog.top">GoofySatoshi</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://icarus-blog.top/jvm-interview-2025/">https://icarus-blog.top/jvm-interview-2025/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://icarus-blog.top" target="_blank">GoofySatoshi's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/JVM/">JVM</a><a class="post-meta__tags" href="/tags/%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/">垃圾回收</a><a class="post-meta__tags" href="/tags/%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/">内存模型</a><a class="post-meta__tags" href="/tags/%E5%85%AB%E8%82%A1%E6%96%87/">八股文</a></div><div class="post-share"><div class="social-share" data-image="/img/avatar.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2025/11/25/LeetCode1015-%E5%8F%AF%E8%A2%ABK%E6%95%B4%E9%99%A4%E7%9A%84%E6%9C%80%E5%B0%8F%E6%95%B4%E6%95%B0/" title="LeetCode1015.可被K整除的最小整数"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">LeetCode1015.可被K整除的最小整数</div></div><div class="info-2"><div class="info-item-1">1015.可被K整除的最小整数题目描述：给定正整数 k ，你需要找出可以被 k 整除的、仅包含数字 1 的最 小 正整数 n 的长度。 返回 n 的长度。如果不存在这样的 n ，就返回-1。 注意： n 可能不符合 64 位带符号整数。 示例 1: 输入: k &#x3D; 1 输出: 1 解释: 最小的答案是 n &#x3D; 1，其长度为 1。  示例 2: 输入: k &#x3D; 2输出: -1解释: 不存在可被 2 整除的正整数 n 。  示例 3: 输入: k &#x3D; 3输出: 3解释: 最小的答案是 n &#x3D; 111，其长度为 3。  提示: 1 &lt;= k &lt;= 10^5  思路： 循环遍历乘10取余k，为了避免溢出对k取余,对k取余不会影响结果  代码：123456789101112class Solution &#123;    public int smallestRepunitDivByK(int k) &#123;        int res = 0;        for (int i = 1; i &lt; 100000; ...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2025/09/22/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/" title="G1 垃圾收集器学习笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-09-22</div><div class="info-item-2">G1 垃圾收集器学习笔记</div></div><div class="info-2"><div class="info-item-1">G1垃圾收集器学习笔记2025-09-23一、G1垃圾收集器概述G1（Garbage-First）是Java 9默认的垃圾收集器，核心特性如下：    取消物理分代：将内存划分为2048个逻辑Region（默认值）   动态分区管理：年轻代&#x2F;老年代区域可相互转化   巨型对象处理：新增Humongous区存储超Region 50%的大对象  二、内存管理机制1. 内存分区 逻辑分区：保留年轻代（Eden&#x2F;Survivor）、老年代概念   物理结构：   默认2048个Region（通过-XX:G1HeapRegionSize调整）   年轻代初始占比5%（动态调整，上限60%）   Eden:Survivor默认比例8:1:1    2. 特殊区域 Humongous区：   存储超过Region 50%的大对象   若对象超过单个Region大小，会被分割存储于多个连续Region    三、垃圾回收流程G1回收分为四个阶段：    初始标记（Stop The World）   标记GC Roots直接引用对象   并发标记（Concurrent）   与...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="utterances-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/load.gif" data-lazy-src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">GoofySatoshi</div><div class="author-info-description">分享技术、读书笔记和生活点滴</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">33</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">87</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">35</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/GoofySatoshi"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/GoofySatoshi" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">连雨不知春归去，一晴方觉夏已深</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#JVM-%E6%A0%B8%E5%BF%83%E7%9F%A5%E8%AF%86%E7%82%B9%E5%85%AB%E8%82%A1%E6%96%87%EF%BC%88%E9%AB%98%E9%A2%91%E9%9D%A2%E8%AF%95%E7%89%88%EF%BC%89"><span class="toc-number">1.</span> <span class="toc-text">JVM 核心知识点八股文（高频面试版）</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81JVM-%E5%86%85%E5%AD%98%E7%BB%93%E6%9E%84%EF%BC%88%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%EF%BC%89"><span class="toc-number">1.1.</span> <span class="toc-text">一、JVM 内存结构（运行时数据区）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-%E7%BA%BF%E7%A8%8B%E7%A7%81%E6%9C%89%E5%8C%BA%E5%9F%9F"><span class="toc-number">1.1.1.</span> <span class="toc-text">1. 线程私有区域</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E7%BA%BF%E7%A8%8B%E5%85%B1%E4%BA%AB%E5%8C%BA%E5%9F%9F"><span class="toc-number">1.1.2.</span> <span class="toc-text">2. 线程共享区域</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-%E7%9B%B4%E6%8E%A5%E5%86%85%E5%AD%98%EF%BC%88%E9%9D%9E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%EF%BC%89"><span class="toc-number">1.1.3.</span> <span class="toc-text">3. 直接内存（非运行时数据区）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%EF%BC%88GC%EF%BC%89%E6%A0%B8%E5%BF%83"><span class="toc-number">1.2.</span> <span class="toc-text">二、垃圾回收（GC）核心</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E5%8F%AF%E5%9B%9E%E6%94%B6%EF%BC%9F"><span class="toc-number">1.2.1.</span> <span class="toc-text">1. 如何判断对象可回收？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E5%B8%B8%E8%A7%81-GC-%E7%AE%97%E6%B3%95"><span class="toc-number">1.2.2.</span> <span class="toc-text">2. 常见 GC 算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-%E7%BB%8F%E5%85%B8%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8"><span class="toc-number">1.2.3.</span> <span class="toc-text">3. 经典垃圾收集器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-GC-%E8%A7%A6%E5%8F%91%E6%97%B6%E6%9C%BA"><span class="toc-number">1.2.4.</span> <span class="toc-text">4. GC 触发时机</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6"><span class="toc-number">1.3.</span> <span class="toc-text">三、类加载机制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-%E7%B1%BB%E5%8A%A0%E8%BD%BD%E7%9A%84%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8B"><span class="toc-number">1.3.1.</span> <span class="toc-text">1. 类加载的完整流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%E5%88%86%E7%B1%BB"><span class="toc-number">1.3.2.</span> <span class="toc-text">2. 类加载器分类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-%E5%8F%8C%E4%BA%B2%E5%A7%94%E6%B4%BE%E6%9C%BA%E5%88%B6"><span class="toc-number">1.3.3.</span> <span class="toc-text">3. 双亲委派机制</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81JVM-%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98"><span class="toc-number">1.4.</span> <span class="toc-text">四、JVM 性能调优</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-%E6%A0%B8%E5%BF%83%E8%B0%83%E4%BC%98%E5%8F%82%E6%95%B0"><span class="toc-number">1.4.1.</span> <span class="toc-text">1. 核心调优参数</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/jvm-interview-2025/" title="JVM核心知识点八股文">JVM核心知识点八股文</a><time datetime="2025-12-11T07:30:00.000Z" title="发表于 2025-12-11 15:30:00">2025-12-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/11/25/LeetCode1015-%E5%8F%AF%E8%A2%ABK%E6%95%B4%E9%99%A4%E7%9A%84%E6%9C%80%E5%B0%8F%E6%95%B4%E6%95%B0/" title="LeetCode1015.可被K整除的最小整数">LeetCode1015.可被K整除的最小整数</a><time datetime="2025-11-25T12:30:00.000Z" title="发表于 2025-11-25 20:30:00">2025-11-25</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/11/24/LeetCode1018-%E5%8F%AF%E8%A2%AB5%E6%95%B4%E9%99%A4%E7%9A%84%E4%BA%8C%E8%BF%9B%E5%88%B6/" title="LeetCode1018.可被5整除的二进制">LeetCode1018.可被5整除的二进制</a><time datetime="2025-11-24T14:56:00.000Z" title="发表于 2025-11-24 22:56:00">2025-11-24</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/11/23/LeetCode1262-%E5%8F%AF%E8%A2%AB%E4%B8%89%E6%95%B4%E9%99%A4%E7%9A%84%E6%9C%80%E5%A4%A7%E5%92%8C/" title="LeetCode1262.可被三整除的最大和">LeetCode1262.可被三整除的最大和</a><time datetime="2025-11-23T14:29:00.000Z" title="发表于 2025-11-23 22:29:00">2025-11-23</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/11/22/LeetCode65-%E6%9C%89%E6%95%88%E6%95%B0%E5%AD%97/" title="LeetCode65.有效数字">LeetCode65.有效数字</a><time datetime="2025-11-22T17:30:00.000Z" title="发表于 2025-11-23 01:30:00">2025-11-23</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2019 - 2025 By GoofySatoshi</span></div><div class="footer_custom_text"><img src="/img/load.gif" data-lazy-src="https://github.com/GoofySatoshi/GoofySatoshi.github.io/blob/source/source/img/logo.png?raw=true" style="width:20px; height:auto; vertical-align:middle; margin-right:5px;"> <a href="http://beian.miit.gov.cn/" style="color:white; text-decoration:none;" target="_blank">浙ICP备2025214344号</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/utils.min.js"></script><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/main.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+  const getUtterancesTheme = theme => theme === 'dark' ? 'github-dark' : 'github-light'
+
+  const loadUtterances = (el = document, key) => {
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyUtterances = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+
+    const config = {
+      src: 'https://utteranc.es/client.js',
+      repo: 'GoofySatoshi/GoofySatoshi.github.io',
+      theme: getUtterancesTheme(document.documentElement.getAttribute('data-theme')),
+      crossorigin: 'anonymous',
+      async: true,
+      ...option,
+      'issue-term': isShuoshuo ? key : (option && option['issue-term']) || 'pathname'
+    }
+
+    const ele = document.createElement('script')
+    Object.entries(config).forEach(([key, value]) => ele.setAttribute(key, value))
+    el.querySelector('#utterances-wrap').appendChild(ele)
+  }
+
+  const changeUtterancesTheme = theme => {
+    const iframe = document.querySelector('#utterances-wrap iframe')
+    if (iframe) {
+      const message = {
+        type: 'set-theme',
+        theme: getUtterancesTheme(theme)
+      };
+      iframe.contentWindow.postMessage(message, 'https://utteranc.es')
+    }
+  }
+
+  btf.addGlobalFn('themeChange', changeUtterancesTheme, 'utterances')
+
+  if (isShuoshuo) {
+    'Utterances' === 'Utterances'
+      ? window.shuoshuoComment = { loadComment: loadUtterances }
+      : window.loadOtherComment = loadUtterances
+    return
+  }
+  
+  if ('Utterances' === 'Utterances' || !false) {
+    if (false) btf.loadComment(document.getElementById('utterances-wrap'), loadUtterances)
+    else loadUtterances()
+  } else {
+    window.loadOtherComment = loadUtterances
+  }
+})()</script></div><script>
+  // 背景图片列表（替换为你的图片路径）
+  const backgroundImages = [
+    '/img/background1.jpg',
+    '/img/background2.png',
+    '/img/background3.jpg',
+    '/img/background4.jpg',
+    '/img/background5.jpg',
+    '/img/background6.jpg',
+    '/img/background7.jpg',
+    '/img/background8.jpg',
+    '/img/background9.jpg',
+    '/img/background10.jpg',
+    '/img/background11.jpg',
+    '/img/background12.jpg',
+    '/img/background13.jpg',
+    '/img/background14.jpg',
+    '/img/background15.jpg',
+    '/img/background16.jpg',
+    '/img/background17.jpg',
+    '/img/background18.jpg',
+    '/img/background19.jpg',
+    '/img/background20.jpg'
+  ];
+  // 随机选择一张图片
+  const randomImg = backgroundImages[Math.floor(Math.random() * backgroundImages.length)];
+  // 设置为背景
+  document.body.style.backgroundImage = `url(${randomImg})`;
+</script>
+<script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+POWERMODE.mobile = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章..." type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly/source/js/search/local-search.min.js"></script></div></div><script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/","tagMode":false,"debug":false,"model":{"jsonPath":"/live2dw/assets/miku.model.json"},"display":{"position":"left","width":150,"height":300,"hOffset":0,"vOffset":-20},"mobile":{"show":true},"log":false});</script></body></html>
